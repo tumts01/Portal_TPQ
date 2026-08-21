@@ -1,0 +1,4296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aplikasi TPQ Al Mabrur Singosari</title>
+  
+  <!-- App Icons for Add to Home Screen -->
+  <link rel="icon" href="https://faizabdau-dotcom.github.io/portal-almabrur/icon-192.png">
+  <link rel="apple-touch-icon" href="https://faizabdau-dotcom.github.io/portal-almabrur/icon-192.png">
+  <meta name="theme-color" content="#00695C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  
+  <!-- SweetAlert2 -->
+  <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <style>
+    :root {
+      --primary-color: #198754;
+      --secondary-color: #0d6efd;
+      --sidebar-width: 250px;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+    }
+    
+    /* Login Page */
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--primary-color) 0%, #0d6efd 100%);
+    }
+    
+    .login-box {
+      background: white;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .logo-login {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 1rem;
+      display: block;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: var(--sidebar-width);
+      background: linear-gradient(180deg, var(--primary-color) 0%, #0d6efd 100%);
+      color: white;
+      padding: 1rem 0;
+      overflow-y: auto;
+      z-index: 1000;
+      transition: all 0.3s;
+    }
+    
+    .sidebar-header {
+      padding: 1rem;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 1rem;
+    }
+    
+    .sidebar-logo {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .sidebar-menu li {
+      margin: 0.5rem 0;
+    }
+    
+    .sidebar-menu a {
+      color: white;
+      text-decoration: none;
+      padding: 0.75rem 1.5rem;
+      display: block;
+      transition: all 0.3s;
+      border-left: 3px solid transparent;
+    }
+    
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
+      background: rgba(255,255,255,0.1);
+      border-left-color: white;
+    }
+    
+    .sidebar-menu i {
+      margin-right: 0.5rem;
+      width: 20px;
+    }
+    
+    /* Main Content */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      padding: 2rem;
+      min-height: 100vh;
+      transition: margin-left 0.3s ease;
+    }
+    
+    .header {
+      background: white;
+      padding: 1rem 2rem;
+      margin-bottom: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .content-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+    }
+    
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto;
+      overflow-y: visible;
+    }
+    
+    table {
+      font-size: 0.9rem;
+    }
+    
+    table thead {
+      background: var(--primary-color);
+      color: white;
+    }
+    
+    /* Buttons */
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+    }
+    
+    .btn-primary:hover {
+      background-color: #146c43;
+      border-color: #146c43;
+    }
+    
+    /* Loading Overlay */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.45);
+      z-index: 9998;
+      backdrop-filter: blur(3px);
+    }
+    .loading-overlay.show { display: flex; align-items: center; justify-content: center; }
+    .loading-box {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: popIn 0.3s ease;
+    }
+    .loading-box .spinner-ring {
+      width: 56px; height: 56px;
+      border: 5px solid #e9ecef;
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    .loading-box p { font-size: 0.95rem; color: #555; margin: 0; font-weight: 500; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes popIn { from { transform: scale(0.8); opacity:0; } to { transform: scale(1); opacity:1; } }
+
+    /* Toast Notification */
+    #toastContainer {
+      position: fixed;
+      top: 1.2rem;
+      right: 1.2rem;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .toast-notif {
+      min-width: 280px;
+      max-width: 380px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      animation: slideInRight 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      border-left: 4px solid var(--primary-color);
+    }
+    .toast-notif.toast-error { border-left-color: #dc3545; }
+    .toast-notif.toast-warning { border-left-color: #ffc107; }
+    .toast-notif.toast-info { border-left-color: #0dcaf0; }
+    .toast-notif .toast-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
+    .toast-notif.toast-success .toast-icon { color: #198754; }
+    .toast-notif.toast-error .toast-icon { color: #dc3545; }
+    .toast-notif.toast-warning .toast-icon { color: #e6a817; }
+    .toast-notif.toast-info .toast-icon { color: #0dcaf0; }
+    .toast-notif .toast-body { flex: 1; }
+    .toast-notif .toast-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
+    .toast-notif .toast-msg { font-size: 0.82rem; color: #666; line-height: 1.4; }
+    .toast-notif .toast-close { background: none; border: none; font-size: 1rem; color: #aaa; cursor: pointer; padding: 0; line-height: 1; }
+    .toast-notif .toast-close:hover { color: #333; }
+    @keyframes slideInRight {
+      from { transform: translateX(110%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    .toast-notif.fade-out {
+      animation: fadeOutRight 0.3s ease forwards;
+    }
+    @keyframes fadeOutRight {
+      from { transform: translateX(0);   opacity: 1; }
+      to   { transform: translateX(110%); opacity: 0; }
+    }
+
+    /* Copyright Footer */
+    .app-footer {
+      text-align: center;
+      padding: 1.2rem 2rem;
+      color: #9aabbf;
+      font-size: 0.78rem;
+      border-top: 1px solid #edf0f2;
+      margin-top: 2rem;
+      letter-spacing: 0.02em;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar.hide-desktop {
+        transform: translateX(-100%);
+      }
+      
+      .main-content.expand-desktop {
+        margin-left: 0;
+      }
+    }
+    
+    /* Print Styles */
+    @media print {
+      .sidebar, .header, .no-print {
+        display: none !important;
+      }
+      
+      .main-content {
+        margin-left: 0;
+        padding: 0;
+      }
+      
+      .content-card {
+        box-shadow: none;
+        border: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-box">
+      <div class="spinner-ring"></div>
+      <p id="loadingText">Memproses data...</p>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+  
+  <!-- Login Page -->
+  <div id="loginPage" class="login-container">
+    <div class="login-box">
+      <img src="https://i.ibb.co.com/5hcK4HTq/Logo-TPQ-Bilqolam-Al-Mabrur-versi-enteng-e-2.png" alt="Logo" class="logo-login">
+      <h3 class="text-center mb-4">TPQ Al Mabrur Singosari</h3>
+      <form id="loginForm">
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-control" id="username" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+      </form>
+      <div id="loginError" class="alert alert-danger mt-3" style="display:none;"></div>
+    </div>
+  </div>
+  
+  <!-- Main App -->
+  <div id="mainApp" style="display:none;">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header position-relative">
+        <button class="btn btn-link text-white position-absolute top-0 end-0 mt-2 me-2 p-1" onclick="toggleSidebar()" title="Tutup Sidebar">
+          <i class="fas fa-times"></i>
+        </button>
+        <img src="https://i.ibb.co.com/5hcK4HTq/Logo-TPQ-Bilqolam-Al-Mabrur-versi-enteng-e-2.png" alt="Logo" class="sidebar-logo">
+        <h6 class="mb-0">TPQ Al Mabrur</h6>
+        <small>Singosari</small>
+      </div>
+      
+      <ul class="sidebar-menu" id="menuList">
+        <!-- Menu akan di-generate berdasarkan role -->
+      </ul>
+      
+      <div style="position:absolute;bottom:1rem;width:100%;padding:0 1rem;">
+        <button class="btn btn-outline-light w-100" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <div>
+          <button class="btn btn-sm btn-outline-primary" onclick="toggleSidebar()" title="Toggle Sidebar">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h5 class="d-inline-block ms-2" id="pageTitle">Dashboard</h5>
+        </div>
+        <div>
+          <span id="userName"></span>
+          <span class="badge bg-info ms-2" id="userRole"></span>
+        </div>
+      </div>
+      
+      <div id="contentArea">
+        <!-- Content akan di-load di sini -->
+      </div>
+
+      
+      <!-- Page: Data Kelas -->
+      <div class="page-section" id="page_kelas" style="display:none;">
+        <div class="content-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Data Kelas</h5>
+            <button class="btn btn-primary btn-sm" onclick="loadDataKelas()">
+              <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+          </div>
+          <div id="kelasResultContainer" class="table-responsive">
+            <!-- Table goes here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="app-footer">
+        &copy; 2026 Faisol, Inc. | All Rights Reserved
+      </footer>
+    </div>
+  </div>
+  
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+
+  
+  <script>
+    // Global variables
+    let currentUser = null;
+    let config = null;
+    
+    // Menu configuration based on role
+    const menuConfig = {
+      super_admin: [
+        { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', page: 'dashboard' },
+        { id: 'santri', icon: 'fa-user-graduate', label: 'Data Santri', page: 'santri' },
+        { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
+        { id: 'guru', icon: 'fa-chalkboard-teacher', label: 'Data Guru', page: 'guru' },
+        { id: 'presensi', icon: 'fa-calendar-check', label: 'Presensi', page: 'presensi' },
+        { id: 'bendahara', icon: 'fa-money-bill-wave', label: 'Bendahara', page: 'bendahara' },
+        { id: 'rekap_harian', icon: 'fa-calendar-day', label: 'Rekap Harian', page: 'rekap_harian' },
+        { id: 'rapor', icon: 'fa-file-alt', label: 'Rapor', page: 'rapor' },
+        { id: 'pengumuman', icon: 'fa-bullhorn', label: 'Pengumuman', page: 'pengumuman' },
+      ],
+      bendahara: [
+        { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
+        { id: 'bendahara', icon: 'fa-money-bill-wave', label: 'Bendahara', page: 'bendahara' },
+        { id: 'rekap_harian', icon: 'fa-calendar-day', label: 'Rekap Harian', page: 'rekap_harian' },
+        { id: 'presensi', icon: 'fa-calendar-check', label: 'Presensi', page: 'presensi' },
+      ],
+      ustadz: [
+        { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', page: 'dashboard' },
+        { id: 'presensi', icon: 'fa-calendar-check', label: 'Presensi', page: 'presensi' },
+        { id: 'rapor', icon: 'fa-file-alt', label: 'Rapor', page: 'rapor' },
+        { id: 'santri', icon: 'fa-user-graduate', label: 'Data Santri', page: 'santri', readonly: true },
+        { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
+        { id: 'guru', icon: 'fa-chalkboard-teacher', label: 'Data Guru', page: 'guru', readonly: true },
+        { id: 'pengumuman', icon: 'fa-bullhorn', label: 'Pengumuman', page: 'pengumuman' },
+      ],
+      wali_santri: [
+        { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', page: 'dashboard' },
+        { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
+        { id: 'pembayaran_wali', icon: 'fa-money-bill-wave', label: 'Pembayaran', page: 'pembayaran_wali' },
+        { id: 'pengumuman', icon: 'fa-bullhorn', label: 'Pengumuman', page: 'pengumuman' },
+      ],
+    };
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if already logged in
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        showMainApp();
+      }
+      
+      // Login form submit
+      document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        doLogin();
+      });
+    });
+    
+    // Login
+    function doLogin() {
+      const username = document.getElementById('username').value;
+      
+      showLoading();
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideLoading();
+          
+          if (result.success) {
+            currentUser = result.user;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            showMainApp();
+          } else {
+            document.getElementById('loginError').style.display = 'block';
+            document.getElementById('loginError').textContent = result.message;
+          }
+        })
+        .withFailureHandler(function(error) {
+          hideLoading();
+          alert('Error: ' + error.message);
+        })
+        .login(username);
+    }
+    
+    // Show main app
+    function showMainApp() {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      
+      // Set user info
+      document.getElementById('userName').textContent = currentUser.nama;
+      document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+      
+      // Generate menu
+      generateMenu();
+      
+      // Load default page
+      loadPage('dashboard');
+      
+      // Check for active announcements
+      google.script.run.withSuccessHandler(checkAndShowPengumuman).getPengumuman(currentUser.role);
+    }
+    
+    function checkAndShowPengumuman(data) {
+      if (!data || data.length === 0) return;
+      
+      // Filter out non-active announcements just in case
+      const activeData = data.filter(d => d.status === 'aktif');
+      if (activeData.length === 0) return;
+      
+      // Sort to get the latest (newest date first)
+      activeData.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+      const latest = activeData[0];
+      
+      // Check if already seen
+      const lastSeenId = localStorage.getItem('last_seen_pengumuman');
+      if (lastSeenId === latest.id_pengumuman) return;
+      
+      // Populate Modal
+      document.getElementById('notifPengumumanJudul').textContent = latest.judul;
+      
+      const tglOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('notifPengumumanTanggal').textContent = new Date(latest.tanggal).toLocaleDateString('id-ID', tglOptions);
+      
+      // Highlight high priority
+      if (latest.prioritas === 'tinggi') {
+        document.getElementById('notifPengumumanJudul').innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> ' + latest.judul;
+      } else {
+        document.getElementById('notifPengumumanJudul').innerHTML = '<i class="fas fa-info-circle text-primary"></i> ' + latest.judul;
+      }
+      
+      const isiHtml = latest.isi.replace(/\n/g, '<br>');
+      document.getElementById('notifPengumumanIsi').innerHTML = isiHtml;
+      
+      // Setup seen button
+      document.getElementById('btnMengertiPengumuman').onclick = function() {
+        localStorage.setItem('last_seen_pengumuman', latest.id_pengumuman);
+      };
+      
+      // Show Modal
+      const modal = new bootstrap.Modal(document.getElementById('notifPengumumanModal'));
+      modal.show();
+    }
+    
+    // Generate menu based on role
+    function generateMenu() {
+      const menuList = document.getElementById('menuList');
+      const menus = menuConfig[currentUser.role] || [];
+      
+      menuList.innerHTML = menus.map(menu => `
+        <li>
+          <a href="#" onclick="loadPage('${menu.page}'); return false;" id="menu-${menu.id}">
+            <i class="fas ${menu.icon}"></i> ${menu.label}
+          </a>
+        </li>
+      `).join('');
+    }
+    
+    // Load page
+    function loadPage(page) {
+      // Update active menu
+      document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
+      const activeMenu = document.getElementById('menu-' + page);
+      if (activeMenu) activeMenu.classList.add('active');
+
+      // Update title
+      const titles = {
+        dashboard: 'Dashboard',
+        santri: 'Data Santri',
+        guru: 'Data Guru',
+        presensi: 'Presensi',
+        bendahara: 'Bendahara',
+        rekap_harian: 'Rekap Pembayaran Harian',
+        rapor: 'Rapor',
+        pengumuman: 'Pengumuman',
+        dashboard_wali: 'Dashboard Wali Santri',
+        kelas: 'Data Kelas'
+      };
+      document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+      
+      // Load content
+      const contentArea = document.getElementById('contentArea');
+      contentArea.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x"></i></div>';
+      
+      // Load page content based on role and page
+      setTimeout(() => {
+        loadPageContent(page);
+      }, 100);
+    }
+    
+    // Load page content
+    function loadPageContent(page) {
+      const contentArea = document.getElementById('contentArea');
+      
+      switch(page) {
+        case 'dashboard':
+          loadDashboard();
+          break;
+        case 'santri':
+          loadSantriPage();
+          break;
+        case 'guru':
+          loadGuruPage();
+          break;
+        case 'presensi':
+          loadPresensiPage();
+          break;
+        case 'bendahara':
+          loadBendaharaPage();
+          break;
+        case 'rekap_harian':
+          loadRekapHarianPage();
+          break;
+        case 'rapor':
+          loadRaporPage();
+          break;
+        case 'pengumuman':
+          loadPengumumanPage();
+          break;
+        case 'dashboard_wali':
+        case 'pembayaran_wali':
+          loadPembayaranWali();
+          break;
+        case 'kelas':
+          loadKelasPage();
+          break;
+      }
+    }
+    
+    // Logout
+    function logout() {
+      Swal.fire({
+        title: 'Keluar Aplikasi?',
+        text: 'Apakah Anda yakin ingin mengakhiri sesi ini?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#e74c3c',
+        cancelButtonColor: '#bdc3c7',
+        confirmButtonText: '<i class="fas fa-sign-out-alt"></i> Ya, Keluar',
+        cancelButtonText: 'Batal',
+        backdrop: `rgba(0,0,0,0.4)`
+      }).then((result) => {
+        if (result.isConfirmed) {
+          localStorage.removeItem('currentUser');
+          currentUser = null;
+          document.getElementById('loginPage').style.display = 'flex';
+          document.getElementById('mainApp').style.display = 'none';
+        }
+      });
+    }
+    
+    // Toggle sidebar (mobile & desktop)
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.querySelector('.main-content');
+      
+      if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('show');
+      } else {
+        sidebar.classList.toggle('hide-desktop');
+        mainContent.classList.toggle('expand-desktop');
+      }
+    }
+    
+    // Show/hide loading
+    function showLoading(text) {
+      document.getElementById('loadingText').textContent = text || 'Memproses data...';
+      document.getElementById('loading').classList.add('show');
+    }
+    
+    function hideLoading() {
+      document.getElementById('loading').classList.remove('show');
+    }
+
+    // Toast notification system
+    function showToast(message, type, title) {
+      const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+      const titles = { success: 'Berhasil', error: 'Gagal', warning: 'Perhatian', info: 'Informasi' };
+      type = type || 'success';
+      title = title || titles[type];
+      const icon = icons[type] || icons.info;
+
+      const el = document.createElement('div');
+      el.className = `toast-notif toast-${type}`;
+      el.innerHTML = `
+        <div class="toast-icon"><i class="fas ${icon}"></i></div>
+        <div class="toast-body">
+          <div class="toast-title">${title}</div>
+          <div class="toast-msg">${message}</div>
+        </div>
+        <button class="toast-close" onclick="dismissToast(this)">&times;</button>
+      `;
+
+      const container = document.getElementById('toastContainer');
+      container.appendChild(el);
+
+      setTimeout(() => dismissToast(el.querySelector('.toast-close')), 4000);
+    }
+
+    function dismissToast(btn) {
+      const el = btn.closest ? btn.closest('.toast-notif') : btn;
+      if (!el || el.classList.contains('fade-out')) return;
+      el.classList.add('fade-out');
+      setTimeout(() => el.remove(), 300);
+    }
+    
+    // Format currency
+    function formatRupiah(angka) {
+      return 'Rp ' + angka.toLocaleString('id-ID');
+    }
+    
+    // Format date
+    function formatDate(date) {
+      if (!date) return '-';
+      const d = new Date(date);
+      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+    
+    // Export to Excel
+    function exportToExcel(data, filename) {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      XLSX.writeFile(wb, filename + '.xlsx');
+    }
+</script>
+  
+  <script>
+function loadDashboard() {
+  const contentArea = document.getElementById('contentArea');
+  
+  // Get stats
+  google.script.run
+    .withSuccessHandler(function(result) {
+      try {
+        const santriCount = result.santri || 0;
+        const guruCount = result.guru || 0;
+        const saldo = result.saldo || { pemasukan: 0, pengeluaran: 0, saldo: 0 };
+        
+        let financialStats = '';
+        if (currentUser.role !== 'ustadz' && currentUser.role !== 'wali_santri') {
+          financialStats = `
+          <div class="col-md-3 mb-3">
+            <div class="card bg-info text-white">
+              <div class="card-body">
+                <h6 class="card-title">Pemasukan</h6>
+                <h5 class="mb-0">${formatRupiah(saldo.pemasukan)}</h5>
+                <i class="fas fa-arrow-up fa-3x opacity-50"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-white">
+              <div class="card-body">
+                <h6 class="card-title">Saldo</h6>
+                <h5 class="mb-0">${formatRupiah(saldo.saldo)}</h5>
+                <i class="fas fa-wallet fa-3x opacity-50"></i>
+              </div>
+            </div>
+          </div>
+          `;
+        }
+        
+        let welcomeCard = '';
+        if (currentUser.role === 'ustadz') {
+          const safeName = String(currentUser.nama || '').replace(/'/g, "");
+          const fallbackUrl = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(safeName) + '&background=random&format=svg';
+          welcomeCard = `
+            <div class="d-flex flex-column flex-md-row align-items-center align-items-md-start gap-4">
+              <div style="flex-shrink: 0;">
+                <div style="width: 150px; height: 200px; border-radius: 12px; padding: 5px; background: linear-gradient(135deg, var(--primary-color), #0d6efd); box-shadow: 0 8px 20px rgba(0,0,0,0.15); display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                  <img src="${currentUser.foto || fallbackUrl}" 
+                       onerror="this.onerror=null; this.src='${fallbackUrl}';" 
+                       alt="Foto Profil" 
+                       style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 3px solid white; background-color: white; display: block;">
+                </div>
+              </div>
+              <div class="text-center text-md-start w-100 mt-2">
+                <h4 class="mb-2">Selamat Datang, ${currentUser.nama}</h4>
+                <p class="text-muted">Semoga hari ini penuh berkah dan kelancaran dalam mendidik santri.</p>
+                <div class="row text-start mt-3">
+                  <div class="col-md-6 mb-3">
+                    <h6 class="mb-3 text-secondary">Informasi Sistem:</h6>
+                    <ul class="list-unstyled mb-0">
+                      <li class="mb-2"><i class="fas fa-id-badge text-primary me-2" style="width:20px"></i> Role: <strong>${currentUser.role.toUpperCase()}</strong></li>
+                      <li><i class="fas fa-clock text-primary me-2" style="width:20px"></i> Login terakhir: <strong>${new Date().toLocaleString('id-ID')}</strong></li>
+                    </ul>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <div id="infoKelasGuruContainer" class="p-3 bg-light border border-success rounded text-start h-100">
+                      <p class="text-center mb-0 mt-2"><i class="fas fa-spinner fa-spin"></i> Memuat data kelas yang diajar...</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // Asynchronously fetch class data for Guru
+          setTimeout(() => {
+            google.script.run.withSuccessHandler(function(kelasList) {
+              const ustadzName = currentUser.nama;
+              const ustadzID = currentUser.username;
+              
+              // Filter kelas di mana guru ini menjadi pengajar / wali kelas
+              const kelasAjar = (kelasList || []).filter(k => 
+                String(k.Ustadz_Wali).trim().toLowerCase() === String(ustadzName).trim().toLowerCase() || 
+                String(k.Ustadz_Wali).trim() === String(ustadzID).trim()
+              );
+              
+              const el = document.getElementById('infoKelasGuruContainer');
+              if(el) {
+                if (kelasAjar.length === 0) {
+                  el.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle"></i> Saat ini Anda belum ditugaskan mengajar kelas manapun.</p>';
+                } else {
+                  let html = `<h6 class="text-success mb-3"><i class="fas fa-chalkboard-teacher"></i> Jadwal Mengajar Anda:</h6>`;
+                  kelasAjar.forEach(k => {
+                    const jamMasuk = k['Jam Masuk'] || k.Jam_Masuk || '-';
+                    const lokasiKelas = k['Lokasi Kelas'] || k.Lokasi_Kelas || '-';
+                    html += `
+                      <div class="mb-3 pb-2 border-bottom border-success-subtle">
+                        <strong class="d-block text-dark fs-6 mb-1">Kelas ${k.Nama_Kelas}</strong>
+                        <div class="d-flex flex-column gap-1">
+                          <small class="text-muted"><i class="fas fa-map-marker-alt text-danger" style="width: 15px;"></i> Lokasi: <strong>${lokasiKelas}</strong></small>
+                          <small class="text-muted"><i class="fas fa-clock text-warning" style="width: 15px;"></i> Jam: <strong>${jamMasuk}</strong></small>
+                        </div>
+                      </div>
+                    `;
+                  });
+                  el.innerHTML = html;
+                }
+              }
+            }).withFailureHandler(function(err){
+              const el = document.getElementById('infoKelasGuruContainer');
+              if(el) el.innerHTML = '<span class="text-danger">Gagal memuat jadwal kelas.</span>';
+            }).getKelasList();
+          }, 100);
+          
+        } else if (currentUser.role === 'wali_santri') {
+          welcomeCard = `
+            <h5>Selamat Datang di Aplikasi TPQ Al Mabrur Singosari</h5>
+            <p>Silakan pilih menu di sidebar untuk mengakses fitur aplikasi.</p>
+            <hr>
+            <h6>Informasi Sistem:</h6>
+            <ul>
+              <li>Role Anda: <strong>${currentUser.role.toUpperCase()}</strong></li>
+              <li>Nama Anda: <strong>${currentUser.nama}</strong></li>
+              <li>Login terakhir: <strong>${new Date().toLocaleString('id-ID')}</strong></li>
+            </ul>
+            <div id="infoAnakWaliContainer" class="mt-4 p-3 bg-light border border-info rounded">
+              <p class="text-center mb-0"><i class="fas fa-spinner fa-spin"></i> Memuat data kelas anak...</p>
+            </div>
+          `;
+          
+          // Asynchronously fetch santri data
+          setTimeout(() => {
+            google.script.run.withSuccessHandler(function(santriList) {
+              const found = (santriList || []).find(s => s.NIS === currentUser.username || s.No_WA_Ayah === currentUser.username || s.No_WA_Ibu === currentUser.username);
+              if (!found) {
+                const el = document.getElementById('infoAnakWaliContainer');
+                if(el) el.innerHTML = '<p class="text-danger mb-0">Data santri tidak ditemukan untuk akun ini.</p>';
+                return;
+              }
+              google.script.run.withSuccessHandler(function(kelasList) {
+                google.script.run.withSuccessHandler(function(guruList) {
+                  const kelasInfo = (kelasList || []).find(k => k.Nama_Kelas === found.Kelas) || {};
+                  const namaWaliKelas = kelasInfo.Ustadz_Wali || 'Belum diatur';
+                  const guruInfo = (guruList || []).find(g => g.Nama === namaWaliKelas || g.ID_Guru === namaWaliKelas) || {};
+                  const noWaWaliKelas = guruInfo.No_WA ? String(guruInfo.No_WA).replace(/\D/g, '') : '';
+                  const displayWaWali = noWaWaliKelas ? `<a href="https://wa.me/${noWaWaliKelas}" target="_blank" class="btn btn-sm btn-success mt-2"><i class="fab fa-whatsapp"></i> Chat Wali Kelas</a>` : '<span class="text-muted text-sm d-block mt-2">Nomor tidak tersedia</span>';
+                  
+                  // Proses link foto agar mendukung Google Drive link biasa
+                  let fotoUrl = guruInfo.Foto || guruInfo.foto || '';
+                  if (fotoUrl && String(fotoUrl).includes('drive.google.com')) {
+                      const matchId = String(fotoUrl).match(/[-\w]{25,}/);
+                      if (matchId) {
+                          fotoUrl = 'https://drive.google.com/thumbnail?id=' + matchId[0] + '&sz=w400';
+                      }
+                  }
+                  
+                  const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(namaWaliKelas) + '&background=random&color=fff&size=150';
+                  const finalImgSrc = fotoUrl ? fotoUrl : defaultAvatar;
+                  
+                  const jamMasuk = kelasInfo['Jam Masuk'] || kelasInfo.Jam_Masuk || '-';
+                  const lokasiKelas = kelasInfo['Lokasi Kelas'] || kelasInfo.Lokasi_Kelas || '-';
+                  
+                  const el = document.getElementById('infoAnakWaliContainer');
+                  if(el) {
+                    el.innerHTML = `
+                      <h6 class="text-primary mb-3"><i class="fas fa-user-graduate"></i> Informasi Santri & Kelas</h6>
+                      <div class="row">
+                        <div class="col-md-5 mb-3">
+                          <p class="mb-1 text-muted small">Nama Anak</p>
+                          <p class="mb-3 fw-bold fs-5">${found.Nama_Santri}</p>
+                          <p class="mb-1 text-muted small">NIS</p>
+                          <p class="mb-1 fw-bold">${found.NIS}</p>
+                        </div>
+                        <div class="col-md-7 mb-2">
+                          <div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border">
+                            <div style="width: 110px; height: 140px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: linear-gradient(135deg, var(--primary-color), #0d6efd); box-shadow: 0 4px 10px rgba(0,0,0,0.1);" class="me-3 border border-2 border-white d-flex justify-content-center align-items-center">
+                              <img src="${finalImgSrc}" alt="Wali Kelas" style="width: 100%; height: 100%; object-fit: ${fotoUrl ? 'cover' : 'contain'};" onerror="this.src='${defaultAvatar}'; this.style.objectFit='contain';">
+                            </div>
+                            <div>
+                              <p class="mb-1"><i class="fas fa-school text-secondary"></i> Kelas: <strong>${found.Kelas}</strong></p>
+                              <p class="mb-1"><i class="fas fa-clock text-secondary"></i> Jam Masuk: <strong>${jamMasuk}</strong></p>
+                              <p class="mb-1"><i class="fas fa-map-marker-alt text-secondary"></i> Lokasi: <strong>${lokasiKelas}</strong></p>
+                              <p class="mb-2"><i class="fas fa-chalkboard-teacher text-secondary"></i> Wali Kelas: <strong>${namaWaliKelas}</strong></p>
+                              ${displayWaWali}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  }
+                }).getGuruList();
+              }).getKelasList();
+            }).getSantriList();
+          }, 100);
+
+        } else {
+          welcomeCard = `
+            <h5>Selamat Datang di Aplikasi TPQ Al Mabrur Singosari</h5>
+            <p>Silakan pilih menu di sidebar untuk mengakses fitur aplikasi.</p>
+            <hr>
+            <h6>Informasi Sistem:</h6>
+            <ul>
+              <li>Role Anda: <strong>${currentUser.role.toUpperCase()}</strong></li>
+              <li>Nama: <strong>${currentUser.nama}</strong></li>
+              <li>Login terakhir: <strong>${new Date().toLocaleString('id-ID')}</strong></li>
+            </ul>
+          `;
+        }
+        
+        contentArea.innerHTML = `
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <div class="card bg-primary text-white">
+                <div class="card-body">
+                  <h6 class="card-title">Total Santri</h6>
+                  <h2 class="mb-0">${santriCount}</h2>
+                  <i class="fas fa-user-graduate fa-3x opacity-50"></i>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="card bg-success text-white">
+                <div class="card-body">
+                  <h6 class="card-title">Total Guru</h6>
+                  <h2 class="mb-0">${guruCount}</h2>
+                  <i class="fas fa-chalkboard-teacher fa-3x opacity-50"></i>
+                </div>
+              </div>
+            </div>
+            ${financialStats}
+          </div>
+          
+          <div class="row">
+            <div class="col-md-12">
+              <div class="content-card">
+                ${welcomeCard}
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        contentArea.innerHTML = '<div class="alert alert-danger">Frontend Error: ' + err.message + '</div>';
+      }
+    })
+    .withFailureHandler(function(error) {
+      contentArea.innerHTML = '<div class="alert alert-danger">Server Error: ' + error.message + '</div>';
+    })
+    .getDashboardStats();
+}
+</script>
+
+  <script>
+function loadSantriPage() {
+  const contentArea = document.getElementById('contentArea');
+  const isReadonly = currentUser.role === 'ustadz' || currentUser.role === 'wali_santri';
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Data Induk Santri</h5>
+        <div>
+          <button class="btn btn-success btn-sm me-2" onclick="exportSantriExcel()">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+          ${!isReadonly ? `
+          <button class="btn btn-primary btn-sm" onclick="showSantriForm()">
+            <i class="fas fa-plus"></i> Tambah Santri
+          </button>
+          ` : ''}
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchSantri" class="form-control" placeholder="Cari berdasarkan nama..." onkeyup="filterSantri()">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select id="filterKelasSantri" class="form-select" onchange="filterSantri()">
+            <option value="">Semua Kelas</option>
+          </select>
+        </div>
+        <div class="col-md-5 d-flex align-items-center">
+          <span class="badge bg-primary me-2" id="totalSantriBadge">Total: 0 Santri</span>
+          <span class="badge bg-info me-2" id="totalLBadge">L: 0</span>
+          <span class="badge bg-warning text-dark" id="totalPBadge">P: 0</span>
+        </div>
+      </div>
+      
+      <div id="santriForm" style="display:none;" class="mb-4">
+        <div class="card">
+          <div class="card-body">
+            <h6 id="formSantriTitle">Tambah Santri Baru</h6>
+            <form id="formSantri">
+              <input type="hidden" id="s_nis">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama Santri *</label>
+                  <input type="text" class="form-control" id="s_nama" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Jenis Kelamin *</label>
+                  <select class="form-select" id="s_jk" required>
+                    <option value="">Pilih</option>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Kelas *</label>
+                  <select class="form-select" id="s_kelas" required>
+                    <option value="">Pilih Kelas</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Status *</label>
+                  <select class="form-select" id="s_status" required>
+                    <option value="aktif">Aktif</option>
+                    <option value="nonaktif">Non-Aktif</option>
+                    <option value="lulus">Lulus</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">No WA Ayah</label>
+                  <input type="text" class="form-control" id="s_wa_ayah" placeholder="628xxx">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">No WA Ibu</label>
+                  <input type="text" class="form-control" id="s_wa_ibu" placeholder="628xxx">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tempat Lahir</label>
+                  <input type="text" class="form-control" id="s_tempat_lahir">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tanggal Lahir</label>
+                  <input type="date" class="form-control" id="s_tgl_lahir">
+                </div>
+                <div class="col-12 mb-3">
+                  <label class="form-label">Alamat Lengkap</label>
+                  <textarea class="form-control" id="s_alamat" rows="2"></textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
+              <button type="button" class="btn btn-secondary" onclick="hideSantriForm()">Batal</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>NIS</th>
+              <th>Nama Santri</th>
+              <th>L/P</th>
+              <th>Kelas</th>
+              <th>Wali Kelas</th>
+              <th>Lokasi Kelas</th>
+              <th>No WA Ayah</th>
+              <th>No WA Ibu</th>
+              <th>Alamat</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="santriTableBody">
+            <tr><td colspan="11" class="text-center">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  loadSantriData();
+  
+  document.getElementById('formSantri').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSantriData();
+  });
+}
+
+let _santriCache = [];
+let _kelasCache = [];
+
+function loadSantriData() {
+  console.log('Memanggil getKelasList...');
+  google.script.run
+    .withSuccessHandler(function(kelasList) {
+      console.log('getKelasList sukses', kelasList);
+      _kelasCache = kelasList;
+      const selectForm = document.getElementById('s_kelas');
+      const selectFilter = document.getElementById('filterKelasSantri');
+      
+      let options = '<option value="">Pilih Kelas</option>';
+      let filterOpts = '<option value="">Semua Kelas</option>';
+      
+      (kelasList || []).forEach(k => {
+        options += '<option value="' + (k.Nama_Kelas || k['Nama Kelas']) + '">' + (k.Nama_Kelas || k['Nama Kelas']) + '</option>';
+        filterOpts += '<option value="' + (k.Nama_Kelas || k['Nama Kelas']) + '">' + (k.Nama_Kelas || k['Nama Kelas']) + '</option>';
+      });
+      
+      if(selectForm) selectForm.innerHTML = options;
+      if(selectFilter) selectFilter.innerHTML = filterOpts;
+      
+      fetchSantriList();
+    })
+    .withFailureHandler(function(e) {
+      console.error('getKelasList error:', e);
+      document.getElementById('santriTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error Load Kelas: ' + e.message + '</td></tr>';
+      fetchSantriList(); // fallback
+    })
+    .getKelasList();
+}
+
+function fetchSantriList() {
+  console.log('Memanggil getSantriList...');
+  google.script.run
+    .withSuccessHandler(function(santriList) {
+      console.log('getSantriList sukses', santriList);
+      _santriCache = santriList || [];
+      renderSantriTable(_santriCache);
+    })
+    .withFailureHandler(function(e) {
+      console.error('getSantriList error:', e);
+      document.getElementById('santriTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Gagal memuat data santri: ' + e.message + '</td></tr>';
+      showToast('Gagal memuat data santri: ' + e.message, 'error');
+    })
+    .getSantriList();
+}
+
+function filterSantri() {
+  const searchTerm = document.getElementById('searchSantri').value.toLowerCase();
+  const filterKelas = document.getElementById('filterKelasSantri').value;
+  
+  const filtered = _santriCache.filter(s => {
+    const matchName = (s.Nama_Santri || '').toLowerCase().includes(searchTerm);
+    const matchKelas = filterKelas === '' || s.Kelas === filterKelas;
+    return matchName && matchKelas;
+  });
+  
+  renderSantriTable(filtered);
+}
+
+function renderSantriTable(data) {
+  const tbody = document.getElementById('santriTableBody');
+  const isReadonly = currentUser.role === 'ustadz' || currentUser.role === 'wali_santri';
+  
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-3">Tidak ada data santri</td></tr>';
+    updateSantriStats(0, 0, 0);
+    return;
+  }
+  
+  let totalL = 0;
+  let totalP = 0;
+  
+  const q = String.fromCharCode(39);
+  let html = '';
+  
+  data.forEach(s => {
+    const jk = (s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+    if (jk === 'L' || jk === 'LAKI-LAKI' || jk === 'LAKI LAKI' || jk.includes('LAKI')) totalL++;
+    else if (jk === 'P' || jk === 'PEREMPUAN' || jk.includes('PEREMPUAN')) totalP++;
+    
+    let btnHtml = '';
+    if (!isReadonly) {
+      btnHtml = '<button class="btn btn-sm btn-warning me-1" onclick="editSantri(' + q + s.NIS + q + ')" title="Edit"><i class="fas fa-edit"></i></button>' +
+                '<button class="btn btn-sm btn-danger" onclick="deleteSantri(' + q + s.NIS + q + ')" title="Hapus"><i class="fas fa-trash"></i></button>';
+    } else {
+      btnHtml = '<span class="badge bg-secondary">Readonly</span>';
+    }
+    
+    let jenisKelamin = s.Jenis_Kelamin || s['L/P'] || '-';
+    let waliKelas = '-';
+    const kInfo = _kelasCache.find(k => k.Nama_Kelas === s.Kelas || k['Nama Kelas'] === s.Kelas);
+    if (kInfo && kInfo.Ustadz_Wali) {
+      waliKelas = kInfo.Ustadz_Wali;
+    } else if (s.Wali_Kelas || s['Wali Kelas']) {
+      waliKelas = s.Wali_Kelas || s['Wali Kelas'];
+    }
+    
+    html += '<tr>' +
+      '<td><small>' + (s.NIS || '-') + '</small></td>' +
+      '<td><strong>' + (s.Nama_Santri || s['Nama Santri'] || '-') + '</strong></td>' +
+      '<td><span class="badge bg-' + (jk.includes('LAKI') || jk === 'L' ? 'primary' : 'danger') + '">' + jenisKelamin + '</span></td>' +
+      '<td><span class="badge bg-info text-dark">' + (s.Kelas || '-') + '</span></td>' +
+      '<td><small>' + waliKelas + '</small></td>' +
+      '<td>' + (s.Lokasi_Kelas || '-') + '</td>' +
+      '<td>' + (s.No_WA_Ayah || s['No WA Ayah'] ? '<a href="https://wa.me/' + (s.No_WA_Ayah || s['No WA Ayah']) + '" target="_blank"><i class="fab fa-whatsapp text-success"></i> ' + (s.No_WA_Ayah || s['No WA Ayah']) + '</a>' : '-') + '</td>' +
+      '<td>' + (s.No_WA_Ibu || s['No WA Ibu'] ? '<a href="https://wa.me/' + (s.No_WA_Ibu || s['No WA Ibu']) + '" target="_blank"><i class="fab fa-whatsapp text-success"></i> ' + (s.No_WA_Ibu || s['No WA Ibu']) + '</a>' : '-') + '</td>' +
+      '<td><small>' + (s.Alamat_Lengkap || s['Alamat'] || s['Alamat Lengkap'] || '-') + '</small></td>' +
+      '<td><span class="badge bg-' + ((s.Status || 'aktif').toLowerCase() === 'aktif' ? 'success' : 'secondary') + '">' + (s.Status || 'aktif') + '</span></td>' +
+      '<td>' + btnHtml + '</td>' +
+    '</tr>';
+  });
+  
+  tbody.innerHTML = html;
+  updateSantriStats(data.length, totalL, totalP);
+}
+
+function updateSantriStats(total, l, p) {
+  const elTotal = document.getElementById('totalSantriBadge');
+  const elL = document.getElementById('totalLBadge');
+  const elP = document.getElementById('totalPBadge');
+  if(elTotal) elTotal.textContent = 'Total: ' + total + ' Santri';
+  if(elL) elL.textContent = 'L: ' + l;
+  if(elP) elP.textContent = 'P: ' + p;
+}
+
+function showSantriForm() {
+  document.getElementById('santriForm').style.display = 'block';
+  document.getElementById('formSantriTitle').textContent = 'Tambah Santri Baru';
+  document.getElementById('formSantri').reset();
+  document.getElementById('s_nis').value = '';
+}
+
+function hideSantriForm() {
+  document.getElementById('santriForm').style.display = 'none';
+}
+
+function saveSantriData() {
+  const data = {
+    NIS: document.getElementById('s_nis').value,
+    Nama_Santri: document.getElementById('s_nama').value,
+    Jenis_Kelamin: document.getElementById('s_jk').value,
+    Kelas: document.getElementById('s_kelas').value,
+    Status: document.getElementById('s_status').value,
+    No_WA_Ayah: document.getElementById('s_wa_ayah').value,
+    No_WA_Ibu: document.getElementById('s_wa_ibu').value,
+    Tempat_Lahir: document.getElementById('s_tempat_lahir').value,
+    Tanggal_Lahir: document.getElementById('s_tgl_lahir').value,
+    Alamat_Lengkap: document.getElementById('s_alamat').value,
+  };
+  
+  showLoading('Menyimpan data santri...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      if (result && result.success) {
+        showToast(result.message, 'success');
+        hideSantriForm();
+        fetchSantriList();
+      } else {
+        showToast(result ? result.message : 'Terjadi kesalahan', 'error');
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .saveSantri(data);
+}
+
+function editSantri(id) {
+  const santri = _santriCache.find(s => String(s.NIS) === String(id));
+  if (santri) {
+    showSantriForm();
+    document.getElementById('formSantriTitle').textContent = 'Edit Santri';
+    document.getElementById('s_nis').value = santri.NIS;
+    document.getElementById('s_nama').value = santri.Nama_Santri || '';
+    document.getElementById('s_jk').value = santri.Jenis_Kelamin || '';
+    document.getElementById('s_kelas').value = santri.Kelas || '';
+    document.getElementById('s_status').value = santri.Status || 'aktif';
+    document.getElementById('s_wa_ayah').value = santri.No_WA_Ayah || '';
+    document.getElementById('s_wa_ibu').value = santri.No_WA_Ibu || '';
+    document.getElementById('s_tempat_lahir').value = santri.Tempat_Lahir || '';
+    
+    let tgl = '';
+    if (santri.Tanggal_Lahir) {
+      try {
+        tgl = new Date(santri.Tanggal_Lahir).toISOString().split('T')[0];
+      } catch(e) {}
+    }
+    document.getElementById('s_tgl_lahir').value = tgl;
+    document.getElementById('s_alamat').value = santri.Alamat_Lengkap || '';
+  }
+}
+
+function deleteSantri(id) {
+  if (confirm('Yakin ingin menghapus data santri ini? Tindakan ini tidak dapat dibatalkan.')) {
+    showLoading('Menghapus data santri...');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        showToast(result && result.message ? result.message : 'Data santri berhasil dihapus', 'success');
+        fetchSantriList();
+      })
+      .withFailureHandler(function(e) {
+        hideLoading();
+        showToast('Error: ' + e.message, 'error');
+      })
+      .deleteSantri(id);
+  }
+}
+
+function exportSantriExcel() {
+  showLoading('Menyiapkan file Excel...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      if (result && result.success) {
+        window.open(result.downloadUrl, '_blank');
+        showToast('File Excel berhasil dibuat', 'success');
+      } else {
+        showToast('Gagal export: ' + (result ? result.message : 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .exportToExcel('Data_Santri_TPQ_Al_Mabrur', _santriCache);
+}
+</script>
+  <script>
+function loadGuruPage() {
+  const contentArea = document.getElementById('contentArea');
+  const isReadonly = currentUser.role === 'ustadz';
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Data Induk Guru</h5>
+        <div>
+          <button class="btn btn-success btn-sm" onclick="exportGuruExcel()">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+          ${!isReadonly ? `
+          <button class="btn btn-primary btn-sm" onclick="showGuruForm()">
+            <i class="fas fa-plus"></i> Tambah Guru
+          </button>
+          ` : ''}
+        </div>
+      </div>
+      
+      <div id="guruForm" style="display:none;" class="mb-4">
+        <div class="card">
+          <div class="card-body">
+            <h6 id="formGuruTitle">Tambah Guru Baru</h6>
+            <form id="formGuru">
+              <input type="hidden" id="id_guru">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama *</label>
+                  <input type="text" class="form-control" id="g_nama" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Jenis Kelamin *</label>
+                  <select class="form-select" id="g_jk" required>
+                    <option value="">Pilih</option>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tempat Lahir</label>
+                  <input type="text" class="form-control" id="g_tempat_lahir">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tanggal Lahir</label>
+                  <input type="date" class="form-control" id="g_tgl_lahir">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Pendidikan Terakhir</label>
+                  <input type="text" class="form-control" id="g_pendidikan">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Sekolah/Universitas</label>
+                  <input type="text" class="form-control" id="g_sekolah">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Jurusan</label>
+                  <input type="text" class="form-control" id="g_jurusan">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Lulus Tahun</label>
+                  <input type="number" class="form-control" id="g_lulus">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tahun Mulai Mengajar</label>
+                  <input type="number" class="form-control" id="g_mulai">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">No WA</label>
+                  <input type="text" class="form-control" id="g_wa">
+                </div>
+                <div class="col-12 mb-3">
+                  <label class="form-label">Alamat Lengkap</label>
+                  <textarea class="form-control" id="g_alamat" rows="2"></textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
+              <button type="button" class="btn btn-secondary" onclick="hideGuruForm()">Batal</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nama</th>
+              <th>L/P</th>
+              <th>Pendidikan</th>
+              <th>Sekolah/Universitas</th>
+              <th>Kelas Diampu</th>
+              <th>Status</th>
+              <th>Alamat</th>
+              <th>No WA</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="guruTableBody">
+            <tr><td colspan="7" class="text-center">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  loadGuruData();
+  
+  document.getElementById('formGuru').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveGuruData();
+  });
+}
+
+let _guruCache = [];
+
+function loadGuruData() {
+  google.script.run
+    .withSuccessHandler(function(guruList) {
+      google.script.run
+        .withSuccessHandler(function(kelasList) {
+          _guruCache = guruList;
+          const tbody = document.getElementById('guruTableBody');
+          const isReadonly = currentUser.role === 'ustadz';
+          
+          if (guruList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3">Belum ada data guru</td></tr>';
+            return;
+          }
+          
+          tbody.innerHTML = guruList.map(g => {
+            // Cari kelas apa saja yang diajar oleh guru ini
+            const kelasAjar = (kelasList || []).filter(k => 
+              String(k.Ustadz_Wali).trim().toLowerCase() === String(g.Nama).trim().toLowerCase() ||
+              String(k.Ustadz_Wali).trim() === String(g.ID_Guru).trim()
+            ).map(k => k.Nama_Kelas).join(', ');
+            
+            const kelasDisplay = kelasAjar || g.Kelas_Diampu || '-';
+            
+            return `
+            <tr>
+              <td><small>${g.ID_Guru}</small></td>
+              <td><strong>${g.Nama}</strong></td>
+              <td><span class="badge bg-${g.Jenis_Kelamin === 'L' ? 'primary' : 'danger'}">${g.Jenis_Kelamin}</span></td>
+              <td>${g.Pendidikan_Terakhir || '-'}</td>
+              <td><small>${g.Sekolah_Universitas || '-'}</small></td>
+              <td><span class="badge bg-info text-dark">${kelasDisplay}</span></td>
+              <td><span class="badge bg-${(g.Status || 'aktif').toLowerCase() === 'aktif' ? 'success' : 'secondary'}">${g.Status || 'aktif'}</span></td>
+              <td><small>${g.Alamat_Lengkap || '-'}</small></td>
+              <td>${g.No_WA ? `<a href="https://wa.me/${g.No_WA}" target="_blank" class="text-success"><i class="fab fa-whatsapp"></i> ${g.No_WA}</a>` : '-'}</td>
+              <td>
+                ${!isReadonly ? `
+                <button class="btn btn-sm btn-warning me-1" onclick="editGuru('${g.ID_Guru}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteGuru('${g.ID_Guru}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                ` : '<span class="badge bg-secondary">Readonly</span>'}
+              </td>
+            </tr>
+            `;
+          }).join('');
+        })
+        .withFailureHandler(function(e) {
+          showToast('Gagal memuat relasi kelas: ' + e.message, 'error');
+        })
+        .getKelasList();
+    })
+    .withFailureHandler(function(e) {
+      showToast('Gagal memuat data guru: ' + e.message, 'error');
+    })
+    .getGuruList();
+}
+
+function showGuruForm() {
+  document.getElementById('guruForm').style.display = 'block';
+  document.getElementById('formGuruTitle').textContent = 'Tambah Guru Baru';
+  document.getElementById('formGuru').reset();
+  document.getElementById('id_guru').value = '';
+}
+
+function hideGuruForm() {
+  document.getElementById('guruForm').style.display = 'none';
+}
+
+function saveGuruData() {
+  const data = {
+    ID_Guru: document.getElementById('id_guru').value,
+    nama: document.getElementById('g_nama').value,
+    jenis_kelamin: document.getElementById('g_jk').value,
+    tempat_lahir: document.getElementById('g_tempat_lahir').value,
+    tanggal_lahir: document.getElementById('g_tgl_lahir').value,
+    pendidikan_terakhir: document.getElementById('g_pendidikan').value,
+    sekolah_universitas: document.getElementById('g_sekolah').value,
+    jurusan: document.getElementById('g_jurusan').value,
+    lulus_tahun: document.getElementById('g_lulus').value,
+    tahun_mulai_mengajar: document.getElementById('g_mulai').value,
+    alamat_lengkap: document.getElementById('g_alamat').value,
+    no_wa: document.getElementById('g_wa').value,
+  };
+  
+  showLoading('Menyimpan data guru...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      if (result.success) {
+        showToast(result.message, 'success');
+        hideGuruForm();
+        loadGuruData();
+      } else {
+        showToast(result.message, 'error');
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .saveGuru(data);
+}
+
+function editGuru(id) {
+  // Use cached data
+  const guru = _guruCache.find(g => g.ID_Guru === id);
+  if (guru) {
+    showGuruForm();
+    document.getElementById('formGuruTitle').textContent = 'Edit Guru';
+    document.getElementById('id_guru').value = guru.ID_Guru;
+    document.getElementById('g_nama').value = guru.Nama || '';
+    document.getElementById('g_jk').value = guru.Jenis_Kelamin || '';
+    document.getElementById('g_tempat_lahir').value = guru.Tempat_Lahir || '';
+    document.getElementById('g_tgl_lahir').value = guru.Tanggal_Lahir ? new Date(guru.Tanggal_Lahir).toISOString().split('T')[0] : '';
+    document.getElementById('g_pendidikan').value = guru.Pendidikan_Terakhir || '';
+    document.getElementById('g_sekolah').value = guru.Sekolah_Universitas || '';
+    document.getElementById('g_jurusan').value = guru.Jurusan || '';
+    document.getElementById('g_lulus').value = guru.Lulus_Tahun || '';
+    document.getElementById('g_mulai').value = guru.Tahun_Mulai_Mengajar || '';
+    document.getElementById('g_alamat').value = guru.Alamat_Lengkap || '';
+    document.getElementById('g_wa').value = guru.No_WA || '';
+  }
+}
+
+function deleteGuru(id) {
+  if (confirm('Yakin ingin menghapus data guru ini? Tindakan ini tidak dapat dibatalkan.')) {
+    showLoading('Menghapus data guru...');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        showToast(result ? result.message : 'Data guru berhasil dihapus', 'success');
+        loadGuruData();
+      })
+      .withFailureHandler(function(e) {
+        hideLoading();
+        showToast('Error: ' + e.message, 'error');
+      })
+      .deleteGuru(id);
+  }
+}
+
+function exportGuruExcel() {
+  google.script.run
+    .withSuccessHandler(function(guruList) {
+      const exportData = guruList.map(g => ({
+        'ID Guru': g.ID_Guru,
+        'Nama': g.Nama,
+        'L/P': g.Jenis_Kelamin,
+        'Tempat Lahir': g.Tempat_Lahir,
+        'Tanggal Lahir': g.Tanggal_Lahir,
+        'Pendidikan Terakhir': g.Pendidikan_Terakhir,
+        'Sekolah/Universitas': g.Sekolah_Universitas,
+        'Jurusan': g.Jurusan,
+        'Lulus Tahun': g.Lulus_Tahun,
+        'Tahun Mulai Mengajar': g.Tahun_Mulai_Mengajar,
+        'Alamat': g.Alamat_Lengkap,
+        'No WA': g.No_WA,
+      }));
+      exportToExcel(exportData, 'Data_Guru_TPQ_Al_Mabrur');
+    })
+    .getGuruList();
+}
+</script>
+  <script>
+function loadPresensiPage() {
+  const contentArea = document.getElementById('contentArea');
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabSantri">Presensi Santri</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRekapSantri">Rekap Santri</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRekapGuru">Rekap Guru</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabJurnalKelas" onclick="loadJurnalKelas()">Jurnal Kelas</a></li>
+      </ul>
+      
+      <div class="tab-content mt-3">
+        <!-- Tab Presensi Santri -->
+        <div class="tab-pane fade show active" id="tabSantri">
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <label>Pilih Kelas</label>
+              <select class="form-select" id="ps_kelas" onchange="loadSantriForPresensi()">
+                <option value="">-- Pilih Kelas --</option>
+              </select>
+            </div>
+              <div class="col-md-3">
+                <label>Tahun Ajaran</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="ps_tahun_ajaran" value="">
+                  <button class="btn btn-outline-secondary" type="button" id="btn_save_ta" onclick="simpanTA()" style="display:none;" title="Simpan sebagai default">
+                    <i class="fas fa-save"></i>
+                  </button>
+                </div>
+              </div>
+            <div class="col-md-4">
+              <label>Tanggal</label>
+              <input type="date" class="form-control" id="ps_tanggal" value="${new Date().toISOString().split('T')[0]}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button class="btn btn-primary" onclick="simpanPresensiSantri()">
+                <i class="fas fa-save"></i> Simpan
+              </button>
+            </div>
+          </div>
+          <div id="ps_santriList"></div>
+        </div>
+        
+        <!-- Tab Rekap Santri -->
+        <div class="tab-pane fade" id="tabRekapSantri">
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <label>Kelas</label>
+              <select class="form-select" id="rs_kelas"></select>
+            </div>
+            <div class="col-md-3">
+              <label>Tahun Ajaran</label>
+              <input type="text" class="form-control" id="rs_tahun_ajaran" value="20261">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button class="btn btn-primary me-2" onclick="loadRekapSantri()">Tampilkan</button>
+              <button class="btn btn-success" onclick="exportRekapSantri()"><i class="fas fa-file-excel"></i></button>
+            </div>
+          </div>
+          <div id="rs_result"></div>
+        </div>
+        
+        <!-- Tab Rekap Guru -->
+        <div class="tab-pane fade" id="tabRekapGuru">
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <label>Nama Guru</label>
+              <select class="form-select" id="rg_guru">
+                <option value="">Semua Guru</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label>Bulan</label>
+              <select class="form-select" id="rg_bulan">
+                <option value="">Semua Bulan</option>
+                <option value="1">Januari</option><option value="2">Februari</option>
+                <option value="3">Maret</option><option value="4">April</option>
+                <option value="5">Mei</option><option value="6">Juni</option>
+                <option value="7">Juli</option><option value="8">Agustus</option>
+                <option value="9">September</option><option value="10">Oktober</option>
+                <option value="11">November</option><option value="12">Desember</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label>Tahun</label>
+              <input type="number" class="form-control" id="rg_tahun" value="${new Date().getFullYear()}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <button class="btn btn-primary me-2" onclick="loadRekapGuru()">Tampilkan</button>
+              <button class="btn btn-success" onclick="exportRekapGuru()"><i class="fas fa-file-excel"></i></button>
+            </div>
+          </div>
+          <div id="rg_result"></div>
+        </div>
+        <!-- Tab Jurnal Kelas -->
+        <div class="tab-pane fade" id="tabJurnalKelas">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Jurnal Mengajar Terbaru (Per Kelas)</h5>
+            <button class="btn btn-primary btn-sm" onclick="loadJurnalKelas()"><i class="fas fa-sync"></i> Refresh</button>
+          </div>
+          <div id="jk_result"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Declare cache
+  let _presensiSantriCache = [];
+  window._presensiSantriCache = _presensiSantriCache;
+  
+  if (typeof currentUser !== 'undefined' && currentUser && currentUser.role !== 'super_admin') {
+    setTimeout(() => { document.getElementById('ps_tahun_ajaran').disabled = true; }, 500);
+  }
+  
+  if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin')) {
+    setTimeout(() => { 
+      const btn = document.getElementById('btn_save_ta');
+      if (btn) btn.style.display = 'block'; 
+    }, 500);
+  }
+  
+  google.script.run.withSuccessHandler(function(config) {
+    if (config && config.TAHUN_AJARAN) {
+      const psTa = document.getElementById('ps_tahun_ajaran');
+      const rsTa = document.getElementById('rs_tahun_ajaran');
+      if (psTa) psTa.value = config.TAHUN_AJARAN;
+      if (rsTa) rsTa.value = config.TAHUN_AJARAN;
+    }
+  }).getConfig();
+    // Load Jenis Kegiatan Guru
+    let _kegiatanArray = [];
+    let _kelasArray = [];
+    
+    function renderPsKelas() {
+      const psKelas = document.getElementById('ps_kelas');
+      if (psKelas) {
+        const combined = [..._kegiatanArray, ..._kelasArray];
+        const uniqueCombined = Array.from(new Set(combined)).sort((a, b) => a.localeCompare(b));
+        psKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' + 
+          uniqueCombined.map(k => `<option value="${k}">${k}</option>`).join('');
+      }
+    }
+
+    google.script.run.withSuccessHandler(function(kegiatanList) {
+      window._kegiatanGuruList = kegiatanList;
+      _kegiatanArray = kegiatanList;
+      renderPsKelas();
+      refreshPgKelasDropdown();
+    }).getJenisKegiatanGuru();
+
+  google.script.run.withSuccessHandler(function(kelasList) {
+    _kelasArray = kelasList.map(k => k.Nama_Kelas);
+    renderPsKelas();
+    
+    const rsKelas = document.getElementById('rs_kelas');
+    if (rsKelas) {
+      const uniqueKelas = Array.from(new Set(_kelasArray)).sort((a,b) => a.localeCompare(b));
+      rsKelas.innerHTML = '<option value="">-- Semua Kelas --</option>' + 
+        uniqueKelas.map(k => `<option value="${k}">${k}</option>`).join('');
+    }
+  }).withFailureHandler(function(e) {
+    showToast('Gagal memuat daftar kelas: ' + e.message, 'error');
+  }).getKelasList();
+  
+  // Pre-load semua santri sekali saja ke cache
+  showLoading('Memuat data santri...');
+  google.script.run.withSuccessHandler(function(list) {
+    _presensiSantriCache = list;
+    hideLoading();
+  }).withFailureHandler(function(e) {
+    hideLoading();
+    showToast('Gagal memuat data santri: ' + e.message, 'error');
+  }).getSantriList();
+
+  google.script.run.withSuccessHandler(function(guruList) {
+    window._guruListCache = guruList;
+    const pgGuru = document.getElementById('pg_guru');
+    const rgGuru = document.getElementById('rg_guru');
+    if (pgGuru) pgGuru.innerHTML = '<option value="">-- Pilih Guru --</option>' + 
+      guruList.map(g => `<option value="${g.ID_Guru}|${g.Nama}">${g.Nama}</option>`).join('');
+    if (rgGuru) rgGuru.innerHTML = '<option value="">Semua Guru</option>' + 
+      guruList.map(g => `<option value="${g.Nama}">${g.Nama}</option>`).join('');
+  }).withFailureHandler(function(e) {
+    showToast('Gagal memuat data guru: ' + e.message, 'error');
+  }).getGuruList();
+  
+  document.getElementById('formPresensiGuru').addEventListener('submit', function(e) {
+    e.preventDefault();
+    simpanPresensiGuru();
+  });
+  
+  // Expose cache to inner function
+  window._presensiSantriCache = _presensiSantriCache;
+  
+  if (typeof currentUser !== 'undefined' && currentUser && currentUser.role !== 'super_admin') {
+    setTimeout(() => { document.getElementById('ps_tahun_ajaran').disabled = true; }, 500);
+  }
+}
+
+function loadSantriForPresensi() {
+  const kelas = document.getElementById('ps_kelas').value;
+  const container = document.getElementById('ps_santriList');
+  
+  if (!kelas) {
+    container.innerHTML = '';
+    return;
+  }
+
+  // Gunakan cache yang sudah di-load, tidak perlu API call lagi
+  const cache = window._presensiSantriCache || [];
+  
+  if (cache.length === 0) {
+    // Jika cache belum siap, load dulu
+    container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-success"></div> Memuat santri...</div>';
+    showLoading('Memuat data santri...');
+    google.script.run.withSuccessHandler(function(santriList) {
+      hideLoading();
+      window._presensiSantriCache = santriList;
+      renderPresensiTable(kelas, santriList, container);
+    }).withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Gagal memuat santri: ' + e.message, 'error');
+    }).getSantriList();
+    return;
+  }
+  
+  renderPresensiTable(kelas, cache, container);
+}
+
+function renderPresensiTable(kelas, santriList, container) {
+  const targetKelas = (kelas || '').trim().toLowerCase();
+  const filtered = santriList.filter(s => 
+    (s.Kelas || '').trim().toLowerCase() === targetKelas && 
+    ((s.Status || '').trim().toLowerCase() === 'aktif' || (s.Status || '').trim() === '')
+  );
+  
+  let html = '';
+  
+  if (filtered.length > 0) {
+    html += `
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th>No</th>
+              <th>NIS</th>
+              <th>Nama Santri</th>
+              <th width="200">Status Kehadiran</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map((s, i) => `
+              <tr>
+                <td>${i+1}</td>
+                <td>${s.NIS || '-'}</td>
+                <td>${s.Nama_Santri}</td>
+                <td>
+                  <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="status_${s.NIS}" id="h_${s.NIS}" value="H" checked>
+                    <label class="btn btn-outline-success btn-sm" for="h_${s.NIS}">H</label>
+                    <input type="radio" class="btn-check" name="status_${s.NIS}" id="s_${s.NIS}" value="S">
+                    <label class="btn btn-outline-warning btn-sm" for="s_${s.NIS}">S</label>
+                    <input type="radio" class="btn-check" name="status_${s.NIS}" id="i_${s.NIS}" value="I">
+                    <label class="btn btn-outline-info btn-sm" for="i_${s.NIS}">I</label>
+                    <input type="radio" class="btn-check" name="status_${s.NIS}" id="a_${s.NIS}" value="A">
+                    <label class="btn btn-outline-danger btn-sm" for="a_${s.NIS}">A</label>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+  
+  // Add Jurnal Mengajar at the bottom
+  html += `
+    <div class="mt-4 mb-3 p-3 border rounded bg-light">
+      <h6 class="mb-2"><i class="fas fa-book-open text-primary"></i> Jurnal / Catatan Kegiatan <span class="text-danger">*</span></h6>
+      <p class="text-muted small mb-2">Wajib diisi sebagai laporan presensi guru.</p>
+      <textarea class="form-control" id="ps_jurnal" rows="3" placeholder="Tuliskan materi yang diajarkan, catatan rapat, atau kegiatan hari ini..." required></textarea>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+
+function simpanTA() {
+    const ta = document.getElementById('ps_tahun_ajaran').value;
+    if(!ta) { showToast('Tahun Ajaran tidak boleh kosong', 'warning'); return; }
+    showLoading('Menyimpan Tahun Ajaran default...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        hideLoading();
+        if(res.success) {
+          showToast(res.message, 'success');
+        } else {
+          showToast(res.message, 'error');
+        }
+      })
+      .withFailureHandler(function(e) {
+        hideLoading();
+        showToast(e.message, 'error');
+      })
+      .saveConfig('TAHUN_AJARAN', ta);
+  }
+
+function simpanPresensiSantri() {
+    const kelas = document.getElementById('ps_kelas').value;
+    const tanggal = document.getElementById('ps_tanggal').value;
+    const ta = document.getElementById('ps_tahun_ajaran').value;
+    
+    if (!kelas || !tanggal) {
+      showToast('Pilih kelas dan tanggal terlebih dahulu', 'warning');
+      return;
+    }
+    
+    const jurnalInput = document.getElementById('ps_jurnal');
+    const jurnalText = jurnalInput ? jurnalInput.value.trim() : '';
+
+    if (!jurnalText) {
+      showToast('Jurnal / Catatan Kegiatan wajib diisi!', 'warning');
+      return;
+    }
+    
+    const rows = document.querySelectorAll('#ps_santriList tbody tr');
+    
+    // Kumpulkan semua data presensi santri (jika ada)
+    const presensiData = [];
+    if (rows.length > 0) {
+      rows.forEach(row => {
+        const nis = row.cells[1].textContent;
+        const nama = row.cells[2].textContent;
+        const checked = row.querySelector('input[type="radio"]:checked');
+        const status = checked ? checked.value : 'H';
+        presensiData.push({ 
+          tanggal, 
+          nis, 
+          nama_santri: nama, 
+          kelas, 
+          status, 
+          tahun_ajaran: ta, 
+          keterangan: jurnalText, 
+          input_oleh: currentUser.nama || currentUser.username 
+        });
+      });
+    } else {
+      // Jika tidak ada santri (contoh: Rapat), buat dummy row untuk mencatat kegiatan guru
+      presensiData.push({
+        tanggal,
+        nis: '',
+        nama_santri: '',
+        kelas,
+        status: 'H',
+        tahun_ajaran: ta,
+        keterangan: jurnalText,
+        input_oleh: currentUser.nama || currentUser.username
+      });
+    }
+  
+    showLoading('Menyimpan Jurnal dan Presensi...');
+    
+    google.script.run
+      .withSuccessHandler(function() {
+        hideLoading();
+        showToast('Jurnal dan Presensi berhasil disimpan!', 'success');
+        if (jurnalInput) jurnalInput.value = '';
+      })
+      .withFailureHandler(function(e) {
+        hideLoading();
+        showToast('Error simpan presensi: ' + e.message, 'error');
+      })
+      .savePresensiSantriBatch(presensiData);
+  }
+
+
+
+function loadRekapSantri() {
+  const kelas = document.getElementById('rs_kelas').value;
+  const tahunAjaran = document.getElementById('rs_tahun_ajaran').value;
+  
+  showLoading();
+  google.script.run
+    .withSuccessHandler(function(data) {
+      hideLoading();
+      const container = document.getElementById('rs_result');
+      
+      if (!data || data.length === 0) {
+          container.innerHTML = '<div class="alert alert-info">Tidak ada data presensi.</div>';
+          return;
+        }
+      
+      // Group by NIS
+      const grouped = {};
+      data.forEach(d => {
+        let key = (d.nis && d.nis !== '-') ? d.nis : (d.nama_santri + '_' + d.kelas);
+        if (!grouped[key]) {
+          grouped[key] = { nis: d.nis || '-', nama: d.nama_santri, kelas: d.kelas, H: 0, S: 0, I: 0, A: 0 };
+        }
+        let stat = d.status ? d.status.toString().toUpperCase().trim() : 'H';
+        if (stat.includes('HADIR')) stat = 'H';
+        if (stat.includes('SAKIT')) stat = 'S';
+        if (stat.includes('IZIN')) stat = 'I';
+        if (stat.includes('ALPHA') || stat.includes('ALFA')) stat = 'A';
+        if (!['H', 'S', 'I', 'A'].includes(stat)) stat = 'H';
+        grouped[key][stat]++;
+      });
+      
+      container.innerHTML = `
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>NIS</th>
+                <th>Nama</th>
+                <th>Kelas</th>
+                <th class="text-center bg-success text-white">Hadir</th>
+                <th class="text-center bg-warning text-white">Sakit</th>
+                <th class="text-center bg-info text-white">Izin</th>
+                <th class="text-center bg-danger text-white">Alpha</th>
+                <th class="text-center">% Kehadiran</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.values(grouped).map(g => {
+                const total = g.H + g.S + g.I + g.A;
+                const persen = total > 0 ? Math.round((g.H / total) * 100) : 0;
+                return `
+                  <tr>
+                    <td>${g.nis}</td>
+                    <td>${g.nama}</td>
+                    <td>${g.kelas}</td>
+                    <td class="text-center">${g.H}</td>
+                    <td class="text-center">${g.S}</td>
+                    <td class="text-center">${g.I}</td>
+                    <td class="text-center">${g.A}</td>
+                    <td class="text-center"><strong>${persen}%</strong></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      alert('Error: ' + e.message);
+    })
+    .getPresensiSantriByTA(kelas, tahunAjaran);
+}
+
+function loadRekapGuru() {
+  const guruVal = document.getElementById('rg_guru').value;
+  const namaGuru = guruVal.includes('|') ? guruVal.split('|')[1] : guruVal;
+  const bulan = document.getElementById('rg_bulan').value;
+  const tahun = document.getElementById('rg_tahun').value;
+  
+  showLoading();
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      const container = document.getElementById('rg_result');
+      
+      const { total, data } = result;
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Tidak ada data presensi ditemukan</div>';
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="alert alert-primary">
+          <strong>Total Pertemuan: ${total}</strong> ${namaGuru ? '— ' + namaGuru : ''}
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th>No</th>
+                <th>Tanggal</th>
+                <th>Guru</th>
+                <th>Kelas/Kegiatan</th>
+                <th>Jurnal Mengajar</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map((d, i) => `
+                <tr>
+                  <td>${i+1}</td>
+                  <td>${formatDate(d.tanggal)}</td>
+                  <td>${d.nama_guru}</td>
+                  <td>${d.kelas_kegiatan}</td>
+                  <td>${d.jurnal_mengajar}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .getPresensiGuruByGuru(namaGuru, bulan, tahun);
+}
+
+function refreshPgKelasDropdown() {
+  const list = window._kegiatanGuruList || [];
+  const pgKelas = document.getElementById('pg_kelas');
+  if (pgKelas) {
+    pgKelas.innerHTML = '<option value="">-- Pilih Kegiatan --</option>' +
+      list.map(k => `<option value="${k}">${k}</option>`).join('');
+  }
+}
+
+function showTambahKegiatanGuru() {
+  document.getElementById('formKegiatanBaru').style.display = 'block';
+  document.getElementById('input_kegiatan_baru').value = '';
+}
+
+function simpanKegiatanBaru() {
+  const jenis = document.getElementById('input_kegiatan_baru').value.trim();
+  if (!jenis) { showToast('Masukkan nama kegiatan', 'warning'); return; }
+  
+  google.script.run
+    .withSuccessHandler(function(r) {
+      if (r.success) {
+        window._kegiatanGuruList = r.list;
+        refreshPgKelasDropdown();
+        const pgKelas = document.getElementById('pg_kelas');
+        if (pgKelas) pgKelas.value = jenis;
+        document.getElementById('formKegiatanBaru').style.display = 'none';
+        showToast(`Kegiatan "${jenis}" berhasil ditambahkan!`, 'success');
+      } else {
+        showToast('Gagal: ' + r.message, 'error');
+      }
+    })
+    .saveJenisKegiatanGuru(jenis);
+}
+
+function exportRekapSantri() {
+  const data = document.querySelectorAll('#rs_result table tbody tr');
+  const exportData = [];
+  data.forEach(row => {
+    exportData.push({
+      'NIS': row.cells[0].textContent,
+      'Nama': row.cells[1].textContent,
+      'Kelas': row.cells[2].textContent,
+      'Hadir': row.cells[3].textContent,
+      'Sakit': row.cells[4].textContent,
+      'Izin': row.cells[5].textContent,
+      'Alpha': row.cells[6].textContent,
+      '% Kehadiran': row.cells[7].textContent,
+    });
+  });
+  if (exportData.length > 0) exportToExcel(exportData, 'Rekap_Presensi_Santri');
+}
+
+function exportRekapGuru() {
+  const data = document.querySelectorAll('#rg_result table tbody tr');
+  const exportData = [];
+  data.forEach(row => {
+    exportData.push({
+      'Tanggal': row.cells[1].textContent,
+      'Guru': row.cells[2].textContent,
+      'Kelas/Kegiatan': row.cells[3].textContent,
+      'Jurnal': row.cells[4].textContent,
+    });
+  });
+  if (exportData.length > 0) exportToExcel(exportData, 'Rekap_Presensi_Guru');
+}
+function loadJurnalKelas() {
+  const container = document.getElementById('jk_result');
+  container.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div><p>Memuat jurnal kelas...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(data) {
+      try {
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div class="alert alert-info">Belum ada data jurnal mengajar.</div>';
+          return;
+        }
+        
+        container.innerHTML = `
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th width="5%">No</th>
+                  <th width="15%">Tanggal</th>
+                  <th width="20%">Nama Kelas</th>
+                  <th width="35%">Materi Diajarkan</th>
+                  <th width="25%">Nama Pengajar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ` + data.map((d, i) => `
+                  <tr>
+                    <td class="text-center">` + (i+1) + `</td>
+                    <td>` + formatDate(d.tanggal) + `</td>
+                    <td><strong>` + d.kelas + `</strong></td>
+                    <td>` + d.materi + `</td>
+                    <td>` + d.pengajar + `</td>
+                  </tr>
+                `).join('') + `
+              </tbody>
+            </table>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = '<div class="alert alert-danger">Frontend Error: ' + err.message + '</div>';
+        alert("Frontend Error: " + err.message);
+      }
+    })
+    .withFailureHandler(function(e) {
+      container.innerHTML = '<div class="alert alert-danger">Error: ' + e.message + '</div>';
+      alert("Error Jurnal Kelas: " + e.message);
+    })
+    .getJurnalKelas();
+}
+
+</script>
+
+  <script>
+function loadBendaharaPage() {
+  const contentArea = document.getElementById('contentArea');
+  
+  contentArea.innerHTML = `
+    <style>
+        .pembayaran-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+        }
+        .pembayaran-card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: none;
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            background: white;
+        }
+        .pembayaran-card-header {
+            background-color: white;
+            border-bottom: 1px solid #f1f1f1;
+            font-weight: bold;
+            border-radius: 12px 12px 0 0;
+            padding: 1rem;
+        }
+        .status-lunas {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 2px;
+        }
+        .status-belum {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 2px;
+        }
+        .bulan-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.6rem;
+            margin-bottom: 0.5rem;
+            height: 100%;
+        }
+        .bulan-lunas { border-left: 5px solid #28a745; background-color: #fcfdfc; }
+        .bulan-belum { border-left: 5px solid #dc3545; background-color: #fffdfd; }
+        
+        .preview-card {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 450px;
+            margin: 0 auto;
+            background: white;
+        }
+        .preview-header {
+            text-align: center;
+            border-bottom: 2px dashed #eee;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .status-table {
+            width: 100%;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+        .status-table th, .status-table td { border: 1px solid #eee; padding: 8px; }
+    </style>
+
+    <div class="pembayaran-header text-center">
+        <h2>Sistem Pembayaran TPQ Al Mabrur</h2>
+        <p class="lead mb-0">Manajemen Keuangan Santri Generasi Qur'ani</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="pembayaran-card">
+                <div class="pembayaran-card-header">Cari Siswa</div>
+                <div class="card-body p-3">
+                    <div class="mb-3">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Ketik nama santri...">
+                    </div>
+                    <div class="mb-3">
+                        <select id="kelasFilter" class="form-select">
+                            <option value="">Semua Kelas</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-100" onclick="cariSiswa()">Cari Data</button>
+                </div>
+            </div>
+
+            <div class="pembayaran-card">
+                <div class="pembayaran-card-header">Statistik Pembayaran</div>
+                <div class="card-body p-3" id="statistikContent">
+                    <p class="text-center text-muted">Memuat data...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="pembayaran-card">
+                <div class="pembayaran-card-header d-flex justify-content-between align-items-center">
+                    <span>Daftar Siswa (Hanya menampilkan tagihan belum lunas)</span>
+                    <span id="totalSiswa" class="badge bg-primary">0 siswa</span>
+                </div>
+                <div class="card-body p-3">
+                    <div id="loading" class="text-center p-4">
+                        <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                        <span class="ms-2 text-muted small">Sinkronisasi Data...</span>
+                    </div>
+                    <div id="siswaList" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PEMBAYARAN -->
+    <div class="modal fade" id="paymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Form Pembayaran</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nama Santri</label>
+                        <input type="text" id="modalNama" class="form-control bg-light" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Jenis Tagihan</label>
+                        <select id="modalTipeTagihan" class="form-select" onchange="updateBulanOptions()">
+                            <option value="20262">Tagihan 20262</option>
+                            <option value="20261">Tagihan 20261</option>
+                            <option value="20252">Tagihan 20252</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Item Pembayaran (Pilih tagihan yang akan dibayar)</label>
+                        <div id="modalBulanContainer" class="border rounded p-2" style="max-height: 150px; overflow-y: auto; background-color: #f8f9fa;">
+                            <!-- Checkboxes diisi dinamis via JS -->
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tanggal Bayar</label>
+                        <input type="date" id="modalTanggal" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" onclick="simpanDataPembayaran()">Simpan Pembayaran</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL STRUK -->
+    <div class="modal fade" id="strukModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Preview Struk</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="strukPreview"></div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" onclick="cetakArea('strukPreview')">Cetak</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL STATUS -->
+    <div class="modal fade" id="statusModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Preview Status</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="statusPreview"></div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" onclick="cetakArea('statusPreview')">Cetak</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Attach event listeners after rendering HTML
+  setTimeout(() => {
+    document.getElementById('searchInput').addEventListener('input', cariSiswa);
+    document.getElementById('kelasFilter').addEventListener('change', cariSiswa);
+    
+    // Inisialisasi variabel global
+    window.semuaData = [];
+    window.dataAsli = [];
+    window.dynamicOpts20262 = [];
+    window.dynamicOpts20261 = [];
+    window.dynamicOpts20252 = [];
+    
+    // Panggil loadData
+    loadData();
+  }, 100);
+}
+
+// ----------------------------------------------------
+// FUNGSI JAVASCRIPT BAWAAN APLIKASI PEMBAYARAN PENGGUNA
+// ----------------------------------------------------
+
+function loadData() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('siswaList').style.display = 'none';
+    
+    google.script.run
+        .withSuccessHandler(res => {
+            if(res.error) {
+                Swal.fire({ icon: 'error', title: 'Error Sheet', text: res.error });
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            window.dynamicOpts20262 = res.headers20262 || [];
+            window.dynamicOpts20261 = res.headers20261 || [];
+            window.dynamicOpts20252 = res.headers20252 || [];
+            prosesData(res.students);
+        })
+        .withFailureHandler(err => {
+            Swal.fire({ icon: 'error', title: 'Error Server', text: err.toString() });
+            document.getElementById('loading').style.display = 'none';
+        })
+        .getPaymentStatus();
+}
+
+function prosesData(data) {
+    window.semuaData = data;
+    window.dataAsli = [...data];
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('siswaList').style.display = 'block';
+    isiFilterKelas();
+    tampilkanSiswa(data);
+    hitungStatistik(data);
+}
+
+function updateBulanOptions() {
+    const tipe = document.getElementById('modalTipeTagihan').value;
+    const container = document.getElementById('modalBulanContainer');
+    const namaSiswa = document.getElementById('modalNama').value;
+    
+    // Ambil data siswa
+    const siswa = window.dataAsli ? window.dataAsli.find(s => s.nama === namaSiswa) : null;
+    let tagihanSiswa = {};
+    if (siswa) {
+        if (tipe === '20262') tagihanSiswa = siswa.tagihan20262 || {};
+        else if (tipe === '20261') tagihanSiswa = siswa.tagihan20261 || {};
+        else if (tipe === '20252') tagihanSiswa = siswa.tagihan20252 || {};
+    }
+    
+    container.innerHTML = '';
+    const targetOpts = tipe === '20262' ? window.dynamicOpts20262 : (tipe === '20261' ? window.dynamicOpts20261 : window.dynamicOpts20252);
+    
+    let adaYangBelumLunas = false;
+    
+    targetOpts.forEach((opt, index) => {
+        // Jika statusnya LUNAS, jangan tampilkan di pilihan form pembayaran
+        const statusOpt = tagihanSiswa[opt] ? tagihanSiswa[opt].status : '';
+        if ((statusOpt || '').toString().trim().toUpperCase() === 'LUNAS') return;
+        
+        adaYangBelumLunas = true;
+        container.innerHTML += `
+        <div class="form-check">
+            <input class="form-check-input checkbox-bulan" type="checkbox" value="${opt}" id="checkBulan${index}">
+            <label class="form-check-label" for="checkBulan${index}">${opt}</label>
+        </div>`;
+    });
+    
+    if (!adaYangBelumLunas) {
+        container.innerHTML = '<div class="text-success p-2 small fw-bold"><i class="fas fa-check-circle"></i> Semua tagihan untuk tipe ini sudah lunas.</div>';
+    }
+}
+
+function bukaModal(button) {
+    document.getElementById('modalNama').value = decodeURIComponent(button.getAttribute('data-nama'));
+    document.getElementById('modalTanggal').value = new Date().toISOString().split('T')[0];
+    updateBulanOptions();
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+function simpanDataPembayaran() {
+    const nama = document.getElementById('modalNama').value;
+    const tipeTagihan = document.getElementById('modalTipeTagihan').value;
+    const tanggal = document.getElementById('modalTanggal').value;
+    
+    // Ambil array dari checkbox yang dicentang
+    const checkboxes = document.querySelectorAll('.checkbox-bulan:checked');
+    const bulanArray = Array.from(checkboxes).map(cb => cb.value);
+
+    if (!tanggal) {
+        Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih tanggal pembayaran!' });
+        return;
+    }
+    
+    if (bulanArray.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih minimal satu item tagihan!' });
+        return;
+    }
+
+    Swal.fire({
+        title: 'Menyimpan...',
+        text: `Mencatat pembayaran ${nama} untuk ${bulanArray.length} tagihan`,
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    google.script.run
+        .withSuccessHandler(res => {
+            if (res.success) {
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: res.message, timer: 1500, showConfirmButton: false });
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                loadData(); // refresh data
+            } else {
+                Swal.fire({ icon: 'error', title: 'Gagal', text: res.message });
+            }
+        })
+        .withFailureHandler(err => Swal.fire({ icon: 'error', title: 'Error', text: err.toString() }))
+        .updatePayment(nama, tipeTagihan, bulanArray, tanggal);
+}
+
+function isiFilterKelas() {
+    const kelasSet = new Set(window.dataAsli.map(s => s.kelas).filter(k => k));
+    const filter = document.getElementById('kelasFilter');
+    filter.innerHTML = '<option value="">Semua Kelas</option>';
+    Array.from(kelasSet).sort().forEach(k => filter.innerHTML += `<option value="${k}">${k}</option>`);
+}
+
+function tampilkanSiswa(data) {
+    const container = document.getElementById('siswaList');
+    let html = '';
+    data.forEach(siswa => {
+        const p20262 = Object.values(siswa.tagihan20262 || {});
+        const p20261 = Object.values(siswa.tagihan20261 || {});
+        const p20252 = Object.values(siswa.tagihan20252 || {});
+        const allP = [...p20262, ...p20261, ...p20252];
+        
+        const lunasCount = allP.filter(p => (p.status || '').toString().trim().toUpperCase() === 'LUNAS').length;
+        const totalBulan = allP.length;
+        const progress = totalBulan > 0 ? Math.round((lunasCount / totalBulan) * 100) : 0;
+        
+        let html20262 = Object.keys(siswa.tagihan20262 || {})
+          .filter(bulan => (siswa.tagihan20262[bulan].status || '').toString().trim().toUpperCase() !== 'LUNAS')
+          .map(bulan => {
+            const p = siswa.tagihan20262[bulan];
+            return `
+            <div class="col-6 col-md-4 mb-2">
+                <div class="bulan-item ${(p.status || '').toString().trim().toUpperCase() === 'LUNAS' ? 'bulan-lunas' : 'bulan-belum'}">
+                    <div style="font-size: 0.75rem; font-weight: bold; line-height: 1.2;">${bulan}</div>
+                    <span class="${(p.status || '').toString().trim().toUpperCase() === 'LUNAS' ? 'status-lunas' : 'status-belum'}">${p.status || 'BELUM'}</span>
+                    ${p.tanggal ? `<div style="font-size: 0.65rem; color: #666; margin-top: 3px;">${new Date(p.tanggal).toLocaleDateString('id-ID')}</div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+        let html20261 = Object.keys(siswa.tagihan20261 || {})
+          .filter(bulan => (siswa.tagihan20261[bulan].status || '').toString().trim().toUpperCase() !== 'LUNAS')
+          .map(bulan => {
+            const p = siswa.tagihan20261[bulan];
+            return `
+            <div class="col-6 col-md-4 mb-2">
+                <div class="bulan-item ${(p.status || '').toString().trim().toUpperCase() === 'LUNAS' ? 'bulan-lunas' : 'bulan-belum'}">
+                    <div style="font-size: 0.75rem; font-weight: bold; line-height: 1.2;">${bulan}</div>
+                    <span class="${(p.status || '').toString().trim().toUpperCase() === 'LUNAS' ? 'status-lunas' : 'status-belum'}">${p.status || 'BELUM'}</span>
+                    ${p.tanggal ? `<div style="font-size: 0.65rem; color: #666; margin-top: 3px;">${new Date(p.tanggal).toLocaleDateString('id-ID')}</div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+        let html20252 = Object.keys(siswa.tagihan20252 || {})
+          .filter(bulan => (siswa.tagihan20252[bulan].status || '').toString().trim().toUpperCase() !== 'LUNAS')
+          .map(bulan => {
+            const p = siswa.tagihan20252[bulan];
+            return `
+            <div class="col-6 col-md-4 mb-2">
+                <div class="bulan-item ${(p.status || '').toString().trim().toUpperCase() === 'LUNAS' ? 'bulan-lunas' : 'bulan-belum'}">
+                    <div style="font-size: 0.75rem; font-weight: bold; line-height: 1.2;">${bulan}</div>
+                    <span class="${(p.status || '').toString().trim().toUpperCase() === 'LUNAS' ? 'status-lunas' : 'status-belum'}">${p.status || 'BELUM'}</span>
+                    ${p.tanggal ? `<div style="font-size: 0.65rem; color: #666; margin-top: 3px;">${new Date(p.tanggal).toLocaleDateString('id-ID')}</div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+        html += `
+        <div class="card mb-3 border-start border-4 border-primary pembayaran-card">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="mb-1">${siswa.nama}</h5>
+                        <p class="small text-muted mb-2">Kelas: ${siswa.kelas || '-'} | No: ${siswa.no || '-'}</p>
+                        <div class="progress mb-1" style="height: 8px; width: 200px;"><div class="progress-bar bg-success" style="width: ${progress}%"></div></div>
+                        <small class="text-muted">${lunasCount} Pembayaran Lunas (${progress}%)</small>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary" onclick="bukaModal(this)" data-nama="${encodeURIComponent(siswa.nama)}">Bayar</button>
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">Cetak</button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="bukaPreviewStruk('${encodeURIComponent(siswa.nama).replace(/'/g, "%27")}', event)">Preview Struk</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="bukaPreviewStatus('${encodeURIComponent(siswa.nama).replace(/'/g, "%27")}', event)">Preview Status</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6 class="border-bottom pb-2">Tagihan 20262</h6>
+                    <div class="row mt-2">${html20262 || '<div class="col"><p class="small text-muted">Tidak ada data</p></div>'}</div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6 class="border-bottom pb-2">Tagihan 20261</h6>
+                    <div class="row mt-2">${html20261 || '<div class="col"><p class="small text-muted">Tidak ada data</p></div>'}</div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="border-bottom pb-2">Tagihan 20252</h6>
+                    <div class="row mt-2">${html20252 || '<div class="col"><p class="small text-muted">Tidak ada data</p></div>'}</div>
+                </div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html || '<div class="alert alert-info text-center">Data tidak ditemukan.</div>';
+    document.getElementById('totalSiswa').textContent = `${data.length} siswa`;
+}
+
+function cariSiswa() {
+    const s = document.getElementById('searchInput').value.toLowerCase();
+    const k = document.getElementById('kelasFilter').value;
+    const filtered = window.dataAsli.filter(siswa => (siswa.nama.toLowerCase().includes(s)) && (!k || siswa.kelas === k));
+    tampilkanSiswa(filtered);
+    hitungStatistik(filtered);
+}
+
+function hitungStatistik(data) {
+    let total = 0, lunas = 0;
+    data.forEach(s => {
+        const p20262 = Object.values(s.tagihan20262 || {});
+        const p20261 = Object.values(s.tagihan20261 || {});
+        const p20252 = Object.values(s.tagihan20252 || {});
+        const allP = [...p20262, ...p20261, ...p20252];
+        
+        total += allP.length;
+        lunas += allP.filter(x => (x.status || '').toString().trim().toUpperCase() === 'LUNAS').length;
+    });
+    const persen = total > 0 ? Math.round((lunas/total)*100) : 0;
+    document.getElementById('statistikContent').innerHTML = `
+        <div class="text-center">
+            <h3 class="text-primary mb-0">${persen}%</h3>
+            <small class="text-muted">Total Kelunasan</small>
+            <hr>
+            <div class="d-flex justify-content-between small">
+                <span>Lunas: <b>${lunas}</b></span>
+                <span>Total: <b>${total}</b></span>
+            </div>
+        </div>`;
+}
+
+function bukaPreviewStruk(namaEncoded, event) {
+    event.preventDefault();
+    const siswa = window.semuaData.find(s => s.nama === decodeURIComponent(namaEncoded));
+    
+    const formatRincian = (tagihan, judul) => {
+        const lunasItems = Object.keys(tagihan || {}).filter(b => (tagihan[b].status || '').toString().trim().toUpperCase() === 'LUNAS');
+        if (lunasItems.length === 0) return '';
+        return `
+            <h6 class="mt-2 mb-1 border-bottom border-dark border-1">${judul}</h6>
+            ${lunasItems.map(b => `<div class="d-flex justify-content-between small"><span>${b}</span><span>${new Date(tagihan[b].tanggal).toLocaleDateString('id-ID')}</span></div>`).join('')}
+        `;
+    };
+
+    document.getElementById('strukPreview').innerHTML = `
+    <div class="preview-card" id="strukPrintArea">
+        <div class="preview-header">
+            <img src="https://i.ibb.co.com/5hcK4HTq/Logo-TPQ-Bilqolam-Al-Mabrur-versi-enteng-e-2.png" style="width: 60px; margin-bottom:10px;">
+            <h5 class="mb-0">TPQ AL MABRUR</h5>
+            <small>Puri Ronggowuni, Singosari</small>
+        </div>
+        <div class="mb-2"><b>Nama:</b> ${siswa.nama}</div>
+        <div class="mb-2"><b>Kelas:</b> ${siswa.kelas}</div>
+        <hr>
+        <div class="text-center font-weight-bold mb-2">BUKTI PEMBAYARAN</div>
+        ${formatRincian(siswa.tagihan20262, 'Tagihan 20262')}
+        ${formatRincian(siswa.tagihan20261, 'Tagihan 20261')}
+        ${formatRincian(siswa.tagihan20252, 'Tagihan 20252')}
+    </div>`;
+    new bootstrap.Modal(document.getElementById('strukModal')).show();
+}
+
+function bukaPreviewStatus(namaEncoded, event) {
+    event.preventDefault();
+    const siswa = window.semuaData.find(s => s.nama === decodeURIComponent(namaEncoded));
+    
+    const formatBaris = (tagihan, jenis) => {
+        return Object.keys(tagihan || {}).map(b => `<tr><td>[${jenis}] ${b}</td><td>${tagihan[b].status || 'BELUM'}</td><td>${tagihan[b].tanggal ? new Date(tagihan[b].tanggal).toLocaleDateString('id-ID') : '-'}</td></tr>`).join('');
+    };
+
+    document.getElementById('statusPreview').innerHTML = `
+    <div class="preview-card" style="max-width:100%" id="statusPrintArea">
+        <h5 class="text-center">STATUS PEMBAYARAN</h5>
+        <p class="text-center mb-3">${siswa.nama} (${siswa.kelas})</p>
+        <table class="status-table">
+            <thead><tr><th>Bulan/Jenis</th><th>Status</th><th>Tanggal</th></tr></thead>
+            <tbody>
+                ${formatBaris(siswa.tagihan20262, '20262')}
+                ${formatBaris(siswa.tagihan20261, '20261')}
+                ${formatBaris(siswa.tagihan20252, '20252')}
+            </tbody>
+        </table>
+    </div>`;
+    new bootstrap.Modal(document.getElementById('statusModal')).show();
+}
+
+function cetakArea(elementId) {
+    const content = document.getElementById(elementId).innerHTML;
+    const win = window.open('', '_blank');
+    win.document.write(`
+        <html>
+        <head>
+            <title>Cetak</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                body { padding: 20px; font-family: sans-serif; }
+                .preview-card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 450px; margin: 0 auto; }
+                .preview-header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; }
+                .status-table { width: 100%; font-size: 0.9rem; margin-top: 15px; border-collapse: collapse; }
+                .status-table th, .status-table td { border: 1px solid #ccc; padding: 6px; }
+            </style>
+        </head>
+        <body onload="window.print(); window.close();">
+            ${content}
+        
+</body>
+        </html>
+    `);
+    win.document.close();
+}
+</script>
+
+
+
+  <script>
+function loadRekapHarianPage() {
+  const contentArea = document.getElementById('contentArea');
+  
+  contentArea.innerHTML = `
+    <div class="card mb-4 border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <h5 class="card-title fw-bold text-primary mb-4"><i class="fas fa-calendar-day me-2"></i> Rekap Pembayaran Harian</h5>
+            <div class="row align-items-end">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-bold">Pilih Tanggal Pembayaran</label>
+                    <input type="date" id="rekapTanggal" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="col-md-2 mb-3">
+                    <button class="btn btn-primary w-100" onclick="cariRekapHarian()"><i class="fas fa-search me-1"></i> Tampilkan</button>
+                </div>
+            </div>
+            
+            <div id="rekapLoading" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-muted">Mengambil data pembayaran...</p>
+            </div>
+            
+            <div id="rekapResult" style="display: none;" class="mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 fw-bold">Hasil untuk tanggal: <span id="labelTanggalRekap" class="text-primary"></span></h6>
+                    <span id="badgeTotalRekap" class="badge bg-success fs-6">Total: 0 Pembayaran</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">No</th>
+                                <th>Nama Santri</th>
+                                <th>Kelas</th>
+                                <th>Item Dibayar</th>
+                                <th>Jenis Tagihan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rekapTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+  `;
+}
+
+function cariRekapHarian() {
+    const tanggalInput = document.getElementById('rekapTanggal').value;
+    if (!tanggalInput) {
+        Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih tanggal terlebih dahulu!' });
+        return;
+    }
+
+    document.getElementById('rekapResult').style.display = 'none';
+    document.getElementById('rekapLoading').style.display = 'block';
+
+    google.script.run
+        .withSuccessHandler(res => {
+            document.getElementById('rekapLoading').style.display = 'none';
+            if(res.error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: res.error });
+                return;
+            }
+            
+            tampilkanRekap(res.students, tanggalInput);
+        })
+        .withFailureHandler(err => {
+            document.getElementById('rekapLoading').style.display = 'none';
+            Swal.fire({ icon: 'error', title: 'Error Server', text: err.toString() });
+        })
+        .getPaymentStatus();
+}
+
+function tampilkanRekap(students, tanggalDipilih) {
+    document.getElementById('rekapResult').style.display = 'block';
+    
+    // Format tanggal terpilih untuk membandingkan (YYYY-MM-DD)
+    const targetDateObj = new Date(tanggalDipilih);
+    targetDateObj.setHours(0,0,0,0);
+    const targetTime = targetDateObj.getTime();
+    
+    document.getElementById('labelTanggalRekap').textContent = targetDateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    let rekapData = [];
+    
+    students.forEach(siswa => {
+        const cekTagihan = (tagihanObj, jenis) => {
+            if (!tagihanObj) return;
+            Object.keys(tagihanObj).forEach(bulan => {
+                const p = tagihanObj[bulan];
+                if (p.status === 'LUNAS' && p.tanggal) {
+                    const payDateObj = new Date(p.tanggal);
+                    payDateObj.setHours(0,0,0,0);
+                    if (payDateObj.getTime() === targetTime) {
+                        rekapData.push({
+                            nama: siswa.nama,
+                            kelas: siswa.kelas || '-',
+                            bulan: bulan,
+                            jenis: jenis
+                        });
+                    }
+                }
+            });
+        };
+        
+        cekTagihan(siswa.tagihan20262, 'Tagihan 20262');
+        cekTagihan(siswa.tagihan20261, 'Tagihan 20261');
+        cekTagihan(siswa.tagihan20252, 'Tagihan 20252');
+    });
+    
+    const tbody = document.getElementById('rekapTableBody');
+    if (rekapData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-folder-open fa-2x mb-2 opacity-50"></i><br>Tidak ada data pembayaran yang masuk pada tanggal ini.</td></tr>';
+        document.getElementById('badgeTotalRekap').textContent = 'Total: 0 Pembayaran';
+        return;
+    }
+    
+    document.getElementById('badgeTotalRekap').textContent = `Total: ${rekapData.length} Pembayaran`;
+    
+    let html = '';
+    rekapData.forEach((row, index) => {
+        html += `
+        <tr>
+            <td>${index + 1}</td>
+            <td class="fw-bold">${row.nama}</td>
+            <td>${row.kelas}</td>
+            <td><span class="badge bg-primary">${row.bulan}</span></td>
+            <td><small class="text-muted">${row.jenis}</small></td>
+        </tr>`;
+    });
+    
+    tbody.innerHTML = html;
+}
+</script>
+
+  <script>
+
+function loadRaporPage() {
+  const contentArea = document.getElementById('contentArea');
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <ul class="nav nav-tabs">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabInputNilai">Input Nilai</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabCetakRapor">Cetak Rapor</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabPengaturanMateri">Pengaturan Materi</a></li>
+      </ul>
+      
+      <div class="tab-content mt-3">
+        <!-- Tab Input Nilai -->
+        <div class="tab-pane fade show active" id="tabInputNilai">
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <label>Tahun Ajaran</label>
+              <input type="text" class="form-control" id="rn_ta" value="2025/2026">
+            </div>
+            <!-- Dropdown semester dihapus sesuai permintaan -->
+            <input type="hidden" id="rn_semester" value="-">
+            <div class="col-md-3">
+              <label>Kelas</label>
+              <select class="form-select" id="rn_kelas" onchange="loadMateriForInput()">
+                <option value="">-- Pilih Kelas --</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button class="btn btn-primary w-100" onclick="simpanSemuaNilai()">
+                <i class="fas fa-save"></i> Simpan Semua
+              </button>
+            </div>
+          </div>
+          
+          <div id="rn_infoMateri" class="alert alert-info" style="display:none;"></div>
+          <div id="rn_santriList"></div>
+        </div>
+        
+        <!-- Tab Cetak Rapor -->
+        <div class="tab-pane fade" id="tabCetakRapor">
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <label>Tahun Ajaran</label>
+              <input type="text" class="form-control" id="cr_ta" value="2025/2026">
+            </div>
+            <!-- Dropdown semester dihapus sesuai permintaan -->
+            <input type="hidden" id="cr_semester" value="-">
+            <div class="col-md-3">
+              <label>Kelas</label>
+              <select class="form-select" id="cr_kelas">
+                <option value="">-- Pilih Kelas --</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button class="btn btn-primary w-100" onclick="prosesCetakRapor()">
+                <i class="fas fa-print"></i> Proses & Cetak
+              </button>
+            </div>
+          </div>
+          
+          
+          
+          <div id="cr_result"></div>
+        </div>
+        
+        <!-- Tab Pengaturan Materi -->
+        <div class="tab-pane fade" id="tabPengaturanMateri">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label>Pilih Kelas</label>
+              <select class="form-select" id="pm_kelas" onchange="loadPengaturanMateri()">
+                <option value="">-- Pilih Kelas --</option>
+              </select>
+            </div>
+          </div>
+          
+          <div id="pm_materiContainer" style="display:none;">
+            <div class="card mb-3">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Daftar Materi Kelas</h6>
+                <button class="btn btn-sm btn-primary" onclick="showFormTambahMateri()">
+                  <i class="fas fa-plus"></i> Tambah Materi
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-bordered table-sm">
+                    <thead>
+                      <tr><th>No</th><th>Materi</th><th>Bobot (Max Nilai)</th><th>Tipe</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody id="pm_materiTable"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            
+            <div id="formTambahMateri" style="display:none;" class="card">
+              <div class="card-body">
+                <h6>Tambah / Edit Materi</h6>
+                <form id="formMateri" onsubmit="event.preventDefault(); simpanMateri();">
+                  <input type="hidden" id="pm_id_materi">
+                  <div class="row">
+                    <div class="col-md-4 mb-3">
+                      <label>Nama Materi</label>
+                      <input type="text" class="form-control" id="pm_nama" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label>Bobot</label>
+                      <input type="number" class="form-control" id="pm_bobot" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                      <label>Tipe</label>
+                      <select class="form-select" id="pm_tipe" required>
+                        <option value="regular">Regular</option>
+                        <option value="plus">Nilai Plus (Lagu/Suara)</option>
+                        <option value="weighted">Weighted (Tahfidh)</option>
+                        <option value="manual">Manual (Diniyah)</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                      <label>Urutan</label>
+                      <input type="number" class="form-control" id="pm_urutan" value="99">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-success">Simpan Materi</button>
+                  <button type="button" class="btn btn-secondary" onclick="document.getElementById('formTambahMateri').style.display='none'">Batal</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Load kelas options
+  google.script.run.withSuccessHandler(function(kelasList) {
+    const options = '<option value="">-- Pilih Kelas --</option>' + 
+      kelasList.map(k => `<option value="${k.Nama_Kelas}">${k.Nama_Kelas}</option>`).join('');
+    const rnKelas = document.getElementById('rn_kelas');
+    const crKelas = document.getElementById('cr_kelas');
+    const pmKelas = document.getElementById('pm_kelas');
+    if (rnKelas) rnKelas.innerHTML = options;
+    if (crKelas) crKelas.innerHTML = options;
+    if (pmKelas) pmKelas.innerHTML = options;
+  }).withFailureHandler(function(e) {
+    showToast('Gagal memuat kelas: ' + e.message, 'error');
+  }).getKelasList();
+  
+  // Load guru for wali kelas
+  google.script.run.withSuccessHandler(function(guruList) {
+    const options = guruList.map(g => `<option value="${g.Nama}">${g.Nama}</option>`).join('');
+    const crWali = document.getElementById('cr_wali');
+    if (crWali) crWali.innerHTML = '<option value="">-- Pilih Wali Kelas --</option>' + options;
+  }).withFailureHandler(function(e) {
+    showToast('Gagal memuat data guru: ' + e.message, 'error');
+  }).getGuruList();
+}
+
+function loadMateriForInput() {
+  const kelas = document.getElementById('rn_kelas').value;
+  const container = document.getElementById('rn_santriList');
+  const infoContainer = document.getElementById('rn_infoMateri');
+  
+  if (!kelas) {
+    container.innerHTML = '';
+    infoContainer.style.display = 'none';
+    return;
+  }
+  
+  // Load materi untuk kelas ini
+  google.script.run
+    .withSuccessHandler(function(materiList) {
+      // Tampilkan info materi
+      infoContainer.style.display = 'block';
+      infoContainer.innerHTML = `
+        <strong>Materi Kelas ${kelas}:</strong><br>
+        ${materiList.map(m => `• ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
+      `;
+      
+      // Load santri di kelas ini
+      google.script.run
+        .withSuccessHandler(function(santriList) {
+          const filtered = santriList.filter(s => s.Kelas === kelas && s.Status === 'aktif');
+          
+          if (filtered.length === 0) {
+            container.innerHTML = '<div class="alert alert-warning">Tidak ada santri di kelas ini</div>';
+            return;
+          }
+          
+          // Load nilai yang sudah ada
+          const ta = document.getElementById('rn_ta').value;
+          google.script.run
+            .withSuccessHandler(function(nilaiList) {
+              renderInputNilaiForm(filtered, materiList, nilaiList, kelas);
+            })
+            .getNilaiRaporByKelas(kelas, ta);
+        })
+        .getSantriList();
+    })
+    .getMateriByKelas(kelas);
+}
+
+function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
+  const container = document.getElementById('rn_santriList');
+  
+  // Untuk DINIYAH, input manual per materi
+  if (kelas === 'DINIYAH') {
+    container.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th rowspan="2">No</th>
+              <th rowspan="2">NIS</th>
+              <th rowspan="2">Nama Santri</th>
+              ${materiList.map(m => `<th class="text-center">${m.materi}</th>`).join('')}
+              <th rowspan="2">Rata-rata</th>
+            </tr>
+            <tr>
+              ${materiList.map(m => `<th class="text-center small">Nilai (0-100)</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${santriList.map((s, i) => {
+              const nilaiSantri = nilaiList.filter(n => n.nis === s.NIS);
+              return `
+                <tr data-nis="${s.NIS}" data-nama="${s.Nama_Santri}">
+                  <td>${i+1}</td>
+                  <td>${s.NIS}</td>
+                  <td>${s.Nama_Santri}</td>
+                  ${materiList.map(m => {
+                    const existing = nilaiSantri.find(n => n.materi === m.materi);
+                    return `<td><input type="number" class="form-control form-control-sm nilai-manual" 
+                      data-materi="${m.materi}" data-id="${m.id_materi}" data-bobot="${m.bobot}" data-tipe="${m.tipe}"
+                      value="${existing ? existing.nilai_materi : ''}" min="0" max="100" onchange="hitungRataRataDiniyah(this)"></td>`;
+                  }).join('')}
+                  <td class="rata-rata text-center"><strong>-</strong></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    // Hitung rata-rata awal
+    document.querySelectorAll('#rn_santriList tbody tr').forEach(row => {
+      hitungRataRataDiniyah(row.querySelector('.nilai-manual'));
+    });
+    return;
+  }
+  
+  // Untuk TAHFIDH JUZ AMMA (weighted)
+  if (kelas === 'TAHFIDH JUZ AMMA') {
+    container.innerHTML = `
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead class="table-light">
+            <tr>
+              <th rowspan="2">No</th>
+              <th rowspan="2">NIS</th>
+              <th rowspan="2">Nama Santri</th>
+              ${materiList.map(m => `<th class="text-center">${m.materi}<br><small>(Maks: ${m.bobot})</small></th>`).join('')}
+              <th rowspan="2">Total<br>(Maks 100)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${santriList.map((s, i) => {
+              const nilaiSantri = nilaiList.filter(n => n.nis === s.NIS);
+              return `
+                <tr data-nis="${s.NIS}" data-nama="${s.Nama_Santri}">
+                  <td>${i+1}</td>
+                  <td>${s.NIS}</td>
+                  <td>${s.Nama_Santri}</td>
+                  ${materiList.map(m => {
+                    const existing = nilaiSantri.find(n => n.materi === m.materi);
+                    return `<td><input type="number" class="form-control form-control-sm nilai-weighted" 
+                      data-materi="${m.materi}" data-id="${m.id_materi}" data-bobot="${m.bobot}" data-tipe="${m.tipe}"
+                      value="${existing ? existing.nilai_materi : ''}" min="0" max="${m.bobot}" onchange="hitungTotalWeighted(this)"></td>`;
+                  }).join('')}
+                  <td class="total-weighted text-center"><strong>-</strong></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    document.querySelectorAll('#rn_santriList tbody tr').forEach(row => {
+      hitungTotalWeighted(row.querySelector('.nilai-weighted'));
+    });
+    return;
+  }
+  
+  // Untuk kelas REGULAR (PRA - JILID 4 - JUZ AMMA)
+  container.innerHTML = `
+    <div class="alert alert-secondary small">
+      <strong>Formula:</strong> Nilai = 95 - (Σ bobot × kesalahan) + nilai lagu (5)<br>
+      <strong>Contoh:</strong> Jika kesalahan makhroj (bobot 3) = 2, maka pengurangan = 6. Nilai = 95 - 6 + 5 = 94
+    </div>
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-light">
+          <tr>
+            <th rowspan="2">No</th>
+            <th rowspan="2">NIS</th>
+            <th rowspan="2">Nama Santri</th>
+            ${materiList.filter(m => m.tipe !== 'plus').map(m => `<th class="text-center">${m.materi}<br><small>(Bobot: ${m.bobot})</small></th>`).join('')}
+            <th class="text-center">LAGU<br><small>(Nilai 1-5)</small></th>
+            <th class="text-center">Perilaku</th>
+            <th class="text-center">Kedisiplinan</th>
+            <th class="text-center">Keaktifan</th>
+            <th class="text-center">Catatan Penguji</th>
+          </tr>
+          <tr>
+            ${materiList.filter(m => m.tipe !== 'plus').map(m => 
+              `<th class="text-center small">Jml Kesalahan</th>`
+            ).join('')}
+            <th class="text-center small">Nilai (1-5)</th>
+            <th class="text-center small">Perilaku<br><small>A/B/C</small></th>
+            <th class="text-center small">Kedisiplinan<br><small>A/B/C</small></th>
+            <th class="text-center small">Keaktifan<br><small>A/B/C</small></th>
+            <th class="text-center small">Catatan Penguji</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${santriList.map((s, i) => {
+            const nilaiSantri = nilaiList.filter(n => n.nis === s.NIS);
+            return `
+              <tr data-nis="${s.NIS}" data-nama="${s.Nama_Santri}">
+                <td>${i+1}</td>
+                <td>${s.NIS}</td>
+                <td>${s.Nama_Santri}</td>
+                ${materiList.filter(m => m.tipe !== 'plus').map(m => {
+                  const existing = nilaiSantri.find(n => n.materi === m.materi);
+                  return `<td><input type="number" class="form-control form-control-sm nilai-kesalahan" 
+                    data-materi="${m.materi}" data-id="${m.id_materi}" data-bobot="${m.bobot}" data-tipe="${m.tipe}"
+                    value="${existing ? existing.jumlah_kesalahan : 0}" min="0" onchange="hitungNilaiAkhir(this)"></td>`;
+                }).join('')}
+                <td>
+                  <input type="number" class="form-control form-control-sm nilai-lagu" 
+                    data-materi="LAGU/SUARA" data-id="${materiList.find(m => m.tipe === 'plus')?.id_materi}" 
+                    data-bobot="5" data-tipe="plus" onchange="hitungNilaiAkhir(this)"
+                    value="${nilaiSantri.find(n => n.tipe === 'plus') ? nilaiSantri.find(n => n.tipe === 'plus').nilai_materi : ''}" min="1" max="5" placeholder="1-5">
+                </td>
+                <td>
+                  <select class="form-select form-select-sm sikap-perilaku">
+                    <option value="A" ${nilaiSantri[0]?.perilaku === 'A' ? 'selected' : ''}>A</option>
+                    <option value="B" ${nilaiSantri[0]?.perilaku === 'B' ? 'selected' : ''}>B</option>
+                    <option value="C" ${nilaiSantri[0]?.perilaku === 'C' ? 'selected' : ''}>C</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="form-select form-select-sm sikap-disiplin">
+                    <option value="A" ${nilaiSantri[0]?.kedisiplinan === 'A' ? 'selected' : ''}>A</option>
+                    <option value="B" ${nilaiSantri[0]?.kedisiplinan === 'B' ? 'selected' : ''}>B</option>
+                    <option value="C" ${nilaiSantri[0]?.kedisiplinan === 'C' ? 'selected' : ''}>C</option>
+                  </select>
+                </td>
+                <td>
+                  <select class="form-select form-select-sm sikap-aktif">
+                    <option value="A" ${nilaiSantri[0]?.keaktifan === 'A' ? 'selected' : ''}>A</option>
+                    <option value="B" ${nilaiSantri[0]?.keaktifan === 'B' ? 'selected' : ''}>B</option>
+                    <option value="C" ${nilaiSantri[0]?.keaktifan === 'C' ? 'selected' : ''}>C</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" class="form-control form-control-sm catatan-penguji" 
+                    value="${nilaiSantri[0]?.catatan_penguji || ''}" placeholder="Catatan...">
+                </td>
+                <td class="total-kurangan text-center"><strong>0</strong></td>
+                <td class="nilai-akhir text-center"><strong>-</strong></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  // Hitung awal
+  document.querySelectorAll('#rn_santriList tbody tr').forEach(row => {
+    hitungNilaiAkhir(row.querySelector('.nilai-kesalahan') || row.querySelector('.nilai-lagu'));
+  });
+}
+
+function hitungNilaiAkhir(el) {
+  const row = el.closest('tr');
+  const inputs = row.querySelectorAll('.nilai-kesalahan, .nilai-lagu');
+  
+  let totalKurangan = 0;
+  let nilaiLagu = 0;
+  
+  inputs.forEach(input => {
+    const bobot = parseFloat(input.dataset.bobot) || 0;
+    const tipe = input.dataset.tipe;
+    const value = parseFloat(input.value) || 0;
+    
+    if (tipe === 'plus') {
+      nilaiLagu = value;
+    } else {
+      totalKurangan += bobot * value;
+    }
+  });
+  
+  let nilaiAkhir = 95 - totalKurangan + nilaiLagu;
+  if (nilaiAkhir < 70) nilaiAkhir = 70;
+  
+  row.querySelector('.total-kurangan').innerHTML = `<strong>${totalKurangan}</strong>`;
+  row.querySelector('.nilai-akhir').innerHTML = `<strong class="text-primary">${Math.round(nilaiAkhir)}</strong>`;
+}
+
+function hitungRataRataDiniyah(el) {
+  const row = el.closest('tr');
+  const inputs = row.querySelectorAll('.nilai-manual');
+  let total = 0, count = 0;
+  
+  inputs.forEach(input => {
+    const v = parseFloat(input.value);
+    if (!isNaN(v)) {
+      total += v;
+      count++;
+    }
+  });
+  
+  const rata = count > 0 ? Math.round(total / count) : 0;
+  row.querySelector('.rata-rata').innerHTML = `<strong>${rata}</strong>`;
+}
+
+function hitungTotalWeighted(el) {
+  const row = el.closest('tr');
+  const inputs = row.querySelectorAll('.nilai-weighted');
+  let total = 0;
+  
+  inputs.forEach(input => {
+    total += parseFloat(input.value) || 0;
+  });
+  
+  row.querySelector('.total-weighted').innerHTML = `<strong class="text-primary">${total}</strong>`;
+}
+
+function handleSemesterInput() {
+  // Tidak ada dropdown semester lagi
+}
+
+function simpanSemuaNilai() {
+  const ta = document.getElementById('rn_ta').value;
+  const kelas = document.getElementById('rn_kelas').value;
+  const semester = '-';
+  
+  if (!kelas) {
+    showToast('Pilih kelas terlebih dahulu', 'warning');
+    return;
+  }
+  
+  const rows = document.querySelectorAll('#rn_santriList tbody tr');
+  if (rows.length === 0) {
+    showToast('Tidak ada data santri', 'warning');
+    return;
+  }
+  
+  showLoading('Menyimpan semua nilai rapor...');
+  let count = 0;
+  let total = 0;
+  
+  rows.forEach(row => {
+    const nis = row.dataset.nis;
+    const nama = row.dataset.nama;
+    
+    // Collect sikap santri and catatan from this row
+    const perilaku = row.querySelector('.sikap-perilaku')?.value || 'B';
+    const kedisiplinan = row.querySelector('.sikap-disiplin')?.value || 'B';
+    const keaktifan = row.querySelector('.sikap-aktif')?.value || 'B';
+    const catatanPenguji = row.querySelector('.catatan-penguji')?.value || '';
+    
+    const inputs = row.querySelectorAll('input[data-materi], select[data-materi]');
+    
+    inputs.forEach(input => {
+      const materi = input.dataset.materi;
+      if (!materi) return;
+      const idMateri = input.dataset.id;
+      const bobot = input.dataset.bobot;
+      const tipe = input.dataset.tipe;
+      let nilaiMateri = 0;
+      let jumlahKesalahan = 0;
+      
+      if (input.classList.contains('nilai-kesalahan')) {
+        jumlahKesalahan = parseFloat(input.value) || 0;
+        nilaiMateri = 0;
+      } else if (input.classList.contains('nilai-lagu')) {
+        nilaiMateri = parseFloat(input.value) || 0;
+      } else if (input.classList.contains('nilai-manual')) {
+        nilaiMateri = parseFloat(input.value) || 0;
+      } else if (input.classList.contains('nilai-weighted')) {
+        nilaiMateri = parseFloat(input.value) || 0;
+      }
+      
+      total++;
+      
+      google.script.run
+        .withSuccessHandler(function() {
+          count++;
+          if (count === total) {
+            hideLoading();
+            showToast('Semua nilai berhasil disimpan! 🎉', 'success');
+          }
+        })
+        .withFailureHandler(function(e) {
+          count++;
+          if (count === total) hideLoading();
+          showToast('Error simpan nilai: ' + e.message, 'error');
+        })
+        .saveNilaiRapor({
+          tahun_ajaran: ta,
+          semester: semester,
+          nis: nis,
+          nama_santri: nama,
+          kelas: kelas,
+          id_materi: idMateri,
+          materi: materi,
+          bobot: bobot,
+          jumlah_kesalahan: jumlahKesalahan,
+          nilai_materi: nilaiMateri,
+          tipe: tipe,
+          perilaku: perilaku,
+          kedisiplinan: kedisiplinan,
+          keaktifan: keaktifan,
+          catatan_penguji: catatanPenguji,
+          input_oleh: currentUser.username,
+        });
+    });
+  });
+  
+  if (total === 0) {
+    hideLoading();
+    showToast('Tidak ada data nilai yang ditemukan', 'warning');
+  }
+}
+
+function prosesCetakRapor() {
+  const kelas = document.getElementById('cr_kelas').value;
+  const ta = document.getElementById('cr_ta').value;
+  
+  if (!kelas || !ta) {
+    alert('Pilih kelas dan isi Tahun Ajaran');
+    return;
+  }
+  
+  showLoading();
+  
+  google.script.run
+    .withSuccessHandler(function(santriList) {
+      const targetKelas = kelas.trim().toLowerCase();
+      const filtered = santriList.filter(s => 
+        (s.Kelas || '').trim().toLowerCase() === targetKelas && 
+        ((s.Status || '').trim().toLowerCase() === 'aktif' || (s.Status || '').trim() === '')
+      );
+      
+      if (filtered.length === 0) {
+        hideLoading();
+        document.getElementById('cr_result').innerHTML = '<div class="alert alert-warning">Tidak ada santri aktif di kelas ini</div>';
+        return;
+      }
+      
+      google.script.run
+        .withSuccessHandler(function(nilaiSantriList) {
+          google.script.run
+            .withSuccessHandler(function(materiList) {
+                  google.script.run
+                    .withSuccessHandler(function(absenList) {
+                      hideLoading();
+                      
+                      let html = `
+                        <div class="text-center mb-4">
+                          <h4>REKAPITULASI NILAI SANTRI</h4>
+                          <h5>Kelas: ${kelas} | Tahun Ajaran: ${ta}</h5>
+                        </div>
+                        <table class="table table-bordered table-sm" style="font-size: 0.85rem; width: 100%;">
+                          <thead class="table-light text-center align-middle">
+                            <tr>
+                              <th>No</th>
+                              <th>Tahun Ajaran</th>
+                                <th>NIS</th>
+                                <th>Nama</th>
+                              <th>S</th>
+                              <th>I</th>
+                              <th>A</th>
+                                <th>Materi</th>
+                                <th>Kesalahan</th>
+                                <th>Nilai Lagu</th>
+                                  <th>Perilaku</th>
+                              <th>Kedisiplinan</th>
+                              <th>Keaktifan</th>
+                              <th>Catatan Penguji</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                      `;
+                      
+                      filtered.forEach((santri, index) => {
+                          const nis = santri.NIS || santri.nis || santri.Nis;
+                          const nilaiSantri = nilaiSantriList.filter(n => (n.nis||'').toString().trim() === (nis||'').toString().trim() && (n.tahun_ajaran||'').toString().trim() === (ta||'').toString().trim());
+                          const sikap = nilaiSantri.length > 0 ? nilaiSantri[0] : {};
+                          const absen = absenList.filter(a => a.nis == nis);
+                          
+                          let totalSakit = 0, totalIzin = 0, totalAlpha = 0;
+                          absen.forEach(a => {
+                            if (a.status === 'S') totalSakit++;
+                            else if (a.status === 'I') totalIzin++;
+                            else if (a.status === 'A') totalAlpha++;
+                          });
+                          
+                          const materiTampil = materiList.filter(m => m.tipe !== 'plus');
+                          
+                          if (materiTampil.length === 0) {
+                            html += `
+                              <tr>
+                                <td class="text-center">${index + 1}</td>
+                                <td class="text-center">${ta}</td>
+                                <td class="text-center">${santri.NIS || santri.nis || santri.Nis || '-'}</td>
+                                <td>${santri.Nama_Santri || santri.Nama || santri.nama_santri || '-'}</td>
+                                <td class="text-center">${totalSakit}</td>
+                                <td class="text-center">${totalIzin}</td>
+                                <td class="text-center">${totalAlpha}</td>
+                                <td colspan="3" class="text-center text-muted">Belum ada materi</td>
+                                <td class="text-center">${sikap.perilaku || '-'}</td>
+                                <td class="text-center">${sikap.kedisiplinan || '-'}</td>
+                                <td class="text-center">${sikap.keaktifan || '-'}</td>
+                                <td>${sikap.catatan_penguji || '-'}</td>
+                              </tr>
+                            `;
+                          } else {
+                            materiTampil.forEach((m, mIndex) => {
+                              const n = nilaiSantri.find(x => (x.materi||'').toString().trim().toLowerCase() === (m.materi||'').toString().trim().toLowerCase());
+                              const kesalahan = n ? n.jumlah_kesalahan : 0;
+                              
+                              const nLagu = nilaiSantri.find(x => (x.materi||'').toString().trim().toUpperCase() === 'LAGU/SUARA' || x.tipe === 'plus');
+                              const nilaiLagu = nLagu ? nLagu.nilai_materi : '-';
+                              
+                              if (mIndex === 0) {
+                                  html += `
+                                    <tr>
+                                      <td class="text-center">${index + 1}</td>
+                                      <td class="text-center">${ta}</td>
+                                      <td class="text-center">${santri.NIS || santri.nis || santri.Nis || '-'}</td>
+                                      <td>${santri.Nama_Santri || santri.Nama || santri.nama_santri || '-'}</td>
+                                      <td class="text-center">${totalSakit}</td>
+                                      <td class="text-center">${totalIzin}</td>
+                                      <td class="text-center">${totalAlpha}</td>
+                                      <td>${m.materi}</td>
+                                      <td class="text-center">${m.tipe === 'regular' ? kesalahan : '-'}</td>
+                                      <td class="text-center align-middle" rowspan="${materiTampil.length}">${nilaiLagu}</td>
+                                      <td class="text-center">${sikap.perilaku || '-'}</td>
+                                      <td class="text-center">${sikap.kedisiplinan || '-'}</td>
+                                      <td class="text-center">${sikap.keaktifan || '-'}</td>
+                                      <td>${sikap.catatan_penguji || '-'}</td>
+                                    </tr>
+                                  `;
+                                } else {
+                                  html += `
+                                    <tr>
+                                      <td class="text-center">${index + 1}</td>
+                                      <td class="text-center">${ta}</td>
+                                      <td class="text-center">${santri.NIS || santri.nis || santri.Nis || '-'}</td>
+                                      <td>${santri.Nama_Santri || santri.Nama || santri.nama_santri || '-'}</td>
+                                      <td class="text-center">${totalSakit}</td>
+                                      <td class="text-center">${totalIzin}</td>
+                                      <td class="text-center">${totalAlpha}</td>
+                                      <td>${m.materi}</td>
+                                      <td class="text-center">${m.tipe === 'regular' ? kesalahan : '-'}</td>
+                                      <td class="text-center">${sikap.perilaku || '-'}</td>
+                                      <td class="text-center">${sikap.kedisiplinan || '-'}</td>
+                                      <td class="text-center">${sikap.keaktifan || '-'}</td>
+                                      <td>${sikap.catatan_penguji || '-'}</td>
+                                    </tr>
+                                  `;
+                                }
+                            });
+                          }
+                        });
+                        
+                        html += `
+                          </tbody>
+                        </table>
+                        <button class="btn btn-primary no-print mt-3" onclick="window.print()"><i class="fas fa-print"></i> Cetak / Print</button>
+                        `;
+                        
+                        document.getElementById('cr_result').innerHTML = html;
+                    })
+                    .withFailureHandler(e => { hideLoading(); alert('Gagal load absen: ' + e); })
+                    .getPresensiSantriByTA(kelas, ta);
+            })
+            .withFailureHandler(e => { hideLoading(); alert('Gagal load materi: ' + e); })
+            .getMateriByKelas(kelas);
+        })
+        .withFailureHandler(e => { hideLoading(); alert('Gagal load nilai: ' + e); })
+        .getNilaiRaporByKelas(kelas, ta);
+    })
+    .withFailureHandler(e => { hideLoading(); alert('Gagal load santri: ' + e); })
+    .getSantriList();
+  }
+
+// ==== PENGATURAN MATERI ====
+function loadPengaturanMateri() {
+  const kelas = document.getElementById('pm_kelas').value;
+  const container = document.getElementById('pm_materiContainer');
+  const tbody = document.getElementById('pm_materiTable');
+  
+  if (!kelas) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  container.style.display = 'block';
+  document.getElementById('formTambahMateri').style.display = 'none';
+  
+  showLoading('Memuat materi...');
+  google.script.run
+    .withSuccessHandler(function(materiList) {
+      hideLoading();
+      if (materiList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada materi untuk kelas ini</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = materiList.map((m, i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td>${m.materi}</td>
+          <td>${m.bobot}</td>
+          <td>${m.tipe}</td>
+          <td>
+            <button class="btn btn-sm btn-danger" onclick="hapusMateri('${m.id_materi}')"><i class="fas fa-trash"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    })
+    .getMateriByKelas(kelas);
+}
+
+function showFormTambahMateri() {
+  document.getElementById('formTambahMateri').style.display = 'block';
+  document.getElementById('formMateri').reset();
+  document.getElementById('pm_id_materi').value = '';
+}
+
+function simpanMateri() {
+  const data = {
+    id_materi: document.getElementById('pm_id_materi').value,
+    kelas: document.getElementById('pm_kelas').value,
+    materi: document.getElementById('pm_nama').value,
+    bobot: document.getElementById('pm_bobot').value,
+    tipe: document.getElementById('pm_tipe').value,
+    urutan: document.getElementById('pm_urutan').value
+  };
+  
+  if (!data.kelas) {
+    showToast('Silakan pilih kelas terlebih dahulu!', 'warning');
+    return;
+  }
+  
+  showLoading('Menyimpan materi...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      showToast(res.message, res.success ? 'success' : 'error');
+      if (res.success) {
+        document.getElementById('formTambahMateri').style.display = 'none';
+        loadPengaturanMateri();
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .saveMateriKelas(data);
+}
+
+function hapusMateri(idMateri) {
+  if (confirm('Yakin ingin menghapus materi ini?')) {
+    showLoading('Menghapus materi...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        hideLoading();
+        showToast(res.message, res.success ? 'success' : 'error');
+        if (res.success) loadPengaturanMateri();
+      })
+      .deleteMateriKelas(idMateri);
+  }
+}
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <script>
+function loadPengumumanPage() {
+  const contentArea = document.getElementById('contentArea');
+  const isAdmin = currentUser.role === 'super_admin';
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Pengumuman TPQ</h5>
+        ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="showPengumumanForm()">
+          <i class="fas fa-plus"></i> Buat Pengumuman
+        </button>` : ''}
+      </div>
+      
+      <div id="pengumumanForm" style="display:none;" class="mb-4">
+        <div class="card">
+          <div class="card-body">
+            <form id="formPengumuman">
+              <div class="mb-3">
+                <label>Judul</label>
+                <input type="text" class="form-control" id="p_judul" required>
+              </div>
+              <div class="mb-3">
+                <label>Target</label>
+                <select class="form-select" id="p_target" required>
+                  <option value="guru">Guru</option>
+                  <option value="wali">Wali Santri</option>
+                  <option value="semua">Semua</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label>Prioritas</label>
+                <select class="form-select" id="p_prioritas">
+                  <option value="normal">Normal</option>
+                  <option value="penting">Penting</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label>Isi Pengumuman</label>
+                <textarea class="form-control" id="p_isi" rows="5" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Simpan</button>
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('pengumumanForm').style.display='none'">Batal</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div id="pengumumanList"></div>
+    </div>
+  `;
+  
+  loadPengumumanData();
+  
+  if (isAdmin) {
+    document.getElementById('formPengumuman').addEventListener('submit', function(e) {
+      e.preventDefault();
+      simpanPengumuman();
+    });
+  }
+}
+
+function showPengumumanForm() {
+  document.getElementById('pengumumanForm').style.display = 'block';
+}
+
+function simpanPengumuman() {
+  const data = {
+    judul: document.getElementById('p_judul').value,
+    isi: document.getElementById('p_isi').value,
+    target: document.getElementById('p_target').value,
+    prioritas: document.getElementById('p_prioritas').value,
+    dibuat_oleh: currentUser.username,
+  };
+  
+  showLoading('Menyimpan pengumuman...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      showToast(result.message, result.success !== false ? 'success' : 'error');
+      document.getElementById('pengumumanForm').style.display = 'none';
+      document.getElementById('formPengumuman').reset();
+      loadPengumumanData();
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .savePengumuman(data);
+}
+
+function loadPengumumanData() {
+  let target = 'semua';
+  if (currentUser.role === 'ustadz') target = 'guru';
+  else if (currentUser.role === 'wali_santri') target = 'wali';
+  
+  google.script.run
+    .withSuccessHandler(function(list) {
+      const container = document.getElementById('pengumumanList');
+      
+      if (list.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Belum ada pengumuman</div>';
+        return;
+      }
+      
+      container.innerHTML = list.reverse().map(p => {
+        const bgClass = p.prioritas === 'urgent' ? 'danger' : p.prioritas === 'penting' ? 'warning' : 'info';
+        const bgIcon = p.prioritas === 'urgent' ? 'fa-exclamation-circle' : p.prioritas === 'penting' ? 'fa-star' : 'fa-bullhorn';
+        const targetLabel = p.target === 'guru' ? 'Guru' : p.target === 'wali' ? 'Wali Santri' : 'Semua';
+        return `
+          <div class="card mb-3 border-${bgClass}">
+            <div class="card-header bg-${bgClass} text-white d-flex justify-content-between align-items-center">
+              <span><i class="fas ${bgIcon} me-2"></i><strong>${p.judul}</strong></span>
+              <span class="badge bg-light text-dark">${p.prioritas.toUpperCase()}</span>
+            </div>
+            <div class="card-body">
+              <p class="mb-2">${p.isi.replace(/\n/g, '<br>')}</p>
+              <hr class="my-2">
+              <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <small class="text-muted">
+                  <i class="fas fa-users me-1"></i>Target: <strong>${targetLabel}</strong>
+                </small>
+                <small class="text-muted">
+                  <i class="fas fa-calendar-alt me-1"></i>${formatDate(p.tanggal)}
+                </small>
+                <small class="text-muted">
+                  <i class="fas fa-user-edit me-1"></i>Dibuat oleh: <strong>${p.dibuat_oleh || '-'}</strong>
+                </small>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    })
+    .withFailureHandler(function(e) {
+      showToast('Gagal memuat pengumuman: ' + e.message, 'error');
+    })
+    .getPengumuman(target);
+}
+</script>
+  <script>
+function loadPembayaranWali() {
+  const contentArea = document.getElementById('contentArea');
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <div id="hasilTagihan">
+        <div class="text-center py-5">
+          <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+          <h5>Sedang memuat data tagihan...</h5>
+          <p class="text-muted">Mencari data berdasarkan akun Anda...</p>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Langsung cari tagihan tanpa perlu input
+  cariTagihanAnak();
+}
+
+function cariTagihanAnak() {
+  const keyword = currentUser.username; // Ambil otomatis dari username login
+  const container = document.getElementById('hasilTagihan');
+  
+  google.script.run
+    .withSuccessHandler(function(santriList) {
+      const found = santriList.find(s => 
+        s.NIS === keyword || 
+        s.No_WA_Ayah === keyword || 
+        s.No_WA_Ibu === keyword
+      );
+      
+      if (!found) {
+        container.innerHTML = `
+          <div class="alert alert-danger">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Data Tidak Ditemukan</h5>
+            <hr>
+            <p class="mb-0">Sistem tidak dapat menemukan data santri yang terhubung dengan akun Anda.</p>
+            <p class="mb-0 mt-2"><strong>Solusi:</strong> Pastikan <strong>Username</strong> login Anda sama persis dengan <strong>NIS Santri</strong>, atau <strong>Nomor WA Ayah/Ibu</strong> yang terdaftar di Data Santri.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Load data pembayaran dari Google Sheet external lama
+      google.script.run
+        .withSuccessHandler(function(paymentResult) {
+          try {
+            let pembayaran = [];
+            if (paymentResult && paymentResult.students) {
+                // Cari nama santri di data eksternal secara super aman
+                const namaSantriRaw = found.Nama_Santri || found['Nama Santri'] || found.Nama || found.nama || '';
+                const namaSantri = String(namaSantriRaw).toLowerCase().trim();
+                
+                const studentPayment = paymentResult.students.find(s => String(s.nama).toLowerCase().trim() === namaSantri);
+                
+                if (studentPayment) {
+                    const processBulan = (tagihanObj, prefix) => {
+                        if (!tagihanObj) return;
+                        for (const bulan in tagihanObj) {
+                            if (!tagihanObj[bulan]) continue;
+                            let statusRaw = String(tagihanObj[bulan].status || '').toLowerCase().trim();
+                            
+                            let pStatus = 'belum';
+                            
+                            // Deteksi kata kunci lunas
+                            if (statusRaw.includes('lunas') || statusRaw === 'l') {
+                                pStatus = 'lunas';
+                            } 
+                            // Deteksi kata kunci pengecualian tagihan (untuk mutasi masuk / bebas biaya)
+                            else if (statusRaw.includes('mutasi') || statusRaw.includes('bebas') || statusRaw.includes('keringanan') || statusRaw === '-' || statusRaw === 'n/a') {
+                                pStatus = 'bebas';
+                            }
+                            
+                            // Jika statusnya 'bebas', kita skip (jangan dimasukkan ke daftar tagihan)
+                            if (pStatus === 'bebas') continue;
+                            
+                            let nominalTagihan = 50000; // Default jika tidak ada tulisan Rp
+                            let jenisTagihan = 'SPP/Syahriyah';
+                            let namaPeriode = bulan;
+                            
+                            // Ekstrak nominal jika ada format RP. 50.000 atau sejenisnya
+                            const rpMatch = bulan.match(/-?\s*RP\.?\s*([\d\.]+)/i);
+                            if (rpMatch) {
+                                // Ambil angkanya dan hilangkan titik
+                                nominalTagihan = parseInt(rpMatch[1].replace(/\./g, ''));
+                                // Bersihkan teks " - RP. 50.000" dari nama periode
+                                namaPeriode = bulan.replace(rpMatch[0], '').trim();
+                            }
+                            
+                            // Cek jenis tagihan dari namanya
+                            const pLower = namaPeriode.toLowerCase();
+                            if (pLower.includes('daftar ulang')) {
+                                jenisTagihan = 'Daftar Ulang';
+                            } else if (pLower.includes('ujian')) {
+                                jenisTagihan = 'Ujian';
+                            }
+                            
+                            pembayaran.push({
+                                periode: namaPeriode + ' ' + prefix,
+                                jenis_tagihan: jenisTagihan,
+                                nominal: nominalTagihan, 
+                                status: pStatus,
+                                tanggal: tagihanObj[bulan].tanggal || ''
+                            });
+                        }
+                    };
+                    
+                    processBulan(studentPayment.tagihan20262, '(2026 Ganjil)');
+                    processBulan(studentPayment.tagihan20261, '(2025 Genap)');
+                    processBulan(studentPayment.tagihan20252, '(2025 Ganjil)');
+                }
+            }
+            
+            google.script.run
+              .withSuccessHandler(function(kelasList) {
+                google.script.run
+                  .withSuccessHandler(function(guruList) {
+                    hideLoading();
+                    renderTagihanWali(found, pembayaran, kelasList, guruList);
+                  })
+                  .withFailureHandler(function(error) {
+                    container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat data guru: ' + error.message + '</div>';
+                  }).getGuruList();
+              })
+              .withFailureHandler(function(error) {
+                container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat data kelas: ' + error.message + '</div>';
+              }).getKelasList();
+          } catch (err) {
+             container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Terjadi kesalahan memproses data tagihan (Client): ' + err.message + '</div>';
+          }
+        })
+        .withFailureHandler(function(error) {
+          container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal mengambil data tagihan: ' + error.message + '</div>';
+        })
+        .getPaymentStatus();
+    })
+    .withFailureHandler(function(error) {
+      document.getElementById('hasilTagihan').innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat profil santri: ' + error.message + '</div>';
+    })
+    .getSantriList();
+}
+
+function renderTagihanWali(santri, pembayaran, kelasList, guruList) {
+  const container = document.getElementById('hasilTagihan');
+  
+  try {
+    // Ambil hanya tagihan yang belum lunas
+    const tagihanBelumLunas = (pembayaran || []).filter(p => p.status === 'belum');
+    const totalTunggakan = tagihanBelumLunas.reduce((sum, p) => sum + parseFloat(p.nominal || 0), 0);
+    const waBendahara = "6282132733855";
+    
+    let html = `
+      <div class="card shadow-sm border-warning">
+        <div class="card-header bg-warning text-white">
+          <h6 class="mb-0"><i class="fas fa-file-invoice-dollar"></i> Tagihan Belum Lunas (${santri.Nama_Santri})</h6>
+        </div>
+        <div class="card-body">
+    `;
+    
+    if (tagihanBelumLunas.length === 0) {
+      html += `
+          <div class="text-center py-4">
+            <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+            <h5>Alhamdulillah, Lunas!</h5>
+            <p class="text-muted">Tidak ada tagihan pembayaran yang tertunggak untuk santri ini.</p>
+          </div>
+      `;
+    } else {
+      html += `
+          <div class="alert alert-danger mb-4">
+            <h4 class="alert-heading">Total Tagihan: <strong>${formatRupiah(totalTunggakan)}</strong></h4>
+            <p class="mb-0">Mohon untuk segera melakukan pelunasan tagihan di bawah ini.</p>
+          </div>
+          
+          <div class="table-responsive mb-4">
+            <table class="table table-bordered table-striped">
+              <thead class="table-light">
+                <tr>
+                  <th>Periode / Bulan</th>
+                  <th>Jenis Tagihan</th>
+                  <th class="text-end">Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tagihanBelumLunas.map(p => `
+                  <tr>
+                    <td>${p.periode || formatDate(p.tanggal)}</td>
+                    <td>${p.jenis_tagihan}</td>
+                    <td class="text-end">${formatRupiah(p.nominal)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot class="table-light fw-bold">
+                <tr>
+                  <td colspan="2" class="text-end">TOTAL</td>
+                  <td class="text-end text-danger">${formatRupiah(totalTunggakan)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          
+          <div class="text-center bg-light p-4 rounded border">
+            <h5 class="mb-3">Konfirmasi / Pembayaran</h5>
+            <p>Silakan hubungi Bendahara TPQ melalui WhatsApp untuk melakukan pembayaran atau konfirmasi transfer.</p>
+            <a href="https://wa.me/${waBendahara}?text=Assalamualaikum%20Bendahara%20TPQ,%20saya%20Wali%20dari%20Santri%20bernama%20${encodeURIComponent(santri.Nama_Santri)}%20(NIS:%20${santri.NIS}).%20Saya%20ingin%20mengkonfirmasi%20pembayaran..." 
+               target="_blank" 
+               class="btn btn-success btn-lg px-4">
+              <i class="fab fa-whatsapp fs-5 me-2"></i> Hubungi Bendahara
+            </a>
+          </div>
+      `;
+    }
+    
+    html += `
+        </div>
+      </div>
+    `;
+    
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Terjadi kesalahan saat merender tampilan: ' + e.message + '</div>';
+  }
+}
+</script>
+  <script>
+function loadKelasPage() {
+  const contentArea = document.getElementById('contentArea');
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Rekap Data Kelas</h5>
+        <button class="btn btn-primary btn-sm" onclick="loadDataKelas()">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+      <div id="kelasResultContainer" class="table-responsive">
+        <!-- Table goes here -->
+      </div>
+    </div>
+  `;
+  
+  // Load initial data
+  loadDataKelas();
+}
+
+function loadDataKelas() {
+  const container = document.getElementById('kelasResultContainer');
+  container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Memuat data kelas...</p></div>';
+  
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Tidak ada data kelas ditemukan</div>';
+        return;
+      }
+      
+      let html = `
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th width="5%" class="text-center">No</th>
+              <th>Nama Kelas</th>
+              <th>Lokasi Kelas</th>
+              <th class="text-center">Total Santri</th>
+              <th class="text-center">L / P</th>
+              <th>Wali Kelas</th>
+              <th>Catatan Terakhir Jurnal</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      data.forEach((item, index) => {
+        html += `
+          <tr>
+            <td class="text-center">${index + 1}</td>
+            <td class="fw-bold text-primary">${item.nama_kelas}</td>
+            <td><span class="badge bg-info text-dark">${item.lokasi_kelas || '-'}</span></td>
+            <td class="text-center fw-bold">${item.jml_santri}</td>
+            <td class="text-center">${item.jml_l} L / ${item.jml_p} P</td>
+            <td>${item.wali_kelas || '-'}</td>
+            <td><small class="text-muted">${item.jurnal_terakhir}</small></td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    })
+    .withFailureHandler(function(e) {
+      container.innerHTML = '<div class="alert alert-danger">Gagal memuat data: ' + e.message + '</div>';
+      showToast('Error: ' + e.message, 'error');
+    })
+    .getRekapDataKelas();
+}
+</script>
+
+  
+  <!-- Modal Notifikasi Pengumuman -->
+  <div class="modal fade" id="notifPengumumanModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><i class="fas fa-bullhorn"></i> Pengumuman Penting!</h5>
+        </div>
+        <div class="modal-body p-4 p-md-5">
+          <h3 id="notifPengumumanJudul" class="mb-2 text-dark fw-bold"></h3>
+          <p id="notifPengumumanTanggal" class="text-muted small mb-4 pb-3 border-bottom"></p>
+          <div id="notifPengumumanIsi" class="fs-5 text-dark" style="line-height: 1.7;"></div>
+        </div>
+        <div class="modal-footer bg-light p-3 d-flex justify-content-center">
+          <button type="button" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm" data-bs-dismiss="modal" id="btnMengertiPengumuman">
+            <i class="fas fa-check-circle"></i> Saya Sudah Membaca & Mengerti
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+</html>
+
+
+<!-- API Proxy for Google Apps Script -->
+<script>
+    // URL Web App GAS Bapak
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUDCSKKfjjFpgOLoahRepTqE4kaj2aRidFoUM0HmQlUKA002Nr4ntFFEjVI-yhcLFj/exec";
+
+    window.google = {
+        script: {
+            run: {
+                withSuccessHandler: function(onSuccess) {
+                    return this._createProxy(onSuccess, null);
+                },
+                withFailureHandler: function(onFailure) {
+                    return this._createProxy(null, onFailure);
+                },
+                _createProxy: function(successHandler, failureHandler) {
+                    const handlerObj = {
+                        withSuccessHandler: function(cb) {
+                            return window.google.script.run._createProxy(cb, failureHandler);
+                        },
+                        withFailureHandler: function(cb) {
+                            return window.google.script.run._createProxy(successHandler, cb);
+                        }
+                    };
+
+                    return new Proxy(handlerObj, {
+                        get: function(target, prop) {
+                            if (prop in target) return target[prop];
+
+                            return async function(...args) {
+                                try {
+                                    if(GAS_WEB_APP_URL === "URL_GAS_TERBARU") {
+                                        console.error("URL GAS BELUM DIUBAH DI api.js!");
+                                        if (failureHandler) failureHandler(new Error("URL GAS belum di-setting."));
+                                        return;
+                                    }
+                                    
+                                    const response = await fetch(GAS_WEB_APP_URL, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'text/plain;charset=utf-8'
+                                        },
+                                        body: JSON.stringify({
+                                            action: prop,
+                                            args: args
+                                        })
+                                    });
+                                    
+                                    const result = await response.json();
+                                    
+                                    if (result.error && failureHandler) {
+                                        failureHandler(new Error(result.error));
+                                    } else if (!result.error && successHandler) {
+                                        successHandler(result.data);
+                                    }
+                                } catch (e) {
+                                    if (failureHandler) failureHandler(e);
+                                    else console.error("GAS Error:", e);
+                                }
+                            };
+                        }
+                    });
+                }
+            }
+        }
+    };
+</script>
