@@ -572,6 +572,14 @@
       const activeMenu = document.getElementById('menu-' + page);
       if (activeMenu) activeMenu.classList.add('active');
 
+      // Auto-sembunyikan sidebar ketika menu diklik di HP
+      if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar && sidebar.classList.contains('show')) {
+          sidebar.classList.remove('show');
+        }
+      }
+
       // Update title
       const titles = {
         dashboard: 'Dashboard',
@@ -674,6 +682,17 @@
         mainContent.classList.toggle('expand-desktop');
       }
     }
+
+    // Auto-tutup sidebar jika klik di luar area sidebar pada layar HP
+    document.addEventListener('click', function(e) {
+      if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        const isToggleBtn = e.target.closest('[onclick*="toggleSidebar"]');
+        if (sidebar && sidebar.classList.contains('show') && !sidebar.contains(e.target) && !isToggleBtn) {
+          sidebar.classList.remove('show');
+        }
+      }
+    });
     
     // Show/hide loading
     function showLoading(text) {
