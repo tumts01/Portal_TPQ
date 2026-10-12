@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
   <base target="_top">
@@ -419,6 +419,7 @@
         { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
         { id: 'guru', icon: 'fa-chalkboard-teacher', label: 'Data Guru', page: 'guru' },
         { id: 'presensi', icon: 'fa-calendar-check', label: 'Presensi', page: 'presensi' },
+        { id: 'ceklis', icon: 'fa-clipboard-check', label: 'Ceklis Santri', page: 'ceklis' },
         { id: 'bendahara', icon: 'fa-money-bill-wave', label: 'Bendahara', page: 'bendahara' },
         { id: 'rekap_harian', icon: 'fa-calendar-day', label: 'Rekap Harian', page: 'rekap_harian' },
         { id: 'rapor', icon: 'fa-file-alt', label: 'Rapor', page: 'rapor' },
@@ -433,6 +434,7 @@
       ustadz: [
         { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', page: 'dashboard' },
         { id: 'presensi', icon: 'fa-calendar-check', label: 'Presensi', page: 'presensi' },
+        { id: 'ceklis', icon: 'fa-clipboard-check', label: 'Ceklis Santri', page: 'ceklis' },
         { id: 'rapor', icon: 'fa-file-alt', label: 'Rapor', page: 'rapor' },
         { id: 'santri', icon: 'fa-user-graduate', label: 'Data Santri', page: 'santri', readonly: true },
         { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
@@ -576,6 +578,7 @@
         santri: 'Data Santri',
         guru: 'Data Guru',
         presensi: 'Presensi',
+        ceklis: 'Ceklis Santri',
         bendahara: 'Bendahara',
         rekap_harian: 'Rekap Pembayaran Harian',
         rapor: 'Rapor',
@@ -611,6 +614,9 @@
           break;
         case 'presensi':
           loadPresensiPage();
+          break;
+        case 'ceklis':
+          loadCeklisPage();
           break;
         case 'bendahara':
           loadBendaharaPage();
@@ -1186,6 +1192,7 @@ function renderSantriTable(data) {
     return;
   }
   
+  let totalAktif = 0;
   let totalL = 0;
   let totalP = 0;
   
@@ -1193,9 +1200,13 @@ function renderSantriTable(data) {
   let html = '';
   
   data.forEach(s => {
-    const jk = (s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
-    if (jk === 'L' || jk === 'LAKI-LAKI' || jk === 'LAKI LAKI' || jk.includes('LAKI')) totalL++;
-    else if (jk === 'P' || jk === 'PEREMPUAN' || jk.includes('PEREMPUAN')) totalP++;
+    const status = (s.Status || 'aktif').toLowerCase();
+    if (status === 'aktif') {
+      totalAktif++;
+      const jk = (s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+      if (jk === 'L' || jk === 'LAKI-LAKI' || jk === 'LAKI LAKI' || jk.includes('LAKI')) totalL++;
+      else if (jk === 'P' || jk === 'PEREMPUAN' || jk.includes('PEREMPUAN')) totalP++;
+    }
     
     let btnHtml = '';
     if (!isReadonly) {
@@ -1230,7 +1241,7 @@ function renderSantriTable(data) {
   });
   
   tbody.innerHTML = html;
-  updateSantriStats(data.length, totalL, totalP);
+  updateSantriStats(totalAktif, totalL, totalP);
 }
 
 function updateSantriStats(total, l, p) {
@@ -2102,7 +2113,7 @@ function loadRekapGuru() {
       
       container.innerHTML = `
         <div class="alert alert-primary">
-          <strong>Total Pertemuan: ${total}</strong> ${namaGuru ? '— ' + namaGuru : ''}
+          <strong>Total Pertemuan: ${total}</strong> ${namaGuru ? 'â€” ' + namaGuru : ''}
         </div>
         <div class="table-responsive">
           <table class="table table-bordered">
@@ -3126,7 +3137,7 @@ function loadMateriForInput() {
       infoContainer.style.display = 'block';
       infoContainer.innerHTML = `
         <strong>Materi Kelas ${kelas}:</strong><br>
-        ${materiList.map(m => `• ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
+        ${materiList.map(m => `â€¢ ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
       `;
       
       // Load santri di kelas ini
@@ -3248,7 +3259,7 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
   // Untuk kelas REGULAR (PRA - JILID 4 - JUZ AMMA)
   container.innerHTML = `
     <div class="alert alert-secondary small">
-      <strong>Formula:</strong> Nilai = 95 - (Σ bobot × kesalahan) + nilai lagu (5)<br>
+      <strong>Formula:</strong> Nilai = 95 - (Î£ bobot Ã— kesalahan) + nilai lagu (5)<br>
       <strong>Contoh:</strong> Jika kesalahan makhroj (bobot 3) = 2, maka pengurangan = 6. Nilai = 95 - 6 + 5 = 94
     </div>
     <div class="table-responsive">
@@ -3455,7 +3466,7 @@ function simpanSemuaNilai() {
           count++;
           if (count === total) {
             hideLoading();
-            showToast('Semua nilai berhasil disimpan! 🎉', 'success');
+            showToast('Semua nilai berhasil disimpan! ðŸŽ‰', 'success');
           }
         })
         .withFailureHandler(function(e) {
@@ -4201,6 +4212,969 @@ function loadDataKelas() {
 }
 </script>
 
+  <!-- CEKLIS SANTRI MODULE -->
+<div id="page_ceklis" class="page-section" style="display:none;">
+  <div class="content-card">
+    
+    <!-- Tab Navigation untuk Super Admin -->
+    <div id="ceklis_admin_tabs" style="display:none;" class="mb-3">
+      <ul class="nav nav-pills" id="ceklisTabNav" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" id="tab-ceklis-input-btn" data-bs-toggle="pill" data-bs-target="#tab-ceklis-input" type="button">
+            <i class="fas fa-clipboard-check me-1"></i> Pengisian & Rekap Ceklis
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" id="tab-ceklis-config-btn" data-bs-toggle="pill" data-bs-target="#tab-ceklis-config" type="button" onclick="loadCeklisConfigList()">
+            <i class="fas fa-cogs me-1"></i> Pengaturan Form Ceklis (Admin)
+          </button>
+        </li>
+      </ul>
+      <hr class="my-3">
+    </div>
+
+    <div class="tab-content" id="ceklisTabContent">
+      
+      <!-- TAB 1: PENGISIAN CEKLIS -->
+      <div class="tab-pane fade show active" id="tab-ceklis-input" role="tabpanel">
+        
+        <!-- Filter Header -->
+        <div class="row g-3 align-items-end mb-3 bg-light p-3 rounded">
+          <div class="col-md-5">
+            <label class="form-label fw-bold"><i class="fas fa-list-alt text-primary me-1"></i> Pilih Topik / Kegiatan Ceklis</label>
+            <select class="form-select" id="ceklis_select_topik" onchange="onCeklisTopikChange()">
+              <option value="">-- Memuat Topik Ceklis... --</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold"><i class="fas fa-school text-primary me-1"></i> Pilih Kelas</label>
+            <select class="form-select" id="ceklis_select_kelas" onchange="loadSantriCeklisTable()">
+              <option value="">-- Memuat Kelas... --</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-flex gap-2">
+            <button class="btn btn-primary w-100" onclick="loadSantriCeklisTable()">
+              <i class="fas fa-sync-alt me-1"></i> Muat Data
+            </button>
+          </div>
+        </div>
+
+        <!-- Info Card & Deskripsi Topik -->
+        <div id="ceklis_info_banner" class="alert alert-info py-2 px-3 mb-3 d-flex justify-content-between align-items-center" style="display:none !important;">
+          <div>
+            <strong id="ceklis_info_judul">-</strong>
+            <div class="small text-muted" id="ceklis_info_deskripsi">-</div>
+          </div>
+          <span class="badge bg-primary fs-6" id="ceklis_info_badge_kolom">0 Kolom</span>
+        </div>
+
+        <!-- Progress Kelengkapan Kelas -->
+        <div id="ceklis_progress_container" class="card mb-3 border-0 shadow-sm" style="display:none;">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small fw-bold text-secondary">Tingkat Kelengkapan Kelas:</span>
+              <span class="small fw-bold text-primary" id="ceklis_progress_text">0% Tuntas</span>
+            </div>
+            <div class="progress" style="height: 10px;">
+              <div id="ceklis_progress_bar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search & Action Toolbar -->
+        <div id="ceklis_table_toolbar" class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2" style="display:none !important;">
+          <div class="d-flex align-items-center gap-2">
+            <input type="text" id="ceklis_search_santri" class="form-control form-control-sm" placeholder="Cari nama santri..." onkeyup="filterSantriCeklisRows()" style="max-width: 250px;">
+            <span class="badge bg-secondary" id="ceklis_total_santri_badge">0 Santri</span>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm" onclick="exportCeklisExcel()">
+              <i class="fas fa-file-excel me-1"></i> Export Excel
+            </button>
+            <button class="btn btn-success btn-sm fw-bold px-3" onclick="simpanCeklisKelas()">
+              <i class="fas fa-save me-1"></i> Simpan Ceklis Kelas
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div id="ceklis_table_container" class="table-responsive">
+          <div class="text-center py-5 text-muted">
+            <i class="fas fa-clipboard-list fa-3x mb-3 text-secondary opacity-50"></i>
+            <p>Silakan pilih Topik Ceklis dan Kelas untuk mulai mengisi.</p>
+          </div>
+        </div>
+
+        <!-- Bottom Save Button -->
+        <div id="ceklis_bottom_action" class="text-end mt-3" style="display:none;">
+          <button class="btn btn-success btn-lg px-4 shadow-sm fw-bold" onclick="simpanCeklisKelas()">
+            <i class="fas fa-save me-2"></i> Simpan Ceklis Kelas
+          </button>
+        </div>
+
+      </div>
+
+      <!-- TAB 2: PENGATURAN CEKLIS (SUPER ADMIN ONLY) -->
+      <div class="tab-pane fade" id="tab-ceklis-config" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="mb-0 fw-bold">Daftar Formulir Ceklis</h5>
+            <small class="text-muted">Buat dan kelola topik serta kolom-kolom ceklis untuk para Ustadz</small>
+          </div>
+          <button class="btn btn-primary" onclick="openModalTambahCeklis()">
+            <i class="fas fa-plus me-1"></i> Buat Ceklis Baru
+          </button>
+        </div>
+
+        <div id="ceklis_config_table_container" class="table-responsive">
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-muted">Memuat daftar formulir ceklis...</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: BUAT / EDIT CEKLIS KONFIGURASI -->
+<div class="modal fade" id="modalFormCeklis" tabindex="-1" aria-labelledby="modalFormCeklisTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalFormCeklisTitle"><i class="fas fa-edit me-2"></i> Form Konfigurasi Ceklis</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formCeklisConfig" onsubmit="submitCeklisConfig(event)">
+          <input type="hidden" id="cfg_id_ceklis" value="">
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Nama / Topik Ceklis <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="cfg_nama_ceklis" placeholder="Contoh: Kelengkapan Berkas & Seragam Semester 1" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Deskripsi / Petunjuk</label>
+            <textarea class="form-control" id="cfg_deskripsi" rows="2" placeholder="Keterangan singkat pengisian ceklis..."></textarea>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Status</label>
+              <select class="form-select" id="cfg_status">
+                <option value="aktif">Aktif (Bisa diisi oleh Ustadz)</option>
+                <option value="arsip">Arsip (Hanya baca / Disembunyikan)</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Target Kelas</label>
+              <select class="form-select" id="cfg_target_kelas_type" onchange="toggleTargetKelasPicker()">
+                <option value="SEMUA">Semua Kelas</option>
+                <option value="PILIH">Pilih Kelas Tertentu...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Target Kelas Checklist (Optional) -->
+          <div id="cfg_target_kelas_container" class="mb-3 p-3 bg-light rounded" style="display:none;">
+            <label class="form-label fw-bold small text-muted">Centang kelas yang wajib mengisi ceklis ini:</label>
+            <div id="cfg_kelas_checkboxes" class="row g-2">
+              <!-- Dynamically populated classes -->
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- BUILDER KOLOM CEKLIS DINAMIS -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label fw-bold mb-0">
+                <i class="fas fa-columns text-primary me-1"></i> Kolom-Kolom Ceklis (Dinamis)
+              </label>
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="tambahBarisKolomCeklis('')">
+                <i class="fas fa-plus me-1"></i> Tambah Kolom
+              </button>
+            </div>
+            <p class="small text-muted mb-2">Tentukan item apa saja yang akan diceklis (centang) oleh ustadz.</p>
+            
+            <div id="cfg_kolom_list_container" class="d-flex flex-column gap-2">
+              <!-- Kolom input items will be injected here -->
+            </div>
+          </div>
+
+          <div class="modal-footer px-0 pb-0 mt-4">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-primary px-4 fw-bold">
+              <i class="fas fa-save me-1"></i> Simpan Ceklis
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// State Management Ceklis
+let currentCeklisConfigs = [];
+let currentUstadzKelasList = [];
+let activeSelectedConfig = null;
+let currentSantriData = [];
+let allAvailableKelasList = [];
+
+function loadCeklisPage() {
+  const isSuperAdmin = currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin');
+  
+  // Tab visibility
+  const adminTabs = document.getElementById('ceklis_admin_tabs');
+  if (adminTabs) {
+    adminTabs.style.display = isSuperAdmin ? 'block' : 'none';
+  }
+
+  // Set default active tab
+  const inputTabBtn = document.getElementById('tab-ceklis-input-btn');
+  if (inputTabBtn && isSuperAdmin) {
+    const tab = new bootstrap.Tab(inputTabBtn);
+    tab.show();
+  }
+
+  // Load initial options
+  loadCeklisTopikDanKelas();
+}
+
+function loadCeklisTopikDanKelas() {
+  const topikSelect = document.getElementById('ceklis_select_topik');
+  const kelasSelect = document.getElementById('ceklis_select_kelas');
+  
+  topikSelect.innerHTML = '<option value="">-- Memuat Topik Ceklis... --</option>';
+  kelasSelect.innerHTML = '<option value="">-- Memuat Kelas... --</option>';
+
+  // 1. Ambil daftar Ceklis Konfigurasi
+  google.script.run
+    .withSuccessHandler(function(configs) {
+      currentCeklisConfigs = configs || [];
+      populateCeklisTopikSelect();
+    })
+    .withFailureHandler(function(err) {
+      topikSelect.innerHTML = '<option value="">Gagal memuat topik</option>';
+      Swal.fire('Error', 'Gagal memuat konfigurasi ceklis: ' + (err.message || err), 'error');
+    })
+    .getCeklisKonfigurasi(currentUser.role);
+
+  // 2. Ambil daftar Kelas untuk user ini
+  google.script.run
+    .withSuccessHandler(function(kelasList) {
+      currentUstadzKelasList = kelasList || [];
+      populateCeklisKelasSelect();
+    })
+    .withFailureHandler(function(err) {
+      kelasSelect.innerHTML = '<option value="">Gagal memuat kelas</option>';
+      Swal.fire('Error', 'Gagal memuat daftar kelas: ' + (err.message || err), 'error');
+    })
+    .getKelasForUstadz(currentUser.nama, currentUser.id, currentUser.role);
+
+  // 3. Preload all classes for admin target picker
+  google.script.run
+    .withSuccessHandler(function(allK) {
+      allAvailableKelasList = allK || [];
+    })
+    .getKelasList();
+}
+
+function populateCeklisTopikSelect() {
+  const topikSelect = document.getElementById('ceklis_select_topik');
+  if (!currentCeklisConfigs || currentCeklisConfigs.length === 0) {
+    topikSelect.innerHTML = '<option value="">-- Belum ada Topik Ceklis Aktif --</option>';
+    return;
+  }
+
+  let html = '<option value="">-- Pilih Topik Ceklis --</option>';
+  currentCeklisConfigs.forEach(cfg => {
+    const jmlKolom = (cfg.daftar_kolom || []).length;
+    html += `<option value="${cfg.id_ceklis}">${cfg.nama_ceklis} (${jmlKolom} kolom)</option>`;
+  });
+  topikSelect.innerHTML = html;
+
+  // Auto-select if only 1 topic
+  if (currentCeklisConfigs.length === 1) {
+    topikSelect.value = currentCeklisConfigs[0].id_ceklis;
+    onCeklisTopikChange();
+  }
+}
+
+function populateCeklisKelasSelect() {
+  const kelasSelect = document.getElementById('ceklis_select_kelas');
+  if (!currentUstadzKelasList || currentUstadzKelasList.length === 0) {
+    kelasSelect.innerHTML = '<option value="">-- Tidak ada kelas yang diampu --</option>';
+    return;
+  }
+
+  let html = '<option value="">-- Pilih Kelas --</option>';
+  currentUstadzKelasList.forEach(k => {
+    html += `<option value="${k}">${k}</option>`;
+  });
+  kelasSelect.innerHTML = html;
+
+  // Jika ustadz hanya mengampu 1 kelas, langsung pilih otomatis
+  if (currentUstadzKelasList.length === 1) {
+    kelasSelect.value = currentUstadzKelasList[0];
+  }
+}
+
+function onCeklisTopikChange() {
+  const topikId = document.getElementById('ceklis_select_topik').value;
+  activeSelectedConfig = currentCeklisConfigs.find(c => c.id_ceklis === topikId) || null;
+
+  const infoBanner = document.getElementById('ceklis_info_banner');
+  if (activeSelectedConfig) {
+    document.getElementById('ceklis_info_judul').textContent = activeSelectedConfig.nama_ceklis;
+    document.getElementById('ceklis_info_deskripsi').textContent = activeSelectedConfig.deskripsi || 'Tidak ada deskripsi';
+    document.getElementById('ceklis_info_badge_kolom').textContent = (activeSelectedConfig.daftar_kolom || []).length + ' Kolom Centang';
+    infoBanner.style.setProperty('display', 'flex', 'important');
+  } else {
+    infoBanner.style.setProperty('display', 'none', 'important');
+  }
+
+  // Jika kelas sudah terpilih, langsung reload tabel
+  const kelas = document.getElementById('ceklis_select_kelas').value;
+  if (topikId && kelas) {
+    loadSantriCeklisTable();
+  }
+}
+
+function loadSantriCeklisTable() {
+  const topikId = document.getElementById('ceklis_select_topik').value;
+  const kelas = document.getElementById('ceklis_select_kelas').value;
+  const tableContainer = document.getElementById('ceklis_table_container');
+  const toolbar = document.getElementById('ceklis_table_toolbar');
+  const bottomAction = document.getElementById('ceklis_bottom_action');
+  const progressContainer = document.getElementById('ceklis_progress_container');
+
+  if (!topikId) {
+    Swal.fire('Perhatian', 'Silakan pilih Topik Ceklis terlebih dahulu', 'warning');
+    return;
+  }
+  if (!kelas) {
+    Swal.fire('Perhatian', 'Silakan pilih Kelas terlebih dahulu', 'warning');
+    return;
+  }
+
+  activeSelectedConfig = currentCeklisConfigs.find(c => c.id_ceklis === topikId);
+  if (!activeSelectedConfig) return;
+
+  const kolomList = activeSelectedConfig.daftar_kolom || [];
+  if (kolomList.length === 0) {
+    tableContainer.innerHTML = '<div class="alert alert-warning">Topik ceklis ini belum memiliki kolom. Silakan hubungi Super Admin untuk menambahkan kolom.</div>';
+    toolbar.style.setProperty('display', 'none', 'important');
+    bottomAction.style.display = 'none';
+    progressContainer.style.display = 'none';
+    return;
+  }
+
+  tableContainer.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Memuat data santri kelas ' + kelas + '...</p></div>';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.success) {
+        tableContainer.innerHTML = '<div class="alert alert-danger">' + (res.message || 'Gagal memuat data') + '</div>';
+        return;
+      }
+
+      currentSantriData = res.santriList || [];
+      renderSantriCeklisTable(kolomList, currentSantriData);
+    })
+    .withFailureHandler(function(err) {
+      tableContainer.innerHTML = '<div class="alert alert-danger">Error Server: ' + (err.message || err) + '</div>';
+    })
+    .getCeklisData(topikId, kelas);
+}
+
+function renderSantriCeklisTable(kolomList, santriList) {
+  const tableContainer = document.getElementById('ceklis_table_container');
+  const toolbar = document.getElementById('ceklis_table_toolbar');
+  const bottomAction = document.getElementById('ceklis_bottom_action');
+  const progressContainer = document.getElementById('ceklis_progress_container');
+  const badgeTotal = document.getElementById('ceklis_total_santri_badge');
+
+  if (santriList.length === 0) {
+    tableContainer.innerHTML = '<div class="alert alert-info py-4 text-center">Tidak ada santri aktif di kelas ini.</div>';
+    toolbar.style.setProperty('display', 'none', 'important');
+    bottomAction.style.display = 'none';
+    progressContainer.style.display = 'none';
+    return;
+  }
+
+  badgeTotal.textContent = santriList.length + ' Santri';
+  toolbar.style.setProperty('display', 'flex', 'important');
+  bottomAction.style.display = 'block';
+  progressContainer.style.display = 'block';
+
+  let html = `
+    <table class="table table-bordered table-hover align-middle mb-0" id="ceklisMainTable">
+      <thead class="table-dark text-center align-middle sticky-top" style="z-index: 1;">
+        <tr>
+          <th style="width: 50px;">No</th>
+          <th style="width: 120px;">NIS</th>
+          <th style="min-width: 200px;" class="text-start">Nama Santri</th>
+  `;
+
+  // Kolom-kolom Dinamis
+  kolomList.forEach((kolom, kIdx) => {
+    html += `
+      <th style="min-width: 130px;">
+        <div class="mb-1">${kolom}</div>
+        <button type="button" class="btn btn-xs btn-outline-light py-0 px-2" style="font-size: 0.72rem;" onclick="toggleCentangSemuaKolom(${kIdx}, '${kolom.replace(/'/g, "\\'")}')" title="Centang / Batal Semua">
+          Centang Semua
+        </button>
+      </th>
+    `;
+  });
+
+  html += `
+          <th style="width: 120px;">Progress</th>
+          <th style="min-width: 180px;">Catatan (Opsional)</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  santriList.forEach((s, sIdx) => {
+    const hasil = s.hasil || {};
+    let checkedCount = 0;
+
+    kolomList.forEach(k => {
+      if (hasil[k] === true) checkedCount++;
+    });
+
+    const percent = kolomList.length > 0 ? Math.round((checkedCount / kolomList.length) * 100) : 0;
+    const badgeColor = percent === 100 ? 'success' : (percent >= 50 ? 'info' : 'secondary');
+
+    html += `
+      <tr id="row_santri_${s.nis}" data-nis="${s.nis}" data-nama="${s.nama.toLowerCase()}">
+        <td class="text-center text-muted fw-bold">${sIdx + 1}</td>
+        <td class="text-center font-monospace small">${s.nis}</td>
+        <td>
+          <div class="fw-bold text-dark">${s.nama}</div>
+        </td>
+    `;
+
+    // Checkbox per kolom
+    kolomList.forEach((kolom, kIdx) => {
+      const isChecked = hasil[kolom] === true;
+      html += `
+        <td class="text-center bg-light-subtle">
+          <div class="form-check d-flex justify-content-center m-0">
+            <input class="form-check-input col-chk-${kIdx} santri-chk-${s.nis}" 
+                   type="checkbox" 
+                   data-nis="${s.nis}" 
+                   data-kolom="${kolom}" 
+                   ${isChecked ? 'checked' : ''} 
+                   onchange="onCheckboxSantriChange('${s.nis}')"
+                   style="width: 1.35em; height: 1.35em; cursor: pointer;">
+          </div>
+        </td>
+      `;
+    });
+
+    html += `
+        <td class="text-center" id="progress_cell_${s.nis}">
+          <span class="badge bg-${badgeColor}">${checkedCount}/${kolomList.length} (${percent}%)</span>
+        </td>
+        <td>
+          <input type="text" class="form-control form-control-sm" id="catatan_${s.nis}" value="${s.catatan || ''}" placeholder="Catatan...">
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `
+      </tbody>
+    </table>
+  `;
+
+  tableContainer.innerHTML = html;
+  hitungUlangTotalProgressKelas();
+}
+
+function onCheckboxSantriChange(nis) {
+  if (!activeSelectedConfig) return;
+  const kolomList = activeSelectedConfig.daftar_kolom || [];
+  const checkboxes = document.querySelectorAll(`.santri-chk-${nis}`);
+  
+  let checkedCount = 0;
+  checkboxes.forEach(cb => {
+    if (cb.checked) checkedCount++;
+  });
+
+  const percent = kolomList.length > 0 ? Math.round((checkedCount / kolomList.length) * 100) : 0;
+  const badgeColor = percent === 100 ? 'success' : (percent >= 50 ? 'info' : 'secondary');
+
+  const cell = document.getElementById(`progress_cell_${nis}`);
+  if (cell) {
+    cell.innerHTML = `<span class="badge bg-${badgeColor}">${checkedCount}/${kolomList.length} (${percent}%)</span>`;
+  }
+
+  hitungUlangTotalProgressKelas();
+}
+
+function toggleCentangSemuaKolom(colIndex, colName) {
+  const checkboxes = document.querySelectorAll(`.col-chk-${colIndex}`);
+  if (checkboxes.length === 0) return;
+
+  // Cek apakah mayoritas sudah dicentang
+  let allChecked = true;
+  checkboxes.forEach(cb => {
+    if (!cb.checked) allChecked = false;
+  });
+
+  const newState = !allChecked;
+  checkboxes.forEach(cb => {
+    cb.checked = newState;
+    const nis = cb.getAttribute('data-nis');
+    if (nis) onCheckboxSantriChange(nis);
+  });
+}
+
+function hitungUlangTotalProgressKelas() {
+  if (!activeSelectedConfig || !currentSantriData || currentSantriData.length === 0) return;
+  const totalSantri = currentSantriData.length;
+  const totalKolom = (activeSelectedConfig.daftar_kolom || []).length;
+  if (totalKolom === 0) return;
+
+  const totalPossibleChecks = totalSantri * totalKolom;
+  let totalCheckedNow = 0;
+
+  const allCheckboxes = document.querySelectorAll('#ceklisMainTable tbody input[type="checkbox"]');
+  allCheckboxes.forEach(cb => {
+    if (cb.checked) totalCheckedNow++;
+  });
+
+  const overallPercent = Math.round((totalCheckedNow / totalPossibleChecks) * 100);
+  
+  const progressBar = document.getElementById('ceklis_progress_bar');
+  const progressText = document.getElementById('ceklis_progress_text');
+  if (progressBar) progressBar.style.width = overallPercent + '%';
+  if (progressText) progressText.textContent = `${overallPercent}% Tuntas (${totalCheckedNow}/${totalPossibleChecks} item)`;
+}
+
+function filterSantriCeklisRows() {
+  const keyword = (document.getElementById('ceklis_search_santri').value || '').toLowerCase().trim();
+  const rows = document.querySelectorAll('#ceklisMainTable tbody tr');
+  
+  rows.forEach(r => {
+    const nama = r.getAttribute('data-nama') || '';
+    const nis = r.getAttribute('data-nis') || '';
+    if (nama.includes(keyword) || nis.includes(keyword)) {
+      r.style.display = '';
+    } else {
+      r.style.display = 'none';
+    }
+  });
+}
+
+function simpanCeklisKelas() {
+  const topikId = document.getElementById('ceklis_select_topik').value;
+  const kelas = document.getElementById('ceklis_select_kelas').value;
+
+  if (!topikId || !kelas || !activeSelectedConfig) {
+    Swal.fire('Perhatian', 'Parameter data tidak lengkap', 'warning');
+    return;
+  }
+
+  const payloadList = [];
+  const rows = document.querySelectorAll('#ceklisMainTable tbody tr');
+
+  rows.forEach(r => {
+    const nis = r.getAttribute('data-nis');
+    if (!nis) return;
+
+    const santriObj = currentSantriData.find(s => s.nis === nis);
+    const nama = santriObj ? santriObj.nama : '';
+
+    const hasil = {};
+    const cbs = r.querySelectorAll('input[type="checkbox"]');
+    cbs.forEach(cb => {
+      const kolomName = cb.getAttribute('data-kolom');
+      if (kolomName) {
+        hasil[kolomName] = cb.checked;
+      }
+    });
+
+    const catatanInput = document.getElementById(`catatan_${nis}`);
+    const catatan = catatanInput ? catatanInput.value : '';
+
+    payloadList.push({
+      nis: nis,
+      nama: nama,
+      hasil: hasil,
+      catatan: catatan
+    });
+  });
+
+  Swal.fire({
+    title: 'Menyimpan Ceklis...',
+    text: `Sedang menyimpan ${payloadList.length} santri kelas ${kelas}`,
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil Disimpan!',
+          text: res.message || 'Ceklis santri berhasil diperbarui',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        Swal.fire('Gagal Menyimpan', res.message || 'Terjadi kesalahan sistem', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      Swal.fire('Error Server', err.message || err.toString(), 'error');
+    })
+    .saveCeklisData(topikId, kelas, payloadList, currentUser.nama || currentUser.username);
+}
+
+function exportCeklisExcel() {
+  if (!activeSelectedConfig || currentSantriData.length === 0) {
+    Swal.fire('Peringatan', 'Tidak ada data untuk diekspor', 'warning');
+    return;
+  }
+
+  const kelas = document.getElementById('ceklis_select_kelas').value;
+  const kolomList = activeSelectedConfig.daftar_kolom || [];
+
+  const excelRows = [];
+  const header = ['No', 'NIS', 'Nama Santri', 'Kelas'];
+  kolomList.forEach(k => header.push(k));
+  header.push('Persentase', 'Catatan');
+  excelRows.push(header);
+
+  const rows = document.querySelectorAll('#ceklisMainTable tbody tr');
+  let idx = 1;
+
+  rows.forEach(r => {
+    const nis = r.getAttribute('data-nis');
+    const santriObj = currentSantriData.find(s => s.nis === nis);
+    if (!santriObj) return;
+
+    const rowData = [idx++, nis, santriObj.nama, kelas];
+    let chkCount = 0;
+
+    kolomList.forEach(k => {
+      const cb = r.querySelector(`input[data-kolom="${k}"]`);
+      const isChecked = cb && cb.checked;
+      if (isChecked) chkCount++;
+      rowData.push(isChecked ? 'YA' : 'TIDAK');
+    });
+
+    const percent = Math.round((chkCount / kolomList.length) * 100) + '%';
+    const catatan = (document.getElementById(`catatan_${nis}`) || {}).value || '';
+    rowData.push(percent, catatan);
+
+    excelRows.push(rowData);
+  });
+
+  // Create Workbook with SheetJS
+  try {
+    const ws = XLSX.utils.aoa_to_sheet(excelRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ceklis Santri");
+    const filename = `Ceklis_${activeSelectedConfig.nama_ceklis.replace(/[^a-zA-Z0-9]/g, '_')}_Kelas_${kelas}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  } catch (e) {
+    Swal.fire('Error Export', e.message || 'Gagal export Excel', 'error');
+  }
+}
+
+// ==========================================
+// BAGIAN PENGATURAN CEKLIS (SUPER ADMIN)
+// ==========================================
+
+function loadCeklisConfigList() {
+  const container = document.getElementById('ceklis_config_table_container');
+  container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Memuat konfigurasi...</p></div>';
+
+  google.script.run
+    .withSuccessHandler(function(configs) {
+      currentCeklisConfigs = configs || [];
+      renderCeklisConfigTable(currentCeklisConfigs);
+    })
+    .withFailureHandler(function(err) {
+      container.innerHTML = '<div class="alert alert-danger">Error: ' + (err.message || err) + '</div>';
+    })
+    .getCeklisKonfigurasi('super_admin');
+}
+
+function renderCeklisConfigTable(configs) {
+  const container = document.getElementById('ceklis_config_table_container');
+  if (configs.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-5 bg-light rounded">
+        <i class="fas fa-clipboard-check fa-3x text-muted mb-3 opacity-50"></i>
+        <h6>Belum Ada Formulir Ceklis</h6>
+        <p class="text-muted small">Klik tombol "Buat Ceklis Baru" di atas untuk menambahkan formulir.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = `
+    <table class="table table-bordered table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th width="5%" class="text-center">No</th>
+          <th>Topik Ceklis</th>
+          <th>Deskripsi</th>
+          <th>Daftar Kolom Centang</th>
+          <th>Target Kelas</th>
+          <th class="text-center">Status</th>
+          <th width="15%" class="text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  configs.forEach((cfg, idx) => {
+    const kolomBadges = (cfg.daftar_kolom || []).map(k => `<span class="badge bg-light text-dark border me-1 mb-1">${k}</span>`).join('');
+    const targetBadges = (cfg.target_kelas || []).includes('SEMUA') ? '<span class="badge bg-info text-dark">Semua Kelas</span>' : (cfg.target_kelas || []).map(t => `<span class="badge bg-secondary me-1">${t}</span>`).join('');
+    const statusBadge = cfg.status === 'aktif' ? '<span class="badge bg-success">Aktif</span>' : '<span class="badge bg-secondary">Arsip</span>';
+
+    html += `
+      <tr>
+        <td class="text-center">${idx + 1}</td>
+        <td class="fw-bold text-primary">${cfg.nama_ceklis}</td>
+        <td><small class="text-muted">${cfg.deskripsi || '-'}</small></td>
+        <td>${kolomBadges || '<span class="text-muted small">Belum ada kolom</span>'}</td>
+        <td>${targetBadges}</td>
+        <td class="text-center">${statusBadge}</td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-primary me-1" onclick="editCeklisConfig('${cfg.id_ceklis}')" title="Edit">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="hapusCeklisConfig('${cfg.id_ceklis}', '${cfg.nama_ceklis.replace(/'/g, "\\'")}')" title="Hapus">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+function openModalTambahCeklis() {
+  document.getElementById('formCeklisConfig').reset();
+  document.getElementById('cfg_id_ceklis').value = '';
+  document.getElementById('modalFormCeklisTitle').innerHTML = '<i class="fas fa-plus me-2"></i> Buat Ceklis Baru';
+  
+  // Reset kolom builder
+  const colContainer = document.getElementById('cfg_kolom_list_container');
+  colContainer.innerHTML = '';
+  // Default beri 3 baris kosong
+  tambahBarisKolomCeklis('Contoh: Berkas Foto');
+  tambahBarisKolomCeklis('Contoh: FC Akta');
+  tambahBarisKolomCeklis('Contoh: Seragam');
+
+  populateTargetKelasPickerCheckbox([]);
+  toggleTargetKelasPicker();
+
+  const modal = new bootstrap.Modal(document.getElementById('modalFormCeklis'));
+  modal.show();
+}
+
+function editCeklisConfig(idCeklis) {
+  const cfg = currentCeklisConfigs.find(c => c.id_ceklis === idCeklis);
+  if (!cfg) return;
+
+  document.getElementById('cfg_id_ceklis').value = cfg.id_ceklis;
+  document.getElementById('cfg_nama_ceklis').value = cfg.nama_ceklis;
+  document.getElementById('cfg_deskripsi').value = cfg.deskripsi || '';
+  document.getElementById('cfg_status').value = cfg.status || 'aktif';
+
+  const isSemua = (cfg.target_kelas || []).includes('SEMUA');
+  document.getElementById('cfg_target_kelas_type').value = isSemua ? 'SEMUA' : 'PILIH';
+
+  populateTargetKelasPickerCheckbox(cfg.target_kelas || []);
+  toggleTargetKelasPicker();
+
+  // Populate kolom builder
+  const colContainer = document.getElementById('cfg_kolom_list_container');
+  colContainer.innerHTML = '';
+  (cfg.daftar_kolom || []).forEach(k => {
+    tambahBarisKolomCeklis(k);
+  });
+  if ((cfg.daftar_kolom || []).length === 0) {
+    tambahBarisKolomCeklis('');
+  }
+
+  document.getElementById('modalFormCeklisTitle').innerHTML = '<i class="fas fa-edit me-2"></i> Edit Formulir Ceklis';
+  const modal = new bootstrap.Modal(document.getElementById('modalFormCeklis'));
+  modal.show();
+}
+
+function tambahBarisKolomCeklis(namaKolom) {
+  const container = document.getElementById('cfg_kolom_list_container');
+  const count = container.querySelectorAll('.cfg-kolom-row').length + 1;
+
+  const div = document.createElement('div');
+  div.className = 'input-group cfg-kolom-row';
+  div.innerHTML = `
+    <span class="input-group-text bg-light text-muted small fw-bold">${count}</span>
+    <input type="text" class="form-control cfg-kolom-input" value="${namaKolom}" placeholder="Nama kolom centang..." required>
+    <button type="button" class="btn btn-outline-danger" onclick="this.closest('.cfg-kolom-row').remove(); updateKolomNomorIndex();">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  container.appendChild(div);
+}
+
+function updateKolomNomorIndex() {
+  const rows = document.querySelectorAll('#cfg_kolom_list_container .cfg-kolom-row');
+  rows.forEach((r, idx) => {
+    const badge = r.querySelector('.input-group-text');
+    if (badge) badge.textContent = (idx + 1);
+  });
+}
+
+function toggleTargetKelasPicker() {
+  const type = document.getElementById('cfg_target_kelas_type').value;
+  const container = document.getElementById('cfg_target_kelas_container');
+  container.style.display = type === 'PILIH' ? 'block' : 'none';
+}
+
+function populateTargetKelasPickerCheckbox(selectedClasses) {
+  const container = document.getElementById('cfg_kelas_checkboxes');
+  if (!allAvailableKelasList || allAvailableKelasList.length === 0) {
+    container.innerHTML = '<div class="text-muted small">Tidak ada daftar kelas</div>';
+    return;
+  }
+
+  let html = '';
+  allAvailableKelasList.forEach(k => {
+    const kName = k.Nama_Kelas || k.nama_kelas || k;
+    const isChecked = selectedClasses.includes(kName);
+    html += `
+      <div class="col-md-4 col-6">
+        <div class="form-check">
+          <input class="form-check-input cfg-target-chk" type="checkbox" value="${kName}" id="chk_k_${kName}" ${isChecked ? 'checked' : ''}>
+          <label class="form-check-label small" for="chk_k_${kName}">${kName}</label>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function submitCeklisConfig(e) {
+  e.preventDefault();
+
+  const idCeklis = document.getElementById('cfg_id_ceklis').value;
+  const namaCeklis = document.getElementById('cfg_nama_ceklis').value.trim();
+  const deskripsi = document.getElementById('cfg_deskripsi').value.trim();
+  const status = document.getElementById('cfg_status').value;
+  const targetType = document.getElementById('cfg_target_kelas_type').value;
+
+  const targetKelas = [];
+  if (targetType === 'SEMUA') {
+    targetKelas.push('SEMUA');
+  } else {
+    const chks = document.querySelectorAll('.cfg-target-chk:checked');
+    chks.forEach(c => targetKelas.push(c.value));
+    if (targetKelas.length === 0) {
+      Swal.fire('Perhatian', 'Pilih minimal satu kelas target atau pilih "Semua Kelas"', 'warning');
+      return;
+    }
+  }
+
+  const kolomInputs = document.querySelectorAll('.cfg-kolom-input');
+  const daftarKolom = [];
+  kolomInputs.forEach(inp => {
+    const val = inp.value.trim();
+    if (val) daftarKolom.push(val);
+  });
+
+  if (daftarKolom.length === 0) {
+    Swal.fire('Perhatian', 'Harap isi minimal 1 kolom ceklis', 'warning');
+    return;
+  }
+
+  const payload = {
+    id_ceklis: idCeklis,
+    nama_ceklis: namaCeklis,
+    deskripsi: deskripsi,
+    daftar_kolom: daftarKolom,
+    target_kelas: targetKelas,
+    status: status
+  };
+
+  Swal.fire({
+    title: 'Menyimpan Konfigurasi...',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalFormCeklis')).hide();
+        Swal.fire('Berhasil', res.message || 'Konfigurasi Ceklis berhasil disimpan', 'success');
+        loadCeklisConfigList();
+        loadCeklisTopikDanKelas();
+      } else {
+        Swal.fire('Gagal', res.message || 'Gagal menyimpan', 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      Swal.fire('Error Server', err.message || err.toString(), 'error');
+    })
+    .saveCeklisKonfigurasi(payload);
+}
+
+function hapusCeklisConfig(idCeklis, namaCeklis) {
+  Swal.fire({
+    title: 'Hapus Formulir Ceklis?',
+    html: `Apakah Anda yakin ingin menghapus <b>${namaCeklis}</b>? Data centang yang sudah tersimpan pada ceklis ini tidak akan muncul lagi.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Ya, Hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      Swal.fire({
+        title: 'Menghapus...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res.success) {
+            Swal.fire('Terhapus', res.message || 'Ceklis berhasil dihapus', 'success');
+            loadCeklisConfigList();
+            loadCeklisTopikDanKelas();
+          } else {
+            Swal.fire('Gagal', res.message || 'Gagal menghapus', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          Swal.fire('Error Server', err.message || err.toString(), 'error');
+        })
+        .deleteCeklisKonfigurasi(idCeklis);
+    }
+  });
+}
+</script>
+
   
   <!-- Modal Notifikasi Pengumuman -->
   <div class="modal fade" id="notifPengumumanModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -4255,12 +5229,6 @@ function loadDataKelas() {
 
                             return async function(...args) {
                                 try {
-                                    if(GAS_WEB_APP_URL === "URL_GAS_TERBARU") {
-                                        console.error("URL GAS BELUM DIUBAH DI api.js!");
-                                        if (failureHandler) failureHandler(new Error("URL GAS belum di-setting."));
-                                        return;
-                                    }
-                                    
                                     const response = await fetch(GAS_WEB_APP_URL, {
                                         method: 'POST',
                                         headers: {
