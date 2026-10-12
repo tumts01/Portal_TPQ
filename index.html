@@ -2979,6 +2979,24 @@ function tampilkanRekap(students, tanggalDipilih) {
 
   <script>
 
+function normalizeKelas(k) {
+  if (!k) return '';
+  return String(k)
+    .trim()
+    .toLowerCase()
+    .replace(/^jilid\s*/i, '')
+    .replace(/^pra\s+bilqolam/i, 'pra')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function isKelasMatch(k1, k2) {
+  if (!k1 || !k2) return false;
+  const s1 = String(k1).trim().toLowerCase();
+  const s2 = String(k2).trim().toLowerCase();
+  if (s1 === s2) return true;
+  return normalizeKelas(k1) === normalizeKelas(k2);
+}
+
 function loadRaporPage() {
   const contentArea = document.getElementById('contentArea');
   
@@ -2996,7 +3014,7 @@ function loadRaporPage() {
           <div class="row mb-3">
             <div class="col-md-3">
               <label>Tahun Ajaran</label>
-              <input type="text" class="form-control" id="rn_ta" value="2025/2026">
+              <input type="text" class="form-control" id="rn_ta" value="20262">
             </div>
             <!-- Dropdown semester dihapus sesuai permintaan -->
             <input type="hidden" id="rn_semester" value="-">
@@ -3022,7 +3040,7 @@ function loadRaporPage() {
           <div class="row mb-3">
             <div class="col-md-3">
               <label>Tahun Ajaran</label>
-              <input type="text" class="form-control" id="cr_ta" value="2025/2026">
+              <input type="text" class="form-control" id="cr_ta" value="20262">
             </div>
             <!-- Dropdown semester dihapus sesuai permintaan -->
             <input type="hidden" id="cr_semester" value="-">
@@ -3038,8 +3056,6 @@ function loadRaporPage() {
               </button>
             </div>
           </div>
-          
-          
           
           <div id="cr_result"></div>
         </div>
@@ -3114,16 +3130,39 @@ function loadRaporPage() {
     </div>
   `;
   
+  // Load config for active Tahun Ajaran
+  google.script.run.withSuccessHandler(function(cfg) {
+    if (cfg) {
+      const activeTA = cfg.TAHUN_AJARAN || cfg.tahun_ajaran || '20262';
+      const rnTa = document.getElementById('rn_ta');
+      const crTa = document.getElementById('cr_ta');
+      if (rnTa) rnTa.value = activeTA;
+      if (crTa) crTa.value = activeTA;
+    }
+  }).getConfig();
+  
   // Load kelas options
   google.script.run.withSuccessHandler(function(kelasList) {
+    const kNames = kelasList.map(k => k.Nama_Kelas).filter(Boolean);
     const options = '<option value="">-- Pilih Kelas --</option>' + 
-      kelasList.map(k => `<option value="${k.Nama_Kelas}">${k.Nama_Kelas}</option>`).join('');
+      kNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    
     const rnKelas = document.getElementById('rn_kelas');
     const crKelas = document.getElementById('cr_kelas');
-    const pmKelas = document.getElementById('pm_kelas');
     if (rnKelas) rnKelas.innerHTML = options;
     if (crKelas) crKelas.innerHTML = options;
-    if (pmKelas) pmKelas.innerHTML = options;
+    
+    // For Pengaturan Materi, load both Kelas and distinct categories from Materi_Kelas
+    google.script.run.withSuccessHandler(function(materiKelasList) {
+      const combined = Array.from(new Set([...kNames, ...(materiKelasList || [])])).filter(Boolean).sort();
+      const pmOptions = '<option value="">-- Pilih Kelas --</option>' + 
+        combined.map(name => `<option value="${name}">${name}</option>`).join('');
+      const pmKelas = document.getElementById('pm_kelas');
+      if (pmKelas) pmKelas.innerHTML = pmOptions;
+    }).withFailureHandler(function() {
+      const pmKelas = document.getElementById('pm_kelas');
+      if (pmKelas) pmKelas.innerHTML = options;
+    }).getDaftarKelasMateri();
   }).withFailureHandler(function(e) {
     showToast('Gagal memuat kelas: ' + e.message, 'error');
   }).getKelasList();
@@ -3152,41 +3191,71 @@ function loadMateriForInput() {
   // Load materi untuk kelas ini
   google.script.run
     .withSuccessHandler(function(materiList) {
-      // Tampilkan info materi
       infoContainer.style.display = 'block';
-      infoContainer.innerHTML = `
-        <strong>Materi Kelas ${kelas}:</strong><br>
-        ${materiList.map(m => `â€¢ ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
-      `;
+      if (!materiList || materiList.length === 0) {
+        infoContainer.innerHTML = `
+          <div class="text-warning">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Belum ada materi untuk kelas ${kelas}.</strong> Silakan atur materi di sub menu <em>Pengaturan Materi</em>.
+          </div>
+        `;
+      } else {
+        infoContainer.innerHTML = `
+          <strong>Materi Kelas ${kelas}:</strong><br>
+          ${materiList.map(m => `â€¢ ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
+        `;
+      }
       
-      // Load santri di kelas ini
+      // Load santri di kelas ini (fuzzy match kelas dan status aktif)
       google.script.run
         .withSuccessHandler(function(santriList) {
-          const filtered = santriList.filter(s => s.Kelas === kelas && s.Status === 'aktif');
+          const filtered = (santriList || []).filter(s => {
+            const sK = s.Kelas || s.kelas || '';
+            const matchK = isKelasMatch(sK, kelas);
+            const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
+            return matchK && (status === 'aktif' || status === '');
+          });
           
           if (filtered.length === 0) {
-            container.innerHTML = '<div class="alert alert-warning">Tidak ada santri di kelas ini</div>';
+            container.innerHTML = '<div class="alert alert-warning">Tidak ada santri di kelas ini (Kelas: ' + kelas + ')</div>';
             return;
           }
+          
+          // Sort santri by name
+          filtered.sort((a, b) => {
+            const nameA = String(a.Nama_Santri || a.nama_santri || a.Nama || a.nama || '');
+            const nameB = String(b.Nama_Santri || b.nama_santri || b.Nama || b.nama || '');
+            return nameA.localeCompare(nameB);
+          });
           
           // Load nilai yang sudah ada
           const ta = document.getElementById('rn_ta').value;
           google.script.run
             .withSuccessHandler(function(nilaiList) {
-              renderInputNilaiForm(filtered, materiList, nilaiList, kelas);
+              renderInputNilaiForm(filtered, materiList || [], nilaiList || [], kelas);
+            })
+            .withFailureHandler(function(e) {
+              renderInputNilaiForm(filtered, materiList || [], [], kelas);
             })
             .getNilaiRaporByKelas(kelas, ta);
         })
+        .withFailureHandler(function(e) {
+          container.innerHTML = '<div class="alert alert-danger">Gagal memuat data santri: ' + e.message + '</div>';
+        })
         .getSantriList();
+    })
+    .withFailureHandler(function(e) {
+      infoContainer.style.display = 'block';
+      infoContainer.innerHTML = '<div class="alert alert-danger">Gagal memuat materi: ' + e.message + '</div>';
     })
     .getMateriByKelas(kelas);
 }
 
 function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
   const container = document.getElementById('rn_santriList');
+  const upperKelas = String(kelas || '').trim().toUpperCase();
   
   // Untuk DINIYAH, input manual per materi
-  if (kelas === 'DINIYAH') {
+  if (upperKelas.includes('DINIYAH')) {
     container.innerHTML = `
       <div class="table-responsive">
         <table class="table table-bordered">
@@ -3204,16 +3273,18 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
           </thead>
           <tbody>
             ${santriList.map((s, i) => {
-              const nilaiSantri = nilaiList.filter(n => n.nis === s.NIS);
+              const sNis = String(s.NIS || s.nis || s.Nis || '').trim();
+              const sNama = s.Nama_Santri || s.nama_santri || s.Nama || s.nama || '-';
+              const nilaiSantri = nilaiList.filter(n => String(n.nis || '').trim() === sNis);
               return `
-                <tr data-nis="${s.NIS}" data-nama="${s.Nama_Santri}">
+                <tr data-nis="${sNis}" data-nama="${sNama}">
                   <td>${i+1}</td>
-                  <td>${s.NIS}</td>
-                  <td>${s.Nama_Santri}</td>
+                  <td>${sNis}</td>
+                  <td>${sNama}</td>
                   ${materiList.map(m => {
                     const existing = nilaiSantri.find(n => n.materi === m.materi);
                     return `<td><input type="number" class="form-control form-control-sm nilai-manual" 
-                      data-materi="${m.materi}" data-id="${m.id_materi}" data-bobot="${m.bobot}" data-tipe="${m.tipe}"
+                      data-materi="${m.materi}" data-id="${m.id_materi || ''}" data-bobot="${m.bobot || 0}" data-tipe="${m.tipe || 'manual'}"
                       value="${existing ? existing.nilai_materi : ''}" min="0" max="100" onchange="hitungRataRataDiniyah(this)"></td>`;
                   }).join('')}
                   <td class="rata-rata text-center"><strong>-</strong></td>
@@ -3232,8 +3303,8 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
     return;
   }
   
-  // Untuk TAHFIDH JUZ AMMA (weighted)
-  if (kelas === 'TAHFIDH JUZ AMMA') {
+  // Untuk TAHFIDH (weighted)
+  if (upperKelas.includes('TAHFIDH')) {
     container.innerHTML = `
       <div class="table-responsive">
         <table class="table table-bordered">
@@ -3248,16 +3319,18 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
           </thead>
           <tbody>
             ${santriList.map((s, i) => {
-              const nilaiSantri = nilaiList.filter(n => n.nis === s.NIS);
+              const sNis = String(s.NIS || s.nis || s.Nis || '').trim();
+              const sNama = s.Nama_Santri || s.nama_santri || s.Nama || s.nama || '-';
+              const nilaiSantri = nilaiList.filter(n => String(n.nis || '').trim() === sNis);
               return `
-                <tr data-nis="${s.NIS}" data-nama="${s.Nama_Santri}">
+                <tr data-nis="${sNis}" data-nama="${sNama}">
                   <td>${i+1}</td>
-                  <td>${s.NIS}</td>
-                  <td>${s.Nama_Santri}</td>
+                  <td>${sNis}</td>
+                  <td>${sNama}</td>
                   ${materiList.map(m => {
                     const existing = nilaiSantri.find(n => n.materi === m.materi);
                     return `<td><input type="number" class="form-control form-control-sm nilai-weighted" 
-                      data-materi="${m.materi}" data-id="${m.id_materi}" data-bobot="${m.bobot}" data-tipe="${m.tipe}"
+                      data-materi="${m.materi}" data-id="${m.id_materi || ''}" data-bobot="${m.bobot || 0}" data-tipe="${m.tipe || 'weighted'}"
                       value="${existing ? existing.nilai_materi : ''}" min="0" max="${m.bobot}" onchange="hitungTotalWeighted(this)"></td>`;
                   }).join('')}
                   <td class="total-weighted text-center"><strong>-</strong></td>
@@ -3275,7 +3348,7 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
     return;
   }
   
-  // Untuk kelas REGULAR (PRA - JILID 4 - JUZ AMMA)
+  // Untuk kelas REGULAR (PRA - JILID 1 s/d 6 - JUZ AMMA)
   container.innerHTML = `
     <div class="alert alert-secondary small">
       <strong>Formula:</strong> Nilai = 95 - (Î£ bobot Ã— kesalahan) + nilai lagu (5)<br>
@@ -3308,42 +3381,45 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
         </thead>
         <tbody>
           ${santriList.map((s, i) => {
-            const nilaiSantri = nilaiList.filter(n => n.nis === s.NIS);
+            const sNis = String(s.NIS || s.nis || s.Nis || '').trim();
+            const sNama = s.Nama_Santri || s.nama_santri || s.Nama || s.nama || '-';
+            const nilaiSantri = nilaiList.filter(n => String(n.nis || '').trim() === sNis);
+            const plusMateri = materiList.find(m => m.tipe === 'plus');
             return `
-              <tr data-nis="${s.NIS}" data-nama="${s.Nama_Santri}">
+              <tr data-nis="${sNis}" data-nama="${sNama}">
                 <td>${i+1}</td>
-                <td>${s.NIS}</td>
-                <td>${s.Nama_Santri}</td>
+                <td>${sNis}</td>
+                <td>${sNama}</td>
                 ${materiList.filter(m => m.tipe !== 'plus').map(m => {
                   const existing = nilaiSantri.find(n => n.materi === m.materi);
                   return `<td><input type="number" class="form-control form-control-sm nilai-kesalahan" 
-                    data-materi="${m.materi}" data-id="${m.id_materi}" data-bobot="${m.bobot}" data-tipe="${m.tipe}"
+                    data-materi="${m.materi}" data-id="${m.id_materi || ''}" data-bobot="${m.bobot || 0}" data-tipe="${m.tipe || 'regular'}"
                     value="${existing ? existing.jumlah_kesalahan : 0}" min="0" onchange="hitungNilaiAkhir(this)"></td>`;
                 }).join('')}
                 <td>
                   <input type="number" class="form-control form-control-sm nilai-lagu" 
-                    data-materi="LAGU/SUARA" data-id="${materiList.find(m => m.tipe === 'plus')?.id_materi}" 
+                    data-materi="LAGU/SUARA" data-id="${plusMateri ? plusMateri.id_materi : ''}" 
                     data-bobot="5" data-tipe="plus" onchange="hitungNilaiAkhir(this)"
                     value="${nilaiSantri.find(n => n.tipe === 'plus') ? nilaiSantri.find(n => n.tipe === 'plus').nilai_materi : ''}" min="1" max="5" placeholder="1-5">
                 </td>
                 <td>
                   <select class="form-select form-select-sm sikap-perilaku">
                     <option value="A" ${nilaiSantri[0]?.perilaku === 'A' ? 'selected' : ''}>A</option>
-                    <option value="B" ${nilaiSantri[0]?.perilaku === 'B' ? 'selected' : ''}>B</option>
+                    <option value="B" ${!nilaiSantri[0] || nilaiSantri[0]?.perilaku === 'B' ? 'selected' : ''}>B</option>
                     <option value="C" ${nilaiSantri[0]?.perilaku === 'C' ? 'selected' : ''}>C</option>
                   </select>
                 </td>
                 <td>
                   <select class="form-select form-select-sm sikap-disiplin">
                     <option value="A" ${nilaiSantri[0]?.kedisiplinan === 'A' ? 'selected' : ''}>A</option>
-                    <option value="B" ${nilaiSantri[0]?.kedisiplinan === 'B' ? 'selected' : ''}>B</option>
+                    <option value="B" ${!nilaiSantri[0] || nilaiSantri[0]?.kedisiplinan === 'B' ? 'selected' : ''}>B</option>
                     <option value="C" ${nilaiSantri[0]?.kedisiplinan === 'C' ? 'selected' : ''}>C</option>
                   </select>
                 </td>
                 <td>
                   <select class="form-select form-select-sm sikap-aktif">
                     <option value="A" ${nilaiSantri[0]?.keaktifan === 'A' ? 'selected' : ''}>A</option>
-                    <option value="B" ${nilaiSantri[0]?.keaktifan === 'B' ? 'selected' : ''}>B</option>
+                    <option value="B" ${!nilaiSantri[0] || nilaiSantri[0]?.keaktifan === 'B' ? 'selected' : ''}>B</option>
                     <option value="C" ${nilaiSantri[0]?.keaktifan === 'C' ? 'selected' : ''}>C</option>
                   </select>
                 </td>
@@ -3427,7 +3503,7 @@ function handleSemesterInput() {
 }
 
 function simpanSemuaNilai() {
-  const ta = document.getElementById('rn_ta').value;
+  const ta = document.getElementById('rn_ta').value.trim();
   const kelas = document.getElementById('rn_kelas').value;
   const semester = '-';
   
@@ -3442,10 +3518,7 @@ function simpanSemuaNilai() {
     return;
   }
   
-  showLoading('Menyimpan semua nilai rapor...');
-  let count = 0;
-  let total = 0;
-  
+  const batchData = [];
   rows.forEach(row => {
     const nis = row.dataset.nis;
     const nama = row.dataset.nama;
@@ -3457,13 +3530,12 @@ function simpanSemuaNilai() {
     const catatanPenguji = row.querySelector('.catatan-penguji')?.value || '';
     
     const inputs = row.querySelectorAll('input[data-materi], select[data-materi]');
-    
     inputs.forEach(input => {
       const materi = input.dataset.materi;
       if (!materi) return;
-      const idMateri = input.dataset.id;
-      const bobot = input.dataset.bobot;
-      const tipe = input.dataset.tipe;
+      const idMateri = input.dataset.id || '';
+      const bobot = parseFloat(input.dataset.bobot) || 0;
+      const tipe = input.dataset.tipe || 'regular';
       let nilaiMateri = 0;
       let jumlahKesalahan = 0;
       
@@ -3478,46 +3550,47 @@ function simpanSemuaNilai() {
         nilaiMateri = parseFloat(input.value) || 0;
       }
       
-      total++;
-      
-      google.script.run
-        .withSuccessHandler(function() {
-          count++;
-          if (count === total) {
-            hideLoading();
-            showToast('Semua nilai berhasil disimpan! ðŸŽ‰', 'success');
-          }
-        })
-        .withFailureHandler(function(e) {
-          count++;
-          if (count === total) hideLoading();
-          showToast('Error simpan nilai: ' + e.message, 'error');
-        })
-        .saveNilaiRapor({
-          tahun_ajaran: ta,
-          semester: semester,
-          nis: nis,
-          nama_santri: nama,
-          kelas: kelas,
-          id_materi: idMateri,
-          materi: materi,
-          bobot: bobot,
-          jumlah_kesalahan: jumlahKesalahan,
-          nilai_materi: nilaiMateri,
-          tipe: tipe,
-          perilaku: perilaku,
-          kedisiplinan: kedisiplinan,
-          keaktifan: keaktifan,
-          catatan_penguji: catatanPenguji,
-          input_oleh: currentUser.username,
-        });
+      batchData.push({
+        tahun_ajaran: ta,
+        semester: semester,
+        nis: nis,
+        nama_santri: nama,
+        kelas: kelas,
+        id_materi: idMateri,
+        materi: materi,
+        bobot: bobot,
+        jumlah_kesalahan: jumlahKesalahan,
+        nilai_materi: nilaiMateri,
+        tipe: tipe,
+        perilaku: perilaku,
+        kedisiplinan: kedisiplinan,
+        keaktifan: keaktifan,
+        catatan_penguji: catatanPenguji,
+        input_oleh: (typeof currentUser !== 'undefined' && currentUser ? (currentUser.nama || currentUser.username) : 'Ustadz')
+      });
     });
   });
   
-  if (total === 0) {
-    hideLoading();
+  if (batchData.length === 0) {
     showToast('Tidak ada data nilai yang ditemukan', 'warning');
+    return;
   }
+  
+  showLoading('Menyimpan ' + batchData.length + ' nilai rapor...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      if (res && res.success) {
+        showToast(res.message || 'Semua nilai berhasil disimpan! ðŸŽ‰', 'success');
+      } else {
+        showToast('Info: ' + (res ? res.message : 'Nilai disimpan'), 'info');
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error simpan nilai: ' + e.message, 'error');
+    })
+    .saveBatchNilaiRapor(batchData);
 }
 
 function prosesCetakRapor() {
@@ -3533,17 +3606,24 @@ function prosesCetakRapor() {
   
   google.script.run
     .withSuccessHandler(function(santriList) {
-      const targetKelas = kelas.trim().toLowerCase();
-      const filtered = santriList.filter(s => 
-        (s.Kelas || '').trim().toLowerCase() === targetKelas && 
-        ((s.Status || '').trim().toLowerCase() === 'aktif' || (s.Status || '').trim() === '')
-      );
+      const filtered = (santriList || []).filter(s => {
+        const sK = s.Kelas || s.kelas || '';
+        const matchK = isKelasMatch(sK, kelas);
+        const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
+        return matchK && (status === 'aktif' || status === '');
+      });
       
       if (filtered.length === 0) {
         hideLoading();
-        document.getElementById('cr_result').innerHTML = '<div class="alert alert-warning">Tidak ada santri aktif di kelas ini</div>';
+        document.getElementById('cr_result').innerHTML = '<div class="alert alert-warning">Tidak ada santri aktif di kelas ini (' + kelas + ')</div>';
         return;
       }
+      
+      filtered.sort((a, b) => {
+        const nameA = String(a.Nama_Santri || a.nama_santri || a.Nama || a.nama || '');
+        const nameB = String(b.Nama_Santri || b.nama_santri || b.Nama || b.nama || '');
+        return nameA.localeCompare(nameB);
+      });
       
       google.script.run
         .withSuccessHandler(function(nilaiSantriList) {
@@ -3581,10 +3661,10 @@ function prosesCetakRapor() {
                       `;
                       
                       filtered.forEach((santri, index) => {
-                          const nis = santri.NIS || santri.nis || santri.Nis;
-                          const nilaiSantri = nilaiSantriList.filter(n => (n.nis||'').toString().trim() === (nis||'').toString().trim() && (n.tahun_ajaran||'').toString().trim() === (ta||'').toString().trim());
+                          const nis = String(santri.NIS || santri.nis || santri.Nis || '').trim();
+                          const nilaiSantri = (nilaiSantriList || []).filter(n => String(n.nis || '').trim() === nis && String(n.tahun_ajaran || '').trim() === String(ta).trim());
                           const sikap = nilaiSantri.length > 0 ? nilaiSantri[0] : {};
-                          const absen = absenList.filter(a => a.nis == nis);
+                          const absen = (absenList || []).filter(a => String(a.nis || '').trim() === nis);
                           
                           let totalSakit = 0, totalIzin = 0, totalAlpha = 0;
                           absen.forEach(a => {
@@ -3701,8 +3781,8 @@ function loadPengaturanMateri() {
   google.script.run
     .withSuccessHandler(function(materiList) {
       hideLoading();
-      if (materiList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada materi untuk kelas ini</td></tr>';
+      if (!materiList || materiList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Belum ada materi untuk kelas ini. Klik tombol "+ Tambah Materi" di atas untuk menambahkan.</td></tr>';
         return;
       }
       
@@ -3711,14 +3791,29 @@ function loadPengaturanMateri() {
           <td>${i+1}</td>
           <td>${m.materi}</td>
           <td>${m.bobot}</td>
-          <td>${m.tipe}</td>
+          <td><span class="badge bg-secondary">${m.tipe}</span></td>
           <td>
-            <button class="btn btn-sm btn-danger" onclick="hapusMateri('${m.id_materi}')"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-sm btn-warning me-1" onclick="editMateri('${m.id_materi}', '${(m.materi || '').replace(/'/g, "\\'")}', ${m.bobot}, '${m.tipe}', ${m.urutan || 99})" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm btn-danger" onclick="hapusMateri('${m.id_materi}')" title="Hapus"><i class="fas fa-trash"></i></button>
           </td>
         </tr>
       `).join('');
     })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal memuat materi: ' + e.message + '</td></tr>';
+    })
     .getMateriByKelas(kelas);
+}
+
+function editMateri(id, nama, bobot, tipe, urutan) {
+  document.getElementById('formTambahMateri').style.display = 'block';
+  document.getElementById('pm_id_materi').value = id || '';
+  document.getElementById('pm_nama').value = nama || '';
+  document.getElementById('pm_bobot').value = bobot || 0;
+  document.getElementById('pm_tipe').value = tipe || 'regular';
+  document.getElementById('pm_urutan').value = urutan || 99;
+  document.getElementById('pm_nama').focus();
 }
 
 function showFormTambahMateri() {
@@ -5262,9 +5357,9 @@ function hapusCeklisConfig(idCeklis, namaCeklis) {
                             return async function(...args) {
                                 try {
                                     const response = await fetch(GAS_WEB_APP_URL, {
-                                        method: 'POST',
+                                        method: "POST",
                                         headers: {
-                                            'Content-Type': 'text/plain;charset=utf-8'
+                                            "Content-Type": "text/plain;charset=utf-8"
                                         },
                                         body: JSON.stringify({
                                             action: prop,
