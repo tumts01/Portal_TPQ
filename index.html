@@ -4462,12 +4462,15 @@ function loadCeklisTopikDanKelas() {
       if (kelasSelect) kelasSelect.innerHTML = '<option value="">Gagal memuat kelas</option>';
       Swal.fire('Error', 'Gagal memuat daftar kelas: ' + (err.message || err), 'error');
     })
-    .getKelasForUstadz(currentUser.nama, currentUser.id, currentUser.role);
+    .getKelasForUstadz(currentUser.nama, currentUser.id, currentUser.role, currentUser.username);
 
   // 3. Preload all classes for admin target picker
   google.script.run
     .withSuccessHandler(function(allK) {
       allAvailableKelasList = allK || [];
+      if (!currentUstadzKelasList || currentUstadzKelasList.length === 0) {
+        populateCeklisKelasSelect();
+      }
     })
     .getKelasList();
 }
@@ -4499,20 +4502,28 @@ function populateCeklisKelasSelect() {
   const kelasSelect = document.getElementById('ceklis_select_kelas');
   if (!kelasSelect) return;
 
-  if (!currentUstadzKelasList || currentUstadzKelasList.length === 0) {
-    kelasSelect.innerHTML = '<option value="">-- Tidak ada kelas yang diampu --</option>';
+  const listToUse = (currentUstadzKelasList && currentUstadzKelasList.length > 0)
+    ? currentUstadzKelasList
+    : (allAvailableKelasList || []).map(k => k.Nama_Kelas || k.nama_kelas || k);
+
+  if (listToUse.length === 0) {
+    kelasSelect.innerHTML = '<option value="">-- Memuat daftar kelas... --</option>';
     return;
   }
 
   let html = '<option value="">-- Pilih Kelas --</option>';
-  currentUstadzKelasList.forEach(k => {
+  listToUse.forEach(k => {
     html += `<option value="${k}">${k}</option>`;
   });
   kelasSelect.innerHTML = html;
 
-  // Jika ustadz hanya mengampu 1 kelas, langsung pilih otomatis
-  if (currentUstadzKelasList.length === 1) {
-    kelasSelect.value = currentUstadzKelasList[0];
+  // Jika hanya 1 kelas, langsung pilih otomatis dan muat data!
+  if (listToUse.length === 1) {
+    kelasSelect.value = listToUse[0];
+    const topikEl = document.getElementById('ceklis_select_topik');
+    if (topikEl && topikEl.value) {
+      loadSantriCeklisTable();
+    }
   }
 }
 
