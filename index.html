@@ -4345,8 +4345,13 @@ function loadCeklisPage() {
       <div id="ceklis_admin_tabs" style="${isSuperAdmin ? 'display:block;' : 'display:none;'}" class="mb-3">
         <ul class="nav nav-pills" id="ceklisTabNav" role="tablist">
           <li class="nav-item">
-            <button class="nav-link active" id="tab-ceklis-input-btn" data-bs-toggle="pill" data-bs-target="#tab-ceklis-input" type="button">
-              <i class="fas fa-clipboard-check me-1"></i> Pengisian & Rekap Ceklis
+            <button class="nav-link ${isSuperAdmin ? 'active' : ''}" id="tab-ceklis-mon-btn" data-bs-toggle="pill" data-bs-target="#tab-ceklis-mon" type="button" onclick="loadCeklisMonitoring()">
+              <i class="fas fa-chart-pie me-1"></i> Monitoring Progres (%)
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link ${!isSuperAdmin ? 'active' : ''}" id="tab-ceklis-input-btn" data-bs-toggle="pill" data-bs-target="#tab-ceklis-input" type="button">
+              <i class="fas fa-clipboard-check me-1"></i> Pengisian Ceklis per Kelas
             </button>
           </li>
           <li class="nav-item">
@@ -4360,8 +4365,39 @@ function loadCeklisPage() {
 
       <div class="tab-content" id="ceklisTabContent">
         
+        <!-- TAB 0: MONITORING PROGRES PENGISIAN (SUPER ADMIN) -->
+        <div class="tab-pane fade ${isSuperAdmin ? 'show active' : ''}" id="tab-ceklis-mon" role="tabpanel">
+          
+          <!-- Top Filter Bar -->
+          <div class="row g-2 align-items-center mb-3 bg-light p-3 rounded border">
+            <div class="col-md-5">
+              <label class="form-label fw-bold mb-1"><i class="fas fa-list-alt text-primary me-1"></i> Pilih Topik Ceklis:</label>
+              <select class="form-select" id="mon_select_topik" onchange="onMonitoringTopikChange()">
+                <option value="">-- Memuat Topik Ceklis... --</option>
+              </select>
+            </div>
+            <div class="col-md-7 d-flex justify-content-md-end align-items-end gap-2 mt-2 mt-md-0">
+              <button class="btn btn-outline-primary" onclick="loadCeklisMonitoring()" title="Segarkan Data">
+                <i class="fas fa-sync-alt me-1"></i> Refresh Data
+              </button>
+              <button class="btn btn-success" onclick="exportMonitoringExcel()" title="Export Rekap ke Excel">
+                <i class="fas fa-file-excel me-1"></i> Export Rekap Excel
+              </button>
+            </div>
+          </div>
+
+          <!-- Monitoring Content Container -->
+          <div id="mon_content_container">
+            <div class="text-center py-5">
+              <div class="spinner-border text-primary" role="status"></div>
+              <p class="mt-2 text-muted">Memuat data monitoring pengisian ceklis...</p>
+            </div>
+          </div>
+
+        </div>
+
         <!-- TAB 1: PENGISIAN CEKLIS -->
-        <div class="tab-pane fade show active" id="tab-ceklis-input" role="tabpanel">
+        <div class="tab-pane fade ${!isSuperAdmin ? 'show active' : ''}" id="tab-ceklis-input" role="tabpanel">
           
           <!-- Filter Header -->
           <div class="row g-3 align-items-end mb-3 bg-light p-3 rounded">
@@ -4544,6 +4580,9 @@ function loadCeklisPage() {
 
   // Load initial options
   loadCeklisTopikDanKelas();
+  if (isSuperAdmin) {
+    loadCeklisMonitoring();
+  }
 }
 
 function loadCeklisTopikDanKelas() {
@@ -5300,6 +5339,410 @@ function hapusCeklisConfig(idCeklis, namaCeklis) {
     }
   });
 }
+
+// ==========================================
+// BAGIAN MONITORING PROGRES CEKLIS (ADMIN)
+// ==========================================
+let currentMonitoringData = null;
+
+function loadCeklisMonitoring(topikId) {
+  const container = document.getElementById('mon_content_container');
+  if (container) {
+    container.innerHTML = `
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Memuat data monitoring pengisian ceklis...</p>
+      </div>
+    `;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (container) {
+          container.innerHTML = `
+            <div class="alert alert-warning text-center my-4 py-4">
+              <i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i>
+              <h6 class="fw-bold">${res ? res.message : 'Belum ada data formulir ceklis.'}</h6>
+              <p class="small text-muted mb-3">Silakan buat formulir ceklis terlebih dahulu di tab "Pengaturan Form Ceklis".</p>
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('tab-ceklis-config-btn').click()">
+                <i class="fas fa-plus me-1"></i> Buat Formulir Ceklis
+              </button>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      currentMonitoringData = res;
+      renderMonitoringDashboard(res);
+    })
+    .withFailureHandler(function(err) {
+      if (container) {
+        container.innerHTML = `
+          <div class="alert alert-danger text-center my-4 py-4">
+            <i class="fas fa-times-circle fa-2x mb-2"></i>
+            <h6 class="fw-bold">Gagal Memuat Data Monitoring</h6>
+            <p class="small text-muted mb-3">${err.message || err}</p>
+            <button class="btn btn-outline-danger btn-sm" onclick="loadCeklisMonitoring('${topikId || ''}')">
+              <i class="fas fa-sync-alt me-1"></i> Coba Lagi
+            </button>
+          </div>
+        `;
+      }
+    })
+    .getMonitoringCeklis(topikId || '');
+}
+
+function onMonitoringTopikChange() {
+  const select = document.getElementById('mon_select_topik');
+  if (select && select.value) {
+    loadCeklisMonitoring(select.value);
+  }
+}
+
+function renderMonitoringDashboard(res) {
+  const container = document.getElementById('mon_content_container');
+  const topikSelect = document.getElementById('mon_select_topik');
+  if (!container) return;
+
+  const cfg = res.config;
+  const r = res.ringkasan;
+  const listKelas = res.detail_kelas || [];
+
+  // 1. Update dropdown topik
+  if (topikSelect && res.all_configs) {
+    let optHtml = '';
+    res.all_configs.forEach(c => {
+      const isSel = c.id_ceklis === cfg.id_ceklis ? 'selected' : '';
+      const statusLabel = c.status === 'aktif' ? 'Aktif' : 'Arsip';
+      optHtml += `<option value="${c.id_ceklis}" ${isSel}>${c.nama_ceklis} [${statusLabel}]</option>`;
+    });
+    topikSelect.innerHTML = optHtml;
+  }
+
+  // Helper warna progress
+  const getProgressBarColor = (pct) => {
+    if (pct === 100) return 'bg-success';
+    if (pct >= 60) return 'bg-primary';
+    if (pct > 0) return 'bg-warning text-dark';
+    return 'bg-secondary';
+  };
+
+  // Helper badge status
+  const getStatusBadge = (status) => {
+    if (status === 'Tuntas') {
+      return '<span class="badge bg-success px-2 py-1"><i class="fas fa-check-circle me-1"></i> Tuntas (100%)</span>';
+    } else if (status === 'Sebagian') {
+      return '<span class="badge bg-warning text-dark px-2 py-1"><i class="fas fa-spinner fa-spin me-1"></i> Sedang Diisi</span>';
+    } else if (status === 'Tidak Ada Santri') {
+      return '<span class="badge bg-light text-muted border px-2 py-1">Kosong</span>';
+    } else {
+      return '<span class="badge bg-danger px-2 py-1"><i class="fas fa-clock me-1"></i> Belum Diisi (0%)</span>';
+    }
+  };
+
+  let html = `
+    <!-- 1. HERO SUMMARY CARD -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px;">
+      <div class="card-body p-4">
+        <div class="row align-items-center g-3">
+          
+          <!-- Overall Percentage Display -->
+          <div class="col-lg-5 text-center text-lg-start pe-lg-4 border-lg-end">
+            <div class="d-flex align-items-center justify-content-center justify-content-lg-start gap-2 mb-1">
+              <span class="badge bg-primary px-3 py-1 fs-7"><i class="fas fa-bullseye me-1"></i> Target Monitoring TPQ</span>
+              <span class="badge bg-${cfg.status === 'aktif' ? 'success' : 'secondary'} fs-8 text-uppercase">${cfg.status}</span>
+            </div>
+            
+            <div class="d-flex align-items-baseline justify-content-center justify-content-lg-start gap-3 my-2">
+              <h1 class="display-3 fw-bold mb-0 text-success" style="line-height: 1;">${r.overall_persentase}%</h1>
+              <div>
+                <span class="fw-bold fs-5 d-block text-dark">Tuntas Terisi</span>
+                <span class="small text-muted">${r.terceklis_item} dari ${r.target_item} centang</span>
+              </div>
+            </div>
+
+            <!-- Main Big Progress Bar -->
+            <div class="progress mt-3" style="height: 14px; border-radius: 7px; background-color: #dee2e6;">
+              <div class="progress-bar ${getProgressBarColor(r.overall_persentase)} progress-bar-striped progress-bar-animated" 
+                   role="progressbar" 
+                   style="width: ${r.overall_persentase}%; font-size: 11px; font-weight: bold;">
+              </div>
+            </div>
+            <div class="small text-muted mt-2 fst-italic">
+              <i class="fas fa-info-circle me-1 text-primary"></i> ${cfg.nama_ceklis} (${cfg.total_kolom} kolom centang)
+            </div>
+          </div>
+
+          <!-- KPI Stats Grid -->
+          <div class="col-lg-7">
+            <div class="row g-2 text-center">
+              
+              <!-- Card 1: Kelas Tuntas -->
+              <div class="col-4">
+                <div class="p-3 bg-white rounded-3 shadow-sm border border-success-subtle h-100 d-flex flex-column justify-content-center">
+                  <div class="small text-muted fw-semibold mb-1">Kelas Tuntas</div>
+                  <h3 class="fw-bold text-success mb-0">${r.kelas_tuntas} <small class="fs-6 text-muted">/ ${r.total_kelas}</small></h3>
+                  <span class="badge bg-success-subtle text-success mt-1 fs-8">100% Selesai</span>
+                </div>
+              </div>
+
+              <!-- Card 2: Sedang Diisi -->
+              <div class="col-4">
+                <div class="p-3 bg-white rounded-3 shadow-sm border border-warning-subtle h-100 d-flex flex-column justify-content-center">
+                  <div class="small text-muted fw-semibold mb-1">Sedang Diisi</div>
+                  <h3 class="fw-bold text-warning mb-0">${r.kelas_sebagian} <small class="fs-6 text-muted">/ ${r.total_kelas}</small></h3>
+                  <span class="badge bg-warning-subtle text-warning mt-1 fs-8">1-99% Terisi</span>
+                </div>
+              </div>
+
+              <!-- Card 3: Belum Diisi -->
+              <div class="col-4">
+                <div class="p-3 bg-white rounded-3 shadow-sm border border-danger-subtle h-100 d-flex flex-column justify-content-center">
+                  <div class="small text-muted fw-semibold mb-1">Belum Diisi</div>
+                  <h3 class="fw-bold text-danger mb-0">${r.kelas_belum} <small class="fs-6 text-muted">/ ${r.total_kelas}</small></h3>
+                  <span class="badge bg-danger-subtle text-danger mt-1 fs-8">0% Terisi</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Additional Detail Pill Bar -->
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top px-1 small text-muted flex-wrap gap-2">
+              <span><i class="fas fa-users text-primary me-1"></i> Total Santri Target: <b class="text-dark">${r.total_santri}</b></span>
+              <span><i class="fas fa-check-double text-success me-1"></i> Santri Lengkap 100%: <b class="text-dark">${r.santri_tuntas} santri</b> (${r.total_santri > 0 ? Math.round((r.santri_tuntas / r.total_santri) * 100) : 0}%)</span>
+              <span><i class="fas fa-columns text-info me-1"></i> Item Kolom: <b>${(cfg.daftar_kolom || []).join(', ')}</b></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. TOOLBAR FILTER & CARI KELAS -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 380px;">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+          <input type="text" id="mon_filter_search" class="form-control" placeholder="Cari nama kelas atau wali kelas..." onkeyup="filterMonitoringTable()">
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <select id="mon_filter_status" class="form-select form-select-sm" onchange="filterMonitoringTable()" style="width: auto;">
+          <option value="ALL">Semua Status (${r.total_kelas} Kelas)</option>
+          <option value="Tuntas">Hanya Tuntas 100% (${r.kelas_tuntas})</option>
+          <option value="Sebagian">Hanya Sedang Diisi (${r.kelas_sebagian})</option>
+          <option value="Belum Diisi">Hanya Belum Diisi (${r.kelas_belum})</option>
+        </select>
+        <span class="badge bg-secondary py-2 px-3" id="mon_filtered_count_badge">${r.total_kelas} Kelas</span>
+      </div>
+    </div>
+
+    <!-- 3. TABEL MONITORING PROGRES PER KELAS -->
+    <div class="table-responsive border rounded bg-white shadow-sm">
+      <table class="table table-bordered table-hover align-middle mb-0" id="monTable">
+        <thead class="table-light text-center small text-uppercase fw-bold">
+          <tr>
+            <th style="width: 45px;">No</th>
+            <th style="min-width: 140px; text-align: left;">Nama Kelas</th>
+            <th style="min-width: 150px; text-align: left;">Wali Kelas / Pengampu</th>
+            <th style="width: 100px;">Santri Aktif</th>
+            <th style="width: 130px;">Santri Tuntas</th>
+            <th style="width: 120px;">Item Terisi</th>
+            <th style="min-width: 180px;">Progres (%)</th>
+            <th style="width: 120px;">Status</th>
+            <th style="min-width: 160px; text-align: left;">Terakhir Diisi</th>
+            <th style="width: 120px;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  if (listKelas.length === 0) {
+    html += `
+      <tr>
+        <td colspan="10" class="text-center py-4 text-muted">
+          <i class="fas fa-info-circle me-1"></i> Tidak ada kelas yang terdaftar untuk topik ceklis ini.
+        </td>
+      </tr>
+    `;
+  } else {
+    listKelas.forEach((k, idx) => {
+      const dateStr = k.updated_at ? new Date(k.updated_at).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      
+      html += `
+        <tr data-kelas="${k.nama_kelas.toLowerCase()}" data-wali="${k.wali_kelas.toLowerCase()}" data-status="${k.status}">
+          <td class="text-center text-muted fw-bold">${idx + 1}</td>
+          <td>
+            <div class="fw-bold text-dark fs-6">${k.nama_kelas}</div>
+            <small class="text-muted"><i class="fas fa-columns me-1"></i> ${k.total_kolom} kolom ceklis</small>
+          </td>
+          <td>
+            <div class="d-flex align-items-center">
+              <i class="fas fa-user-tie text-secondary me-2"></i>
+              <span class="fw-semibold text-secondary">${k.wali_kelas}</span>
+            </div>
+          </td>
+          <td class="text-center fw-bold fs-6">
+            ${k.total_santri} <small class="text-muted fs-8">santri</small>
+          </td>
+          <td class="text-center">
+            <span class="badge ${k.santri_tuntas === k.total_santri && k.total_santri > 0 ? 'bg-success' : (k.santri_tuntas > 0 ? 'bg-primary' : 'bg-secondary')} px-2 py-1">
+              ${k.santri_tuntas} / ${k.total_santri} santri
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="small fw-bold text-dark">${k.terceklis_item} / ${k.target_item}</span>
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height: 16px; border-radius: 4px; background-color: #e9ecef;">
+                <div class="progress-bar ${getProgressBarColor(k.persentase)}" 
+                     role="progressbar" 
+                     style="width: ${k.persentase}%;">
+                </div>
+              </div>
+              <span class="fw-bold small text-nowrap" style="min-width: 40px; text-align: right;">${k.persentase}%</span>
+            </div>
+          </td>
+          <td class="text-center">
+            ${getStatusBadge(k.status)}
+          </td>
+          <td>
+            ${dateStr ? `
+              <div class="small fw-bold text-dark"><i class="fas fa-clock text-muted me-1"></i> ${dateStr}</div>
+              <div class="small text-muted"><i class="fas fa-user-edit text-muted me-1"></i> ${k.updated_by}</div>
+            ` : '<span class="text-muted small fst-italic">Belum ada pengisian</span>'}
+          </td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-primary shadow-sm fw-bold text-nowrap px-2" 
+                    onclick="bukaDetailKelasDariMonitoring('${k.nama_kelas}')" 
+                    title="Buka form pengisian kelas ${k.nama_kelas}">
+              <i class="fas fa-folder-open me-1"></i> Buka Kelas
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function filterMonitoringTable() {
+  const searchInput = document.getElementById('mon_filter_search');
+  const keyword = (searchInput ? searchInput.value : '').toLowerCase().trim();
+  const statusFilter = document.getElementById('mon_filter_status') ? document.getElementById('mon_filter_status').value : 'ALL';
+
+  const rows = document.querySelectorAll('#monTable tbody tr');
+  let visibleCount = 0;
+
+  rows.forEach(r => {
+    const kelas = r.getAttribute('data-kelas') || '';
+    const wali = r.getAttribute('data-wali') || '';
+    const status = r.getAttribute('data-status') || '';
+
+    const matchSearch = !keyword || kelas.includes(keyword) || wali.includes(keyword);
+    const matchStatus = statusFilter === 'ALL' || status === statusFilter;
+
+    if (matchSearch && matchStatus) {
+      r.style.display = '';
+      visibleCount++;
+    } else {
+      r.style.display = 'none';
+    }
+  });
+
+  const badge = document.getElementById('mon_filtered_count_badge');
+  if (badge) badge.textContent = `${visibleCount} Kelas`;
+}
+
+function bukaDetailKelasDariMonitoring(namaKelas) {
+  // 1. Pindah tab ke Tab Pengisian
+  const inputTabBtn = document.getElementById('tab-ceklis-input-btn');
+  if (inputTabBtn) {
+    const tabInstance = bootstrap.Tab.getOrCreateInstance(inputTabBtn);
+    tabInstance.show();
+  }
+
+  // 2. Set topik terpilih
+  const monTopikEl = document.getElementById('mon_select_topik');
+  const topikId = monTopikEl ? monTopikEl.value : (currentMonitoringData?.config?.id_ceklis || '');
+  const topikSelect = document.getElementById('ceklis_select_topik');
+  if (topikSelect && topikId) {
+    topikSelect.value = topikId;
+    onCeklisTopikChange();
+  }
+
+  // 3. Set kelas terpilih dan muat data santri
+  setTimeout(() => {
+    const kelasSelect = document.getElementById('ceklis_select_kelas');
+    if (kelasSelect) {
+      kelasSelect.value = namaKelas;
+      loadSantriCeklisTable();
+    }
+  }, 150);
+}
+
+function exportMonitoringExcel() {
+  if (!currentMonitoringData || !currentMonitoringData.detail_kelas || currentMonitoringData.detail_kelas.length === 0) {
+    Swal.fire('Info', 'Tidak ada data monitoring untuk diexport', 'info');
+    return;
+  }
+
+  const cfg = currentMonitoringData.config;
+  const rows = [];
+  rows.push(['REKAP MONITORING PROGRES PENGISIAN CEKLIS SANTRI TPQ AL MABRUR']);
+  rows.push(['Topik Ceklis', cfg.nama_ceklis]);
+  rows.push(['Deskripsi', cfg.deskripsi || '-']);
+  rows.push(['Kolom Centang', cfg.total_kolom + ' kolom: ' + (cfg.daftar_kolom || []).join(', ')]);
+  rows.push(['Waktu Export', new Date().toLocaleString('id-ID')]);
+  rows.push(['Progres Keseluruhan', currentMonitoringData.ringkasan.overall_persentase + '%']);
+  rows.push([]);
+  rows.push([
+    'No', 
+    'Nama Kelas', 
+    'Wali Kelas / Pengampu', 
+    'Santri Aktif', 
+    'Santri Tuntas', 
+    'Item Terisi', 
+    'Target Item', 
+    'Persentase (%)', 
+    'Status', 
+    'Terakhir Diisi Oleh', 
+    'Waktu Update Terakhir'
+  ]);
+
+  currentMonitoringData.detail_kelas.forEach((k, idx) => {
+    const dateFormatted = k.updated_at ? new Date(k.updated_at).toLocaleString('id-ID') : '-';
+    rows.push([
+      idx + 1,
+      k.nama_kelas,
+      k.wali_kelas,
+      k.total_santri,
+      k.santri_tuntas,
+      k.terceklis_item,
+      k.target_item,
+      k.persentase + '%',
+      k.status,
+      k.updated_by || '-',
+      dateFormatted
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Monitoring Ceklis");
+  const filename = `Monitoring_Ceklis_${cfg.nama_ceklis.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
 </script>
 
   
@@ -5336,8 +5779,7 @@ function hapusCeklisConfig(idCeklis, namaCeklis) {
             run: {
                 withSuccessHandler: function(onSuccess) {
                     return this._createProxy(onSuccess, null);
-                },
-                withFailureHandler: function(onFailure) {
+                },\n                withFailureHandler: function(onFailure) {
                     return this._createProxy(null, onFailure);
                 },
                 _createProxy: function(successHandler, failureHandler) {
