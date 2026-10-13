@@ -4143,32 +4143,32 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
         <!-- B : 95 -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-b" 
-                 data-nis="${nis}" value="${bVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}')">
+                 data-nis="${nis}" value="${bVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
         <!-- B- : 90 -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-b-minus" 
-                 data-nis="${nis}" value="${bMinusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}')">
+                 data-nis="${nis}" value="${bMinusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
         <!-- C+ : 83 -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-c-plus" 
-                 data-nis="${nis}" value="${cPlusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}')">
+                 data-nis="${nis}" value="${cPlusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
         <!-- C : 80 -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-c" 
-                 data-nis="${nis}" value="${cVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}')">
+                 data-nis="${nis}" value="${cVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
         <!-- C- : 73 -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-c-minus" 
-                 data-nis="${nis}" value="${cMinusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}')">
+                 data-nis="${nis}" value="${cMinusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
         <!-- K : 70 -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-k" 
-                 data-nis="${nis}" value="${kVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}')">
+                 data-nis="${nis}" value="${kVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
 
         <!-- Total Nilai -->
@@ -4224,22 +4224,64 @@ function recalculateAllBupres() {
   });
 }
 
-function hitungBupresSantri(nis) {
+function hitungBupresSantri(nis, changedInput) {
   const row = document.getElementById('row_bp_' + nis);
   if (!row) return;
 
-  const b = parseInt(row.querySelector('.bp-b').value) || 0;
-  const bMinus = parseInt(row.querySelector('.bp-b-minus').value) || 0;
-  const cPlus = parseInt(row.querySelector('.bp-c-plus').value) || 0;
-  const c = parseInt(row.querySelector('.bp-c').value) || 0;
-  const cMinus = parseInt(row.querySelector('.bp-c-minus').value) || 0;
-  const k = parseInt(row.querySelector('.bp-k').value) || 0;
-
-  const totalEntries = b + bMinus + cPlus + c + cMinus + k;
-  const totalNilai = (b * 95) + (bMinus * 90) + (cPlus * 83) + (c * 80) + (cMinus * 73) + (k * 70);
-
   const tmInput = document.getElementById('bp_tatap_muka');
   const tatapMuka = tmInput ? (parseInt(tmInput.value) || 0) : 24;
+
+  let b = parseInt(row.querySelector('.bp-b').value) || 0;
+  let bMinus = parseInt(row.querySelector('.bp-b-minus').value) || 0;
+  let cPlus = parseInt(row.querySelector('.bp-c-plus').value) || 0;
+  let c = parseInt(row.querySelector('.bp-c').value) || 0;
+  let cMinus = parseInt(row.querySelector('.bp-c-minus').value) || 0;
+  let k = parseInt(row.querySelector('.bp-k').value) || 0;
+
+  let totalEntries = b + bMinus + cPlus + c + cMinus + k;
+
+  // SATPAM LEVEL 1: Jika total melebihi tatap muka saat diinput langsung sesuaikan & beri peringatan
+  if (tatapMuka > 0 && totalEntries > tatapMuka) {
+    if (changedInput) {
+      const over = totalEntries - tatapMuka;
+      const curVal = parseInt(changedInput.value) || 0;
+      const adjustedVal = Math.max(0, curVal - over);
+      changedInput.value = adjustedVal;
+
+      // Re-read nilai yang telah dibatasi
+      b = parseInt(row.querySelector('.bp-b').value) || 0;
+      bMinus = parseInt(row.querySelector('.bp-b-minus').value) || 0;
+      cPlus = parseInt(row.querySelector('.bp-c-plus').value) || 0;
+      c = parseInt(row.querySelector('.bp-c').value) || 0;
+      cMinus = parseInt(row.querySelector('.bp-c-minus').value) || 0;
+      k = parseInt(row.querySelector('.bp-k').value) || 0;
+      totalEntries = b + bMinus + cPlus + c + cMinus + k;
+
+      const namaEl = row.querySelector('td:nth-child(3) .fw-bold');
+      const namaSantri = namaEl ? namaEl.textContent.trim() : 'Santri';
+
+      Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true
+      }).fire({
+        icon: 'warning',
+        title: 'Satpam: Maksimal ' + tatapMuka + ' Pertemuan!',
+        text: 'Total nilai untuk ' + namaSantri + ' tidak boleh lebih dari ' + tatapMuka + ' (disesuaikan jadi ' + adjustedVal + ').'
+      });
+    }
+  }
+
+  const isOver = tatapMuka > 0 && totalEntries > tatapMuka;
+  if (isOver) {
+    row.classList.add('table-danger');
+  } else {
+    row.classList.remove('table-danger');
+  }
+
+  const totalNilai = (b * 95) + (bMinus * 90) + (cPlus * 83) + (c * 80) + (cMinus * 73) + (k * 70);
 
   let poinBCK = 0;
   if (tatapMuka > 0) {
@@ -4256,10 +4298,10 @@ function hitungBupresSantri(nis) {
     countBadge.textContent = `${totalEntries}/${tatapMuka}`;
     if (tatapMuka > 0 && totalEntries === tatapMuka) {
       countBadge.className = 'badge bg-success font-monospace';
-      countBadge.title = 'Tuntas (sesuai tatap muka)';
+      countBadge.title = 'Tuntas (pas tatap muka)';
     } else if (totalEntries > tatapMuka) {
       countBadge.className = 'badge bg-danger font-monospace';
-      countBadge.title = 'Melebihi target tatap muka';
+      countBadge.title = 'Melebihi target tatap muka!';
     } else if (totalEntries > 0) {
       countBadge.className = 'badge bg-warning text-dark font-monospace';
       countBadge.title = 'Belum mencapai target tatap muka';
@@ -4394,6 +4436,53 @@ function simpanSemuaBupres() {
   const rows = document.querySelectorAll('#bp_table tbody tr');
   if (rows.length === 0) {
     Swal.fire('Info', 'Tidak ada data santri untuk disimpan', 'info');
+    return;
+  }
+
+  // SATPAM LEVEL 2: Validasi ketat sebelum simpan
+  const invalidSantri = [];
+  rows.forEach(r => {
+    const nis = r.getAttribute('data-nis');
+    const nama = r.querySelector('td:nth-child(3) .fw-bold').textContent.trim();
+    const b = parseInt(r.querySelector('.bp-b').value) || 0;
+    const bMinus = parseInt(r.querySelector('.bp-b-minus').value) || 0;
+    const cPlus = parseInt(r.querySelector('.bp-c-plus').value) || 0;
+    const c = parseInt(r.querySelector('.bp-c').value) || 0;
+    const cMinus = parseInt(r.querySelector('.bp-c-minus').value) || 0;
+    const k = parseInt(r.querySelector('.bp-k').value) || 0;
+    const total = b + bMinus + cPlus + c + cMinus + k;
+
+    if (tatapMuka > 0 && total > tatapMuka) {
+      invalidSantri.push({ nis: nis, nama: nama, total: total, row: r });
+      r.classList.add('table-danger');
+    } else {
+      r.classList.remove('table-danger');
+    }
+  });
+
+  if (invalidSantri.length > 0) {
+    invalidSantri[0].row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    const listHtml = invalidSantri.slice(0, 5).map(it => `
+      <li><strong>${it.nama}</strong>: Total input = <span class="text-danger fw-bold">${it.total}</span> (Batas Tatap Muka: ${tatapMuka})</li>
+    `).join('');
+    const sisa = invalidSantri.length > 5 ? `<li class="text-muted">...dan ${invalidSantri.length - 5} santri lainnya</li>` : '';
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Satpam Bupres: Melebihi Tatap Muka!',
+      html: `
+        <p class="text-danger mb-2">Total Kategori Nilai (B + B- + C+ + C + C- + K) tidak boleh lebih dari <strong>${tatapMuka}</strong> tatap muka!</p>
+        <div class="text-start bg-light p-3 rounded border small">
+          <ul class="mb-0 ps-3">
+            ${listHtml}
+            ${sisa}
+          </ul>
+        </div>
+        <p class="text-muted small mt-2 mb-0">Silakan sesuaikan kembali nilai santri yang bertanda merah.</p>
+      `,
+      confirmButtonText: 'Perbaiki Sekarang'
+    });
     return;
   }
 
