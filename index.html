@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <base target="_top">
@@ -2132,7 +2132,7 @@ function loadRekapGuru() {
       
       container.innerHTML = `
         <div class="alert alert-primary">
-          <strong>Total Pertemuan: ${total}</strong> ${namaGuru ? 'â€” ' + namaGuru : ''}
+          <strong>Total Pertemuan: ${total}</strong> ${namaGuru ? '— ' + namaGuru : ''}
         </div>
         <div class="table-responsive">
           <table class="table table-bordered">
@@ -3201,7 +3201,7 @@ function loadMateriForInput() {
       } else {
         infoContainer.innerHTML = `
           <strong>Materi Kelas ${kelas}:</strong><br>
-          ${materiList.map(m => `â€¢ ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
+          ${materiList.map(m => `• ${m.materi} (Bobot: ${m.bobot}${m.tipe === 'plus' ? ' - Nilai Plus' : ''})`).join('<br>')}
         `;
       }
       
@@ -3351,7 +3351,7 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
   // Untuk kelas REGULAR (PRA - JILID 1 s/d 6 - JUZ AMMA)
   container.innerHTML = `
     <div class="alert alert-secondary small">
-      <strong>Formula:</strong> Nilai = 95 - (Î£ bobot Ã— kesalahan) + nilai lagu (5)<br>
+      <strong>Formula:</strong> Nilai = 95 - (Σ bobot × kesalahan) + nilai lagu (5)<br>
       <strong>Contoh:</strong> Jika kesalahan makhroj (bobot 3) = 2, maka pengurangan = 6. Nilai = 95 - 6 + 5 = 94
     </div>
     <div class="table-responsive">
@@ -3581,7 +3581,7 @@ function simpanSemuaNilai() {
     .withSuccessHandler(function(res) {
       hideLoading();
       if (res && res.success) {
-        showToast(res.message || 'Semua nilai berhasil disimpan! ðŸŽ‰', 'success');
+        showToast(res.message || 'Semua nilai berhasil disimpan! 🎉', 'success');
       } else {
         showToast('Info: ' + (res ? res.message : 'Nilai disimpan'), 'info');
       }
@@ -5770,6 +5770,7 @@ function exportMonitoringExcel() {
 </body>
 </html>
 
+
 <!-- API Proxy for Google Apps Script -->
 <script>
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzUDCSKKfjjFpgOLoahRepTqE4kaj2aRidFoUM0HmQlUKA002Nr4ntFFEjVI-yhcLFj/exec";
@@ -5779,7 +5780,8 @@ function exportMonitoringExcel() {
             run: {
                 withSuccessHandler: function(onSuccess) {
                     return this._createProxy(onSuccess, null);
-                },\n                withFailureHandler: function(onFailure) {
+                },
+                withFailureHandler: function(onFailure) {
                     return this._createProxy(null, onFailure);
                 },
                 _createProxy: function(successHandler, failureHandler) {
