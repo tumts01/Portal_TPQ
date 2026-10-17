@@ -447,6 +447,12 @@
         { id: 'pembayaran_wali', icon: 'fa-money-bill-wave', label: 'Pembayaran', page: 'pembayaran_wali' },
         { id: 'pengumuman', icon: 'fa-bullhorn', label: 'Pengumuman', page: 'pengumuman' },
       ],
+      santri: [
+        { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', page: 'dashboard' },
+        { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
+        { id: 'pembayaran_wali', icon: 'fa-money-bill-wave', label: 'Pembayaran', page: 'pembayaran_wali' },
+        { id: 'pengumuman', icon: 'fa-bullhorn', label: 'Pengumuman', page: 'pengumuman' },
+      ],
     };
     
     // Initialize
@@ -594,7 +600,11 @@
         dashboard_wali: 'Dashboard Wali Santri',
         kelas: 'Data Kelas'
       };
-      document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+      if (currentUser && (currentUser.role === 'wali_santri' || currentUser.role === 'santri') && page === 'dashboard') {
+        document.getElementById('pageTitle').textContent = 'Biodata Santri';
+      } else {
+        document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+      }
       
       // Load content
       const contentArea = document.getElementById('contentArea');
@@ -761,7 +771,22 @@
 function loadDashboard() {
   const contentArea = document.getElementById('contentArea');
   
-  // Get stats
+  // KHUSUS ROLE WALI SANTRI / SANTRI: Tampilkan Dasbor Biodata Santri Lengkap
+  if (currentUser && (currentUser.role === 'wali_santri' || currentUser.role === 'santri')) {
+    contentArea.innerHTML = `
+      <div id="dasborSantriContainer">
+        <div class="content-card text-center py-5">
+          <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+          <h5 class="fw-bold">Memuat Biodata Santri...</h5>
+          <p class="text-muted">Sedang mengambil data profil dari database TPQ Al Mabrur...</p>
+        </div>
+      </div>
+    `;
+    loadDasborSantriWali();
+    return;
+  }
+  
+  // ROLE LAIN: Super Admin, Bendahara, Ustadz
   google.script.run
     .withSuccessHandler(function(result) {
       try {
@@ -770,7 +795,7 @@ function loadDashboard() {
         const saldo = result.saldo || { pemasukan: 0, pengeluaran: 0, saldo: 0 };
         
         let financialStats = '';
-        if (currentUser.role !== 'ustadz' && currentUser.role !== 'wali_santri') {
+        if (currentUser.role !== 'ustadz') {
           financialStats = `
           <div class="col-md-3 mb-3">
             <div class="card bg-info text-white">
@@ -834,7 +859,6 @@ function loadDashboard() {
               const ustadzName = currentUser.nama;
               const ustadzID = currentUser.username;
               
-              // Filter kelas di mana guru ini menjadi pengajar / wali kelas
               const kelasAjar = (kelasList || []).filter(k => 
                 String(k.Ustadz_Wali).trim().toLowerCase() === String(ustadzName).trim().toLowerCase() || 
                 String(k.Ustadz_Wali).trim() === String(ustadzID).trim()
@@ -868,87 +892,6 @@ function loadDashboard() {
             }).getKelasList();
           }, 100);
           
-        } else if (currentUser.role === 'wali_santri') {
-          welcomeCard = `
-            <h5>Selamat Datang di Aplikasi TPQ Al Mabrur Singosari</h5>
-            <p>Silakan pilih menu di sidebar untuk mengakses fitur aplikasi.</p>
-            <hr>
-            <h6>Informasi Sistem:</h6>
-            <ul>
-              <li>Role Anda: <strong>${currentUser.role.toUpperCase()}</strong></li>
-              <li>Nama Anda: <strong>${currentUser.nama}</strong></li>
-              <li>Login terakhir: <strong>${new Date().toLocaleString('id-ID')}</strong></li>
-            </ul>
-            <div id="infoAnakWaliContainer" class="mt-4 p-3 bg-light border border-info rounded">
-              <p class="text-center mb-0"><i class="fas fa-spinner fa-spin"></i> Memuat data kelas anak...</p>
-            </div>
-          `;
-          
-          // Asynchronously fetch santri data
-          setTimeout(() => {
-            google.script.run.withSuccessHandler(function(santriList) {
-              const found = (santriList || []).find(s => s.NIS === currentUser.username || s.No_WA_Ayah === currentUser.username || s.No_WA_Ibu === currentUser.username);
-              if (!found) {
-                const el = document.getElementById('infoAnakWaliContainer');
-                if(el) el.innerHTML = '<p class="text-danger mb-0">Data santri tidak ditemukan untuk akun ini.</p>';
-                return;
-              }
-              google.script.run.withSuccessHandler(function(kelasList) {
-                google.script.run.withSuccessHandler(function(guruList) {
-                  const kelasInfo = (kelasList || []).find(k => k.Nama_Kelas === found.Kelas) || {};
-                  const namaWaliKelas = kelasInfo.Ustadz_Wali || 'Belum diatur';
-                  const guruInfo = (guruList || []).find(g => g.Nama === namaWaliKelas || g.ID_Guru === namaWaliKelas) || {};
-                  const noWaWaliKelas = guruInfo.No_WA ? String(guruInfo.No_WA).replace(/\D/g, '') : '';
-                  const displayWaWali = noWaWaliKelas ? `<a href="https://wa.me/${noWaWaliKelas}" target="_blank" class="btn btn-sm btn-success mt-2"><i class="fab fa-whatsapp"></i> Chat Wali Kelas</a>` : '<span class="text-muted text-sm d-block mt-2">Nomor tidak tersedia</span>';
-                  
-                  // Proses link foto agar mendukung Google Drive link biasa
-                  let fotoUrl = guruInfo.Foto || guruInfo.foto || '';
-                  if (fotoUrl && String(fotoUrl).includes('drive.google.com')) {
-                      const matchId = String(fotoUrl).match(/[-\w]{25,}/);
-                      if (matchId) {
-                          fotoUrl = 'https://drive.google.com/thumbnail?id=' + matchId[0] + '&sz=w400';
-                      }
-                  }
-                  
-                  const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(namaWaliKelas) + '&background=random&color=fff&size=150';
-                  const finalImgSrc = fotoUrl ? fotoUrl : defaultAvatar;
-                  
-                  const jamMasuk = kelasInfo['Jam Masuk'] || kelasInfo.Jam_Masuk || '-';
-                  const lokasiKelas = kelasInfo['Lokasi Kelas'] || kelasInfo.Lokasi_Kelas || '-';
-                  
-                  const el = document.getElementById('infoAnakWaliContainer');
-                  if(el) {
-                    el.innerHTML = `
-                      <h6 class="text-primary mb-3"><i class="fas fa-user-graduate"></i> Informasi Santri & Kelas</h6>
-                      <div class="row">
-                        <div class="col-md-5 mb-3">
-                          <p class="mb-1 text-muted small">Nama Anak</p>
-                          <p class="mb-3 fw-bold fs-5">${found.Nama_Santri}</p>
-                          <p class="mb-1 text-muted small">NIS</p>
-                          <p class="mb-1 fw-bold">${found.NIS}</p>
-                        </div>
-                        <div class="col-md-7 mb-2">
-                          <div class="d-flex align-items-center bg-white p-3 rounded shadow-sm border">
-                            <div style="width: 110px; height: 140px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: linear-gradient(135deg, var(--primary-color), #0d6efd); box-shadow: 0 4px 10px rgba(0,0,0,0.1);" class="me-3 border border-2 border-white d-flex justify-content-center align-items-center">
-                              <img src="${finalImgSrc}" alt="Wali Kelas" style="width: 100%; height: 100%; object-fit: ${fotoUrl ? 'cover' : 'contain'};" onerror="this.src='${defaultAvatar}'; this.style.objectFit='contain';">
-                            </div>
-                            <div>
-                              <p class="mb-1"><i class="fas fa-school text-secondary"></i> Kelas: <strong>${found.Kelas}</strong></p>
-                              <p class="mb-1"><i class="fas fa-clock text-secondary"></i> Jam Masuk: <strong>${jamMasuk}</strong></p>
-                              <p class="mb-1"><i class="fas fa-map-marker-alt text-secondary"></i> Lokasi: <strong>${lokasiKelas}</strong></p>
-                              <p class="mb-2"><i class="fas fa-chalkboard-teacher text-secondary"></i> Wali Kelas: <strong>${namaWaliKelas}</strong></p>
-                              ${displayWaWali}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    `;
-                  }
-                }).getGuruList();
-              }).getKelasList();
-            }).getSantriList();
-          }, 100);
-
         } else {
           welcomeCard = `
             <h5>Selamat Datang di Aplikasi TPQ Al Mabrur Singosari</h5>
@@ -1002,6 +945,363 @@ function loadDashboard() {
       contentArea.innerHTML = '<div class="alert alert-danger">Server Error: ' + error.message + '</div>';
     })
     .getDashboardStats();
+}
+
+// ==========================================
+// ===== DASBOR SANTRI / WALI SANTRI =====
+// ==========================================
+
+let _waliMatchedSantri = [];
+let _waliActiveSantriIdx = 0;
+let _waliKelasList = [];
+let _waliGuruList = [];
+
+function loadDasborSantriWali() {
+  const container = document.getElementById('dasborSantriContainer');
+  if (!container) return;
+
+  google.script.run
+    .withSuccessHandler(function(santriList) {
+      google.script.run
+        .withSuccessHandler(function(kelasList) {
+          google.script.run
+            .withSuccessHandler(function(guruList) {
+              _waliKelasList = kelasList || [];
+              _waliGuruList = guruList || [];
+              
+              const usernameClean = String(currentUser.username || '').trim().toLowerCase();
+              const usernameDigits = String(currentUser.username || '').replace(/\D/g, '');
+              const userNamaClean = String(currentUser.nama || '').trim().toLowerCase();
+              
+              // Cari santri yang cocok dengan akun login
+              _waliMatchedSantri = (santriList || []).filter(s => {
+                const nisStr = String(s.NIS || '').trim().toLowerCase();
+                const namaStr = String(s.Nama_Santri || s['Nama Santri'] || s.Nama || '').trim().toLowerCase();
+                const waAyahDigits = String(s.No_WA_Ayah || s['No WA Ayah'] || '').replace(/\D/g, '');
+                const waIbuDigits = String(s.No_WA_Ibu || s['No WA Ibu'] || '').replace(/\D/g, '');
+                
+                if (nisStr && (nisStr === usernameClean || String(s.NIS) === String(currentUser.username))) return true;
+                if (usernameDigits && waAyahDigits && (waAyahDigits === usernameDigits || waAyahDigits.endsWith(usernameDigits) || usernameDigits.endsWith(waAyahDigits))) return true;
+                if (usernameDigits && waIbuDigits && (waIbuDigits === usernameDigits || waIbuDigits.endsWith(usernameDigits) || usernameDigits.endsWith(waIbuDigits))) return true;
+                if (userNamaClean && namaStr && (namaStr === userNamaClean || namaStr.includes(userNamaClean) || userNamaClean.includes(namaStr))) return true;
+                return false;
+              });
+
+              if (_waliMatchedSantri.length === 0) {
+                container.innerHTML = `
+                  <div class="content-card text-center py-5">
+                    <div class="alert alert-warning d-inline-block text-start p-4 shadow-sm" style="max-width: 650px;">
+                      <h5 class="alert-heading text-warning-emphasis fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Data Santri Belum Terhubung</h5>
+                      <hr>
+                      <p class="mb-2">Sistem belum dapat menemukan data santri yang cocok dengan akun Anda:</p>
+                      <ul class="mb-3 small">
+                        <li><strong>Username Anda:</strong> ${currentUser.username}</li>
+                        <li><strong>Nama Akun:</strong> ${currentUser.nama}</li>
+                      </ul>
+                      <p class="small text-muted mb-0"><i class="fas fa-info-circle me-1"></i> <strong>Solusi:</strong> Pastikan <em>Username</em> login Anda sesuai dengan <strong>NIS Santri</strong> atau <strong>Nomor WhatsApp Ayah/Ibu</strong> yang terdaftar di database TPQ. Silakan hubungi admin TPQ jika memerlukan bantuan pembaruan data.</p>
+                    </div>
+                  </div>
+                `;
+                return;
+              }
+
+              _waliActiveSantriIdx = 0;
+              renderDasborSantriWali();
+            })
+            .withFailureHandler(function(err) {
+              container.innerHTML = `<div class="alert alert-danger">Gagal memuat data guru: ${err.message || err}</div>`;
+            })
+            .getGuruList();
+        })
+        .withFailureHandler(function(err) {
+          container.innerHTML = `<div class="alert alert-danger">Gagal memuat data kelas: ${err.message || err}</div>`;
+        })
+        .getKelasList();
+    })
+    .withFailureHandler(function(err) {
+      container.innerHTML = `<div class="alert alert-danger">Gagal memuat data santri: ${err.message || err}</div>`;
+    })
+    .getSantriList();
+}
+
+function renderDasborSantriWali() {
+  const container = document.getElementById('dasborSantriContainer');
+  if (!container || _waliMatchedSantri.length === 0) return;
+
+  const s = _waliMatchedSantri[_waliActiveSantriIdx];
+  const namaSantri = s.Nama_Santri || s['Nama Santri'] || s.Nama || '-';
+  const nis = s.NIS || '-';
+  const kelas = s.Kelas || s['Kelas'] || '-';
+  const status = (s.Status || 'Aktif').toUpperCase();
+  const lokasi = s.Lokasi_Kelas || '-';
+  
+  // Format Tempat, Tanggal Lahir (TTL)
+  const tempatLahir = s.Tempat_Lahir || s['Tempat Lahir'] || '';
+  const tglLahirRaw = s.Tanggal_Lahir || s['Tanggal Lahir'] || '';
+  let ttlText = '-';
+  let tglIndo = '';
+  if (tglLahirRaw) {
+    try {
+      const d = new Date(tglLahirRaw);
+      if (!isNaN(d.getTime())) {
+        const bln = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        tglIndo = `${d.getDate()} ${bln[d.getMonth()]} ${d.getFullYear()}`;
+      }
+    } catch(e) {}
+  }
+  
+  if (tempatLahir && tglIndo) {
+    ttlText = `${tempatLahir}, ${tglIndo}`;
+  } else if (tempatLahir) {
+    ttlText = tempatLahir;
+  } else if (tglIndo) {
+    ttlText = tglIndo;
+  }
+  
+  // Hitung Usia
+  let usiaText = s.Usia ? `${s.Usia} Tahun` : '';
+  if (!usiaText && tglLahirRaw) {
+    try {
+      const bDate = new Date(tglLahirRaw);
+      if (!isNaN(bDate.getTime())) {
+        const diff = Date.now() - bDate.getTime();
+        const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+        if (age >= 0 && age < 100) usiaText = `${age} Tahun`;
+      }
+    } catch(e) {}
+  }
+  if (usiaText && ttlText !== '-') {
+    ttlText += ` (${usiaText})`;
+  }
+
+  // Nama Ayah, Nama Ibu, No WA, Alamat
+  const namaAyah = s.Nama_Ayah || s['Nama Ayah'] || '-';
+  const namaIbu = s.Nama_Ibu || s['Nama Ibu'] || '-';
+  const noWaAyah = s.No_WA_Ayah || s['No WA Ayah'] || '';
+  const noWaIbu = s.No_WA_Ibu || s['No WA Ibu'] || '';
+  const alamat = s.Alamat || s.Alamat_Lengkap || s['Alamat'] || s['Alamat Lengkap'] || '-';
+
+  // Helper WhatsApp Link
+  const formatWaLink = (no) => {
+    if (!no) return '<span class="text-muted">-</span>';
+    const digits = String(no).replace(/\D/g, '');
+    if (!digits) return '<span class="text-muted">-</span>';
+    let waNum = digits;
+    if (waNum.startsWith('0')) waNum = '62' + waNum.slice(1);
+    return `
+      <div class="d-inline-flex align-items-center gap-2">
+        <span class="fw-semibold text-dark font-monospace">${no}</span>
+        <a href="https://wa.me/${waNum}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-2 shadow-sm text-decoration-none" style="font-size: 0.75rem;">
+          <i class="fab fa-whatsapp me-1"></i>Chat
+        </a>
+      </div>
+    `;
+  };
+
+  const jkRaw = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+  const isL = jkRaw.includes('LAKI') || jkRaw === 'L';
+  const jkText = isL ? 'Laki-laki' : (jkRaw.includes('PEREMPUAN') || jkRaw === 'P' ? 'Perempuan' : '-');
+
+  // Foto Santri
+  let fotoSantri = s.Foto_URL || s.Foto || s.foto || '';
+  if (fotoSantri && String(fotoSantri).includes('drive.google.com')) {
+    const m = String(fotoSantri).match(/[-\w]{25,}/);
+    if (m) fotoSantri = 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w400';
+  }
+  const defaultSantriAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(namaSantri) + '&background=' + (isL ? '0d6efd' : 'e83e8c') + '&color=fff&size=200';
+  const finalFotoSantri = fotoSantri || defaultSantriAvatar;
+
+  // Data Wali Kelas
+  const kelasInfo = _waliKelasList.find(k => k.Nama_Kelas === kelas || k['Nama Kelas'] === kelas) || {};
+  const namaWaliKelas = kelasInfo.Ustadz_Wali || 'Belum diatur';
+  const guruInfo = _waliGuruList.find(g => g.Nama === namaWaliKelas || g.ID_Guru === namaWaliKelas) || {};
+  const noWaWaliKelas = guruInfo.No_WA ? String(guruInfo.No_WA).replace(/\D/g, '') : '';
+  const displayWaWali = noWaWaliKelas ? `<a href="https://wa.me/${noWaWaliKelas}" target="_blank" class="btn btn-sm btn-success shadow-sm mt-1 text-nowrap"><i class="fab fa-whatsapp me-1"></i>Chat Wali Kelas</a>` : '<span class="text-muted small d-block mt-1">Nomor tidak tersedia</span>';
+
+  let fotoGuru = guruInfo.Foto || guruInfo.foto || '';
+  if (fotoGuru && String(fotoGuru).includes('drive.google.com')) {
+    const mG = String(fotoGuru).match(/[-\w]{25,}/);
+    if (mG) fotoGuru = 'https://drive.google.com/thumbnail?id=' + mG[0] + '&sz=w400';
+  }
+  const defaultGuruAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(namaWaliKelas) + '&background=random&color=fff&size=150';
+  const finalFotoGuru = fotoGuru || defaultGuruAvatar;
+
+  const jamMasuk = kelasInfo['Jam Masuk'] || kelasInfo.Jam_Masuk || '-';
+  const lokasiKelas = kelasInfo['Lokasi Kelas'] || kelasInfo.Lokasi_Kelas || lokasi;
+
+  // Switcher jika wali memiliki lebih dari 1 anak
+  let childSwitcher = '';
+  if (_waliMatchedSantri.length > 1) {
+    childSwitcher = `
+      <div class="card p-2 mb-3 bg-light border shadow-sm">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <span class="small fw-bold text-secondary me-1"><i class="fas fa-users text-primary me-1"></i> Pilih Data Santri:</span>
+          ${_waliMatchedSantri.map((cs, cIdx) => `
+            <button type="button" class="btn btn-sm ${cIdx === _waliActiveSantriIdx ? 'btn-primary fw-bold shadow-sm' : 'btn-outline-secondary'}" onclick="pilihAnakSantriWali(${cIdx})">
+              <i class="fas fa-user-graduate me-1"></i> ${cs.Nama_Santri || cs.Nama || 'Santri ' + (cIdx+1)} (${cs.Kelas || '-'})
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    ${childSwitcher}
+
+    <!-- Main Biodata Card -->
+    <div class="card border-0 shadow-sm overflow-hidden mb-4">
+      <!-- Header / Banner Santri -->
+      <div class="p-4 text-white" style="background: linear-gradient(135deg, #198754 0%, #0d6efd 100%);">
+        <div class="d-flex flex-column flex-md-row align-items-center gap-4">
+          <div style="width: 110px; height: 140px; border-radius: 12px; overflow: hidden; background: white; flex-shrink: 0; box-shadow: 0 4px 15px rgba(0,0,0,0.25);" class="d-flex justify-content-center align-items-center border border-3 border-white">
+            <img src="${finalFotoSantri}" alt="Foto ${namaSantri}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='${defaultSantriAvatar}';">
+          </div>
+          <div class="text-center text-md-start flex-grow-1">
+            <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
+              <span class="badge bg-white text-success fw-bold px-2 py-1 shadow-sm"><i class="fas fa-id-card me-1"></i> NIS: ${nis}</span>
+              <span class="badge bg-warning text-dark fw-bold px-2 py-1 shadow-sm"><i class="fas fa-school me-1"></i> Kelas ${kelas}</span>
+              <span class="badge bg-success-subtle text-white border border-white px-2 py-1">${status}</span>
+            </div>
+            <h2 class="fw-bold mb-1 text-white">${namaSantri}</h2>
+            <p class="mb-0 text-white-50 small"><i class="fas fa-map-marker-alt me-1"></i> Ruang: <strong>${lokasiKelas}</strong> | <i class="fas fa-clock me-1"></i> Jam Masuk: <strong>${jamMasuk}</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Biodata Lengkap Body -->
+      <div class="card-body p-4 bg-white">
+        <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+          <i class="fas fa-user-graduate text-success me-2"></i> Biodata Lengkap Santri
+        </h5>
+
+        <div class="row g-3">
+          <!-- Kolom Kiri: Identitas Santri -->
+          <div class="col-lg-6">
+            <div class="p-3 rounded bg-light border h-100">
+              <h6 class="fw-bold text-primary mb-3">
+                <i class="fas fa-id-badge me-2"></i> Identitas Diri
+              </h6>
+              <table class="table table-sm table-borderless mb-0" style="font-size: 0.92rem;">
+                <tbody>
+                  <tr>
+                    <td class="text-muted" style="width: 140px;">Nama Santri</td>
+                    <td style="width: 10px;">:</td>
+                    <td class="fw-bold text-dark">${namaSantri}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">NIS</td>
+                    <td>:</td>
+                    <td class="fw-bold font-monospace text-dark">${nis}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Jenis Kelamin</td>
+                    <td>:</td>
+                    <td>
+                      <span class="badge ${isL ? 'bg-primary' : 'bg-danger'}">
+                        <i class="fas ${isL ? 'fa-mars' : 'fa-venus'} me-1"></i> ${jkText}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Tempat, Tgl Lahir</td>
+                    <td>:</td>
+                    <td class="fw-semibold text-dark">${ttlText}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Asal Sekolah</td>
+                    <td>:</td>
+                    <td class="text-dark">${s.Nama_Sekolah || s['Nama Sekolah'] || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Alamat Lengkap</td>
+                    <td>:</td>
+                    <td class="text-dark">
+                      <i class="fas fa-home text-secondary me-1"></i> ${alamat}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Kolom Kanan: Data Orang Tua & Wali Kelas -->
+          <div class="col-lg-6">
+            <!-- Box Data Orang Tua -->
+            <div class="p-3 rounded bg-light border mb-3">
+              <h6 class="fw-bold text-primary mb-3">
+                <i class="fas fa-user-friends me-2"></i> Data Orang Tua / Wali
+              </h6>
+              <table class="table table-sm table-borderless mb-0" style="font-size: 0.92rem;">
+                <tbody>
+                  <tr>
+                    <td class="text-muted" style="width: 140px;">Nama Ayah</td>
+                    <td style="width: 10px;">:</td>
+                    <td class="fw-bold text-dark">${namaAyah}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">No. WA Ayah</td>
+                    <td>:</td>
+                    <td>${formatWaLink(noWaAyah)}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Nama Ibu</td>
+                    <td>:</td>
+                    <td class="fw-bold text-dark">${namaIbu}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">No. WA Ibu</td>
+                    <td>:</td>
+                    <td>${formatWaLink(noWaIbu)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Box Wali Kelas -->
+            <div class="p-3 rounded border bg-white shadow-sm">
+              <div class="d-flex align-items-center">
+                <div style="width: 65px; height: 85px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: linear-gradient(135deg, var(--primary-color), #0d6efd);" class="me-3 border d-flex justify-content-center align-items-center shadow-sm">
+                  <img src="${finalFotoGuru}" alt="Wali Kelas" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='${defaultGuruAvatar}';">
+                </div>
+                <div class="flex-grow-1">
+                  <small class="text-muted d-block"><i class="fas fa-chalkboard-teacher text-success me-1"></i> Ustadz/Ustadzah Wali Kelas (${kelas}):</small>
+                  <strong class="text-dark fs-6 d-block">${namaWaliKelas}</strong>
+                  <small class="text-muted d-block mb-2"><i class="fas fa-clock text-warning me-1"></i> ${jamMasuk} &nbsp;|&nbsp; <i class="fas fa-map-marker-alt text-danger me-1"></i> ${lokasiKelas}</small>
+                  ${displayWaWali}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Menu Pintas / Akses Cepat -->
+        <hr class="my-4">
+        <div class="row g-2">
+          <div class="col-md-4">
+            <button class="btn btn-outline-primary w-100 py-2 fw-semibold text-start shadow-sm" onclick="loadPage('pembayaran_wali')">
+              <i class="fas fa-money-bill-wave text-success me-2 fs-5"></i> Cek Status Pembayaran / SPP
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-outline-success w-100 py-2 fw-semibold text-start shadow-sm" onclick="loadPage('kelas')">
+              <i class="fas fa-school text-primary me-2 fs-5"></i> Lihat Informasi & Jadwal Kelas
+            </button>
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-outline-info w-100 py-2 fw-semibold text-start shadow-sm" onclick="loadPage('pengumuman')">
+              <i class="fas fa-bullhorn text-warning me-2 fs-5"></i> Pengumuman & Info TPQ
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function pilihAnakSantriWali(idx) {
+  _waliActiveSantriIdx = idx;
+  renderDasborSantriWali();
 }
 </script>
 
@@ -1079,12 +1379,20 @@ function loadSantriPage() {
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama Ayah</label>
+                  <input type="text" class="form-control" id="s_nama_ayah" placeholder="Nama lengkap Ayah">
+                </div>
+                <div class="col-md-6 mb-3">
                   <label class="form-label">No WA Ayah</label>
-                  <input type="text" class="form-control" id="s_wa_ayah" placeholder="628xxx">
+                  <input type="text" class="form-control" id="s_wa_ayah" placeholder="08xxx / 628xxx">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama Ibu</label>
+                  <input type="text" class="form-control" id="s_nama_ibu" placeholder="Nama lengkap Ibu">
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">No WA Ibu</label>
-                  <input type="text" class="form-control" id="s_wa_ibu" placeholder="628xxx">
+                  <input type="text" class="form-control" id="s_wa_ibu" placeholder="08xxx / 628xxx">
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Tempat Lahir</label>
@@ -1228,11 +1536,13 @@ function renderSantriTable(data) {
     }
     
     let btnHtml = '';
+    const btnDetail = '<button class="btn btn-sm btn-info text-white me-1" onclick="showSantriDetail(' + q + s.NIS + q + ')" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i></button>';
     if (!isReadonly) {
-      btnHtml = '<button class="btn btn-sm btn-warning me-1" onclick="editSantri(' + q + s.NIS + q + ')" title="Edit"><i class="fas fa-edit"></i></button>' +
+      btnHtml = btnDetail +
+                '<button class="btn btn-sm btn-warning me-1" onclick="editSantri(' + q + s.NIS + q + ')" title="Edit"><i class="fas fa-edit"></i></button>' +
                 '<button class="btn btn-sm btn-danger" onclick="deleteSantri(' + q + s.NIS + q + ')" title="Hapus"><i class="fas fa-trash"></i></button>';
     } else {
-      btnHtml = '<span class="badge bg-secondary">Readonly</span>';
+      btnHtml = '<button class="btn btn-sm btn-info text-white" onclick="showSantriDetail(' + q + s.NIS + q + ')" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i> Detail</button>';
     }
     
     let jenisKelamin = s.Jenis_Kelamin || s['L/P'] || '-';
@@ -1290,10 +1600,13 @@ function saveSantriData() {
     Jenis_Kelamin: document.getElementById('s_jk').value,
     Kelas: document.getElementById('s_kelas').value,
     Status: document.getElementById('s_status').value,
+    Nama_Ayah: document.getElementById('s_nama_ayah').value,
     No_WA_Ayah: document.getElementById('s_wa_ayah').value,
+    Nama_Ibu: document.getElementById('s_nama_ibu').value,
     No_WA_Ibu: document.getElementById('s_wa_ibu').value,
     Tempat_Lahir: document.getElementById('s_tempat_lahir').value,
     Tanggal_Lahir: document.getElementById('s_tgl_lahir').value,
+    Alamat: document.getElementById('s_alamat').value,
     Alamat_Lengkap: document.getElementById('s_alamat').value,
   };
   
@@ -1322,23 +1635,163 @@ function editSantri(id) {
     showSantriForm();
     document.getElementById('formSantriTitle').textContent = 'Edit Santri';
     document.getElementById('s_nis').value = santri.NIS;
-    document.getElementById('s_nama').value = santri.Nama_Santri || '';
-    document.getElementById('s_jk').value = santri.Jenis_Kelamin || '';
+    document.getElementById('s_nama').value = santri.Nama_Santri || santri['Nama Santri'] || '';
+    document.getElementById('s_jk').value = santri.Jenis_Kelamin || santri['L/P'] || '';
     document.getElementById('s_kelas').value = santri.Kelas || '';
     document.getElementById('s_status').value = santri.Status || 'aktif';
-    document.getElementById('s_wa_ayah').value = santri.No_WA_Ayah || '';
-    document.getElementById('s_wa_ibu').value = santri.No_WA_Ibu || '';
-    document.getElementById('s_tempat_lahir').value = santri.Tempat_Lahir || '';
+    document.getElementById('s_nama_ayah').value = santri.Nama_Ayah || santri['Nama Ayah'] || '';
+    document.getElementById('s_wa_ayah').value = santri.No_WA_Ayah || santri['No WA Ayah'] || '';
+    document.getElementById('s_nama_ibu').value = santri.Nama_Ibu || santri['Nama Ibu'] || '';
+    document.getElementById('s_wa_ibu').value = santri.No_WA_Ibu || santri['No WA Ibu'] || '';
+    document.getElementById('s_tempat_lahir').value = santri.Tempat_Lahir || santri['Tempat Lahir'] || '';
     
     let tgl = '';
-    if (santri.Tanggal_Lahir) {
+    const tglRaw = santri.Tanggal_Lahir || santri['Tanggal Lahir'];
+    if (tglRaw) {
       try {
-        tgl = new Date(santri.Tanggal_Lahir).toISOString().split('T')[0];
+        tgl = new Date(tglRaw).toISOString().split('T')[0];
       } catch(e) {}
     }
     document.getElementById('s_tgl_lahir').value = tgl;
-    document.getElementById('s_alamat').value = santri.Alamat_Lengkap || '';
+    document.getElementById('s_alamat').value = santri.Alamat || santri.Alamat_Lengkap || santri['Alamat'] || '';
   }
+}
+
+function showSantriDetail(id) {
+  const s = _santriCache.find(x => String(x.NIS) === String(id));
+  if (!s) return;
+  
+  const namaSantri = s.Nama_Santri || s['Nama Santri'] || s.Nama || '-';
+  const nis = s.NIS || '-';
+  const kelas = s.Kelas || '-';
+  const status = (s.Status || 'Aktif').toUpperCase();
+  const lokasi = s.Lokasi_Kelas || '-';
+  
+  const tempatLahir = s.Tempat_Lahir || s['Tempat Lahir'] || '';
+  const tglLahirRaw = s.Tanggal_Lahir || s['Tanggal Lahir'] || '';
+  let ttlText = '-';
+  let tglIndo = '';
+  if (tglLahirRaw) {
+    try {
+      const d = new Date(tglLahirRaw);
+      if (!isNaN(d.getTime())) {
+        const bln = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        tglIndo = d.getDate() + ' ' + bln[d.getMonth()] + ' ' + d.getFullYear();
+      }
+    } catch(e) {}
+  }
+  if (tempatLahir && tglIndo) ttlText = tempatLahir + ', ' + tglIndo;
+  else if (tempatLahir) ttlText = tempatLahir;
+  else if (tglIndo) ttlText = tglIndo;
+  
+  let usiaText = s.Usia ? s.Usia + ' Tahun' : '';
+  if (!usiaText && tglLahirRaw) {
+    try {
+      const bDate = new Date(tglLahirRaw);
+      if (!isNaN(bDate.getTime())) {
+        const diff = Date.now() - bDate.getTime();
+        const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+        if (age >= 0 && age < 100) usiaText = age + ' Tahun';
+      }
+    } catch(e) {}
+  }
+  if (usiaText && ttlText !== '-') ttlText += ' (' + usiaText + ')';
+  
+  const namaAyah = s.Nama_Ayah || s['Nama Ayah'] || '-';
+  const namaIbu = s.Nama_Ibu || s['Nama Ibu'] || '-';
+  const noWaAyah = s.No_WA_Ayah || s['No WA Ayah'] || '';
+  const noWaIbu = s.No_WA_Ibu || s['No WA Ibu'] || '';
+  const alamat = s.Alamat || s.Alamat_Lengkap || s['Alamat'] || s['Alamat Lengkap'] || '-';
+  const asalSekolah = s.Nama_Sekolah || s['Nama Sekolah'] || '-';
+  
+  const formatWa = function(no) {
+    if (!no) return '<span class="text-muted">-</span>';
+    const digits = String(no).replace(/\D/g, '');
+    if (!digits) return '<span class="text-muted">-</span>';
+    let waNum = digits.startsWith('0') ? '62' + digits.slice(1) : digits;
+    return '<a href="https://wa.me/' + waNum + '" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 font-monospace"><i class="fab fa-whatsapp me-1"></i>' + no + '</a>';
+  };
+  
+  const jkRaw = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+  const isL = jkRaw.includes('LAKI') || jkRaw === 'L';
+  const jkBadge = '<span class="badge ' + (isL ? 'bg-primary' : 'bg-danger') + '">' + (isL ? 'Laki-laki' : 'Perempuan') + '</span>';
+  
+  let fotoSantri = s.Foto_URL || s.Foto || s.foto || '';
+  if (fotoSantri && String(fotoSantri).includes('drive.google.com')) {
+    const m = String(fotoSantri).match(/[-\w]{25,}/);
+    if (m) fotoSantri = 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w400';
+  }
+  const avatarFallback = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(namaSantri) + '&background=' + (isL ? '0d6efd' : 'e83e8c') + '&color=fff&size=200';
+  const finalFoto = fotoSantri || avatarFallback;
+  
+  let modalEl = document.getElementById('modalSantriDetail');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalSantriDetail';
+    modalEl.className = 'modal fade';
+    modalEl.tabIndex = -1;
+    document.body.appendChild(modalEl);
+  }
+  
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
+          <h5 class="modal-title fw-bold"><i class="fas fa-id-card me-2"></i> Biodata Lengkap Santri</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="d-flex flex-column flex-sm-row align-items-center gap-4 mb-4 pb-3 border-bottom">
+            <div style="width: 100px; height: 130px; border-radius: 10px; overflow: hidden; background: #f8f9fa; flex-shrink: 0;" class="border shadow-sm">
+              <img src="${finalFoto}" alt="Foto" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='${avatarFallback}';">
+            </div>
+            <div class="text-center text-sm-start flex-grow-1">
+              <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-sm-start gap-2 mb-2">
+                <span class="badge bg-primary px-2 py-1">NIS: ${nis}</span>
+                <span class="badge bg-warning text-dark px-2 py-1">Kelas ${kelas}</span>
+                <span class="badge bg-success px-2 py-1">${status}</span>
+              </div>
+              <h3 class="fw-bold mb-1">${namaSantri}</h3>
+              <p class="text-muted mb-0 small"><i class="fas fa-map-marker-alt text-danger me-1"></i> Ruang: ${lokasi}</p>
+            </div>
+          </div>
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded border h-100">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user me-2"></i> Identitas Diri</h6>
+                <table class="table table-sm table-borderless mb-0">
+                  <tr><td class="text-muted" style="width:120px;">NIS</td><td>:</td><td class="fw-bold font-monospace">${nis}</td></tr>
+                  <tr><td class="text-muted">Nama</td><td>:</td><td class="fw-semibold">${namaSantri}</td></tr>
+                  <tr><td class="text-muted">Jenis Kelamin</td><td>:</td><td>${jkBadge}</td></tr>
+                  <tr><td class="text-muted">TTL</td><td>:</td><td>${ttlText}</td></tr>
+                  <tr><td class="text-muted">Asal Sekolah</td><td>:</td><td>${asalSekolah}</td></tr>
+                  <tr><td class="text-muted">Alamat</td><td>:</td><td>${alamat}</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded border h-100">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-friends me-2"></i> Data Orang Tua</h6>
+                <table class="table table-sm table-borderless mb-0">
+                  <tr><td class="text-muted" style="width:120px;">Nama Ayah</td><td>:</td><td class="fw-semibold">${namaAyah}</td></tr>
+                  <tr><td class="text-muted">No. WA Ayah</td><td>:</td><td>${formatWa(noWaAyah)}</td></tr>
+                  <tr><td class="text-muted">Nama Ibu</td><td>:</td><td class="fw-semibold">${namaIbu}</td></tr>
+                  <tr><td class="text-muted">No. WA Ibu</td><td>:</td><td>${formatWa(noWaIbu)}</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
 }
 
 function deleteSantri(id) {
