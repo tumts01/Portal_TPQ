@@ -1203,23 +1203,66 @@ function loadDasborSantriWali() {
               _waliKelasList = kelasList || [];
               _waliGuruList = guruList || [];
               
+              const cleanPhone = (num) => {
+                let n = String(num || '').replace(/\D/g, '');
+                if (n.startsWith('62')) n = n.slice(2);
+                if (n.startsWith('0')) n = n.slice(1);
+                return n;
+              };
+
               const usernameClean = String(currentUser.username || '').trim().toLowerCase();
-              const usernameDigits = String(currentUser.username || '').replace(/\D/g, '');
+              const usernameDigits = cleanPhone(currentUser.username);
+              const userHpDigits = cleanPhone(currentUser.noHp);
               const userNamaClean = String(currentUser.nama || '').trim().toLowerCase();
               
-              // Cari santri yang cocok dengan akun login
+              // Tahap 1: Kumpulkan nomor WA orang tua atau NIS yang terhubung
+              const matchedPhones = new Set();
+              if (userHpDigits && userHpDigits.length >= 7) matchedPhones.add(userHpDigits);
+              if (usernameDigits && usernameDigits.length >= 7) matchedPhones.add(usernameDigits);
+
+              // Cek jika login pakai NIS, temukan nomor WA orang tuanya dari data santri
+              (santriList || []).forEach(s => {
+                const sNis = String(s.NIS || '').trim().toLowerCase();
+                const waAyah = cleanPhone(s.No_WA_Ayah || s['No WA Ayah']);
+                const waIbu = cleanPhone(s.No_WA_Ibu || s['No WA Ibu']);
+                
+                if (sNis && (sNis === usernameClean || sNis === usernameDigits)) {
+                  if (waAyah) matchedPhones.add(waAyah);
+                  if (waIbu) matchedPhones.add(waIbu);
+                }
+                if (matchedPhones.has(waAyah) || matchedPhones.has(waIbu)) {
+                  if (waAyah) matchedPhones.add(waAyah);
+                  if (waIbu) matchedPhones.add(waIbu);
+                }
+              });
+
+              // Tahap 2: Cocokkan seluruh santri/anak yang memiliki nomor WA atau NIS terkait
               _waliMatchedSantri = (santriList || []).filter(s => {
                 const nisStr = String(s.NIS || '').trim().toLowerCase();
                 const namaStr = String(s.Nama_Santri || s['Nama Santri'] || s.Nama || '').trim().toLowerCase();
-                const waAyahDigits = String(s.No_WA_Ayah || s['No WA Ayah'] || '').replace(/\D/g, '');
-                const waIbuDigits = String(s.No_WA_Ibu || s['No WA Ibu'] || '').replace(/\D/g, '');
+                const waAyah = cleanPhone(s.No_WA_Ayah || s['No WA Ayah']);
+                const waIbu = cleanPhone(s.No_WA_Ibu || s['No WA Ibu']);
                 
-                if (nisStr && (nisStr === usernameClean || String(s.NIS) === String(currentUser.username))) return true;
-                if (usernameDigits && waAyahDigits && (waAyahDigits === usernameDigits || waAyahDigits.endsWith(usernameDigits) || usernameDigits.endsWith(waAyahDigits))) return true;
-                if (usernameDigits && waIbuDigits && (waIbuDigits === usernameDigits || waIbuDigits.endsWith(usernameDigits) || usernameDigits.endsWith(waIbuDigits))) return true;
+                // Cocok NIS langsung
+                if (nisStr && (nisStr === usernameClean || nisStr === usernameDigits)) return true;
+                
+                // Cocok Nomor WhatsApp Ayah / Ibu
+                if (waAyah && matchedPhones.has(waAyah)) return true;
+                if (waIbu && matchedPhones.has(waIbu)) return true;
+                
+                // Cocok nama akun jika ada
                 if (userNamaClean && namaStr && (namaStr === userNamaClean || namaStr.includes(userNamaClean) || userNamaClean.includes(namaStr))) return true;
+                
                 return false;
               });
+
+              // Hilangkan duplikasi santri
+              const uniqueMap = new Map();
+              _waliMatchedSantri.forEach(s => {
+                const key = String(s.NIS || s.Nama_Santri || Math.random());
+                if (!uniqueMap.has(key)) uniqueMap.set(key, s);
+              });
+              _waliMatchedSantri = Array.from(uniqueMap.values());
 
               if (_waliMatchedSantri.length === 0) {
                 container.innerHTML = `
@@ -1367,14 +1410,27 @@ function renderDasborSantriWali() {
   let childSwitcher = '';
   if (_waliMatchedSantri.length > 1) {
     childSwitcher = `
-      <div class="card p-2 mb-3 bg-light border shadow-sm">
-        <div class="d-flex flex-wrap align-items-center gap-2">
-          <span class="small fw-bold text-secondary me-1"><i class="fas fa-users text-primary me-1"></i> Pilih Data Santri:</span>
-          ${_waliMatchedSantri.map((cs, cIdx) => `
-            <button type="button" class="btn btn-sm ${cIdx === _waliActiveSantriIdx ? 'btn-primary fw-bold shadow-sm' : 'btn-outline-secondary'}" onclick="pilihAnakSantriWali(${cIdx})">
-              <i class="fas fa-user-graduate me-1"></i> ${cs.Nama_Santri || cs.Nama || 'Santri ' + (cIdx+1)} (${cs.Kelas || '-'})
-            </button>
-          `).join('')}
+      <div class="card p-3 mb-3 bg-white border-2 border-primary shadow-sm" style="border-radius: 12px;">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #0d6efd, #198754);" class="d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-sm">
+              <i class="fas fa-users fs-5"></i>
+            </div>
+            <div>
+              <strong class="d-block text-dark" style="font-size: 0.95rem;">
+                Pilih Data Santri / Anak (${_waliMatchedSantri.length} Santri Terdaftar):
+              </strong>
+              <small class="text-muted">Klik nama ananda di bawah untuk melihat biodata dan jadwal masing-masing</small>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            ${_waliMatchedSantri.map((cs, cIdx) => `
+              <button type="button" class="btn ${cIdx === _waliActiveSantriIdx ? 'btn-primary fw-bold shadow' : 'btn-outline-primary bg-light'} px-3 py-2" onclick="pilihAnakSantriWali(${cIdx})" style="border-radius: 8px;">
+                <i class="fas fa-user-graduate me-1"></i> ${cs.Nama_Santri || cs.Nama || 'Santri ' + (cIdx+1)}
+                <span class="badge ${cIdx === _waliActiveSantriIdx ? 'bg-white text-primary' : 'bg-primary text-white'} ms-1">${cs.Kelas || '-'}</span>
+              </button>
+            `).join('')}
+          </div>
         </div>
       </div>
     `;
