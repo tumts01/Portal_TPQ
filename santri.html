@@ -1,0 +1,536 @@
+<script>
+function loadSantriPage() {
+  const contentArea = document.getElementById('contentArea');
+  const isReadonly = currentUser.role === 'ustadz' || currentUser.role === 'wali_santri';
+  
+  contentArea.innerHTML = `
+    <div class="content-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Data Induk Santri</h5>
+        <div>
+          <button class="btn btn-success btn-sm me-2" onclick="exportSantriExcel()">
+            <i class="fas fa-file-excel"></i> Export Excel
+          </button>
+          ${!isReadonly ? `
+          <button class="btn btn-primary btn-sm" onclick="showSantriForm()">
+            <i class="fas fa-plus"></i> Tambah Santri
+          </button>
+          ` : ''}
+        </div>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchSantri" class="form-control" placeholder="Cari berdasarkan nama..." onkeyup="filterSantri()">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select id="filterKelasSantri" class="form-select" onchange="filterSantri()">
+            <option value="">Semua Kelas</option>
+          </select>
+        </div>
+        <div class="col-md-5 d-flex align-items-center">
+          <span class="badge bg-primary me-2" id="totalSantriBadge">Total: 0 Santri</span>
+          <span class="badge bg-info me-2" id="totalLBadge">L: 0</span>
+          <span class="badge bg-warning text-dark" id="totalPBadge">P: 0</span>
+        </div>
+      </div>
+      
+      <div id="santriForm" style="display:none;" class="mb-4">
+        <div class="card">
+          <div class="card-body">
+            <h6 id="formSantriTitle">Tambah Santri Baru</h6>
+            <form id="formSantri">
+              <input type="hidden" id="s_nis">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama Santri *</label>
+                  <input type="text" class="form-control" id="s_nama" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Jenis Kelamin *</label>
+                  <select class="form-select" id="s_jk" required>
+                    <option value="">Pilih</option>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Kelas *</label>
+                  <select class="form-select" id="s_kelas" required>
+                    <option value="">Pilih Kelas</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Status *</label>
+                  <select class="form-select" id="s_status" required>
+                    <option value="aktif">Aktif</option>
+                    <option value="nonaktif">Non-Aktif</option>
+                    <option value="lulus">Lulus</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama Ayah</label>
+                  <input type="text" class="form-control" id="s_nama_ayah" placeholder="Nama lengkap Ayah">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">No WA Ayah</label>
+                  <input type="text" class="form-control" id="s_wa_ayah" placeholder="08xxx / 628xxx">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Nama Ibu</label>
+                  <input type="text" class="form-control" id="s_nama_ibu" placeholder="Nama lengkap Ibu">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">No WA Ibu</label>
+                  <input type="text" class="form-control" id="s_wa_ibu" placeholder="08xxx / 628xxx">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tempat Lahir</label>
+                  <input type="text" class="form-control" id="s_tempat_lahir">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Tanggal Lahir</label>
+                  <input type="date" class="form-control" id="s_tgl_lahir">
+                </div>
+                <div class="col-12 mb-3">
+                  <label class="form-label">Alamat Lengkap</label>
+                  <textarea class="form-control" id="s_alamat" rows="2"></textarea>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
+              <button type="button" class="btn btn-secondary" onclick="hideSantriForm()">Batal</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>NIS</th>
+              <th>Nama Santri</th>
+              <th>L/P</th>
+              <th>Kelas</th>
+              <th>Wali Kelas</th>
+              <th>Lokasi Kelas</th>
+              <th>No WA Ayah</th>
+              <th>No WA Ibu</th>
+              <th>Alamat</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="santriTableBody">
+            <tr><td colspan="11" class="text-center">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  
+  loadSantriData();
+  
+  document.getElementById('formSantri').addEventListener('submit', function(e) {
+    e.preventDefault();
+    saveSantriData();
+  });
+}
+
+let _santriCache = [];
+let _kelasCache = [];
+
+function loadSantriData() {
+  console.log('Memanggil getKelasList...');
+  google.script.run
+    .withSuccessHandler(function(kelasList) {
+      console.log('getKelasList sukses', kelasList);
+      _kelasCache = kelasList;
+      const selectForm = document.getElementById('s_kelas');
+      const selectFilter = document.getElementById('filterKelasSantri');
+      
+      let options = '<option value="">Pilih Kelas</option>';
+      let filterOpts = '<option value="">Semua Kelas</option>';
+      
+      (kelasList || []).forEach(k => {
+        options += '<option value="' + (k.Nama_Kelas || k['Nama Kelas']) + '">' + (k.Nama_Kelas || k['Nama Kelas']) + '</option>';
+        filterOpts += '<option value="' + (k.Nama_Kelas || k['Nama Kelas']) + '">' + (k.Nama_Kelas || k['Nama Kelas']) + '</option>';
+      });
+      
+      if(selectForm) selectForm.innerHTML = options;
+      if(selectFilter) selectFilter.innerHTML = filterOpts;
+      
+      fetchSantriList();
+    })
+    .withFailureHandler(function(e) {
+      console.error('getKelasList error:', e);
+      document.getElementById('santriTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error Load Kelas: ' + e.message + '</td></tr>';
+      fetchSantriList(); // fallback
+    })
+    .getKelasList();
+}
+
+function fetchSantriList() {
+  console.log('Memanggil getSantriList...');
+  google.script.run
+    .withSuccessHandler(function(santriList) {
+      console.log('getSantriList sukses', santriList);
+      _santriCache = santriList || [];
+      renderSantriTable(_santriCache);
+    })
+    .withFailureHandler(function(e) {
+      console.error('getSantriList error:', e);
+      document.getElementById('santriTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-danger">Gagal memuat data santri: ' + e.message + '</td></tr>';
+      showToast('Gagal memuat data santri: ' + e.message, 'error');
+    })
+    .getSantriList();
+}
+
+function filterSantri() {
+  const searchTerm = document.getElementById('searchSantri').value.toLowerCase();
+  const filterKelas = document.getElementById('filterKelasSantri').value;
+  
+  const filtered = _santriCache.filter(s => {
+    const matchName = (s.Nama_Santri || '').toLowerCase().includes(searchTerm);
+    const matchKelas = filterKelas === '' || s.Kelas === filterKelas;
+    return matchName && matchKelas;
+  });
+  
+  renderSantriTable(filtered);
+}
+
+function renderSantriTable(data) {
+  const tbody = document.getElementById('santriTableBody');
+  const isReadonly = currentUser.role === 'ustadz' || currentUser.role === 'wali_santri';
+  
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-3">Tidak ada data santri</td></tr>';
+    updateSantriStats(0, 0, 0);
+    return;
+  }
+  
+  let totalAktif = 0;
+  let totalL = 0;
+  let totalP = 0;
+  
+  const q = String.fromCharCode(39);
+  let html = '';
+  
+  data.forEach(s => {
+    const status = (s.Status || 'aktif').toLowerCase();
+    if (status === 'aktif') {
+      totalAktif++;
+      const jk = (s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+      if (jk === 'L' || jk === 'LAKI-LAKI' || jk === 'LAKI LAKI' || jk.includes('LAKI')) totalL++;
+      else if (jk === 'P' || jk === 'PEREMPUAN' || jk.includes('PEREMPUAN')) totalP++;
+    }
+    
+    let btnHtml = '';
+    const btnDetail = '<button class="btn btn-sm btn-info text-white me-1" onclick="showSantriDetail(' + q + s.NIS + q + ')" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i></button>';
+    if (!isReadonly) {
+      btnHtml = btnDetail +
+                '<button class="btn btn-sm btn-warning me-1" onclick="editSantri(' + q + s.NIS + q + ')" title="Edit"><i class="fas fa-edit"></i></button>' +
+                '<button class="btn btn-sm btn-danger" onclick="deleteSantri(' + q + s.NIS + q + ')" title="Hapus"><i class="fas fa-trash"></i></button>';
+    } else {
+      btnHtml = '<button class="btn btn-sm btn-info text-white" onclick="showSantriDetail(' + q + s.NIS + q + ')" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i> Detail</button>';
+    }
+    
+    let jenisKelamin = s.Jenis_Kelamin || s['L/P'] || '-';
+    let waliKelas = '-';
+    const kInfo = _kelasCache.find(k => k.Nama_Kelas === s.Kelas || k['Nama Kelas'] === s.Kelas);
+    if (kInfo && kInfo.Ustadz_Wali) {
+      waliKelas = kInfo.Ustadz_Wali;
+    } else if (s.Wali_Kelas || s['Wali Kelas']) {
+      waliKelas = s.Wali_Kelas || s['Wali Kelas'];
+    }
+    
+    html += '<tr>' +
+      '<td><small>' + (s.NIS || '-') + '</small></td>' +
+      '<td><strong>' + (s.Nama_Santri || s['Nama Santri'] || '-') + '</strong></td>' +
+      '<td><span class="badge bg-' + (jk.includes('LAKI') || jk === 'L' ? 'primary' : 'danger') + '">' + jenisKelamin + '</span></td>' +
+      '<td><span class="badge bg-info text-dark">' + (s.Kelas || '-') + '</span></td>' +
+      '<td><small>' + waliKelas + '</small></td>' +
+      '<td>' + (s.Lokasi_Kelas || '-') + '</td>' +
+      '<td>' + (s.No_WA_Ayah || s['No WA Ayah'] ? '<a href="https://wa.me/' + (s.No_WA_Ayah || s['No WA Ayah']) + '" target="_blank"><i class="fab fa-whatsapp text-success"></i> ' + (s.No_WA_Ayah || s['No WA Ayah']) + '</a>' : '-') + '</td>' +
+      '<td>' + (s.No_WA_Ibu || s['No WA Ibu'] ? '<a href="https://wa.me/' + (s.No_WA_Ibu || s['No WA Ibu']) + '" target="_blank"><i class="fab fa-whatsapp text-success"></i> ' + (s.No_WA_Ibu || s['No WA Ibu']) + '</a>' : '-') + '</td>' +
+      '<td><small>' + (s.Alamat_Lengkap || s['Alamat'] || s['Alamat Lengkap'] || '-') + '</small></td>' +
+      '<td><span class="badge bg-' + ((s.Status || 'aktif').toLowerCase() === 'aktif' ? 'success' : 'secondary') + '">' + (s.Status || 'aktif') + '</span></td>' +
+      '<td>' + btnHtml + '</td>' +
+    '</tr>';
+  });
+  
+  tbody.innerHTML = html;
+  updateSantriStats(totalAktif, totalL, totalP);
+}
+
+function updateSantriStats(total, l, p) {
+  const elTotal = document.getElementById('totalSantriBadge');
+  const elL = document.getElementById('totalLBadge');
+  const elP = document.getElementById('totalPBadge');
+  if(elTotal) elTotal.textContent = 'Total: ' + total + ' Santri';
+  if(elL) elL.textContent = 'L: ' + l;
+  if(elP) elP.textContent = 'P: ' + p;
+}
+
+function showSantriForm() {
+  document.getElementById('santriForm').style.display = 'block';
+  document.getElementById('formSantriTitle').textContent = 'Tambah Santri Baru';
+  document.getElementById('formSantri').reset();
+  document.getElementById('s_nis').value = '';
+  google.script.run.withSuccessHandler(function(info) {
+    if (info && info.nextNIS) {
+      const elNis = document.getElementById('s_nis');
+      if (elNis && !elNis.value) elNis.value = info.nextNIS;
+    }
+  }).getNextNIS();
+}
+
+function hideSantriForm() {
+  document.getElementById('santriForm').style.display = 'none';
+}
+
+function saveSantriData() {
+  const data = {
+    NIS: document.getElementById('s_nis').value,
+    Nama_Santri: document.getElementById('s_nama').value,
+    Jenis_Kelamin: document.getElementById('s_jk').value,
+    Kelas: document.getElementById('s_kelas').value,
+    Status: document.getElementById('s_status').value,
+    Nama_Ayah: document.getElementById('s_nama_ayah').value,
+    No_WA_Ayah: document.getElementById('s_wa_ayah').value,
+    Nama_Ibu: document.getElementById('s_nama_ibu').value,
+    No_WA_Ibu: document.getElementById('s_wa_ibu').value,
+    Tempat_Lahir: document.getElementById('s_tempat_lahir').value,
+    Tanggal_Lahir: document.getElementById('s_tgl_lahir').value,
+    Alamat: document.getElementById('s_alamat').value,
+    Alamat_Lengkap: document.getElementById('s_alamat').value,
+  };
+  
+  showLoading('Menyimpan data santri...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      if (result && result.success) {
+        showToast(result.message, 'success');
+        hideSantriForm();
+        fetchSantriList();
+      } else {
+        showToast(result ? result.message : 'Terjadi kesalahan', 'error');
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .saveSantri(data);
+}
+
+function editSantri(id) {
+  const santri = _santriCache.find(s => String(s.NIS) === String(id));
+  if (santri) {
+    showSantriForm();
+    document.getElementById('formSantriTitle').textContent = 'Edit Santri';
+    document.getElementById('s_nis').value = santri.NIS;
+    document.getElementById('s_nama').value = santri.Nama_Santri || santri['Nama Santri'] || '';
+    document.getElementById('s_jk').value = santri.Jenis_Kelamin || santri['L/P'] || '';
+    document.getElementById('s_kelas').value = santri.Kelas || '';
+    document.getElementById('s_status').value = santri.Status || 'aktif';
+    document.getElementById('s_nama_ayah').value = santri.Nama_Ayah || santri['Nama Ayah'] || '';
+    document.getElementById('s_wa_ayah').value = santri.No_WA_Ayah || santri['No WA Ayah'] || '';
+    document.getElementById('s_nama_ibu').value = santri.Nama_Ibu || santri['Nama Ibu'] || '';
+    document.getElementById('s_wa_ibu').value = santri.No_WA_Ibu || santri['No WA Ibu'] || '';
+    document.getElementById('s_tempat_lahir').value = santri.Tempat_Lahir || santri['Tempat Lahir'] || '';
+    
+    let tgl = '';
+    const tglRaw = santri.Tanggal_Lahir || santri['Tanggal Lahir'];
+    if (tglRaw) {
+      try {
+        tgl = new Date(tglRaw).toISOString().split('T')[0];
+      } catch(e) {}
+    }
+    document.getElementById('s_tgl_lahir').value = tgl;
+    document.getElementById('s_alamat').value = santri.Alamat || santri.Alamat_Lengkap || santri['Alamat'] || '';
+  }
+}
+
+function showSantriDetail(id) {
+  const s = _santriCache.find(x => String(x.NIS) === String(id));
+  if (!s) return;
+  
+  const namaSantri = s.Nama_Santri || s['Nama Santri'] || s.Nama || '-';
+  const nis = s.NIS || '-';
+  const kelas = s.Kelas || '-';
+  const status = (s.Status || 'Aktif').toUpperCase();
+  const lokasi = s.Lokasi_Kelas || '-';
+  
+  const tempatLahir = s.Tempat_Lahir || s['Tempat Lahir'] || '';
+  const tglLahirRaw = s.Tanggal_Lahir || s['Tanggal Lahir'] || '';
+  let ttlText = '-';
+  let tglIndo = '';
+  if (tglLahirRaw) {
+    try {
+      const d = new Date(tglLahirRaw);
+      if (!isNaN(d.getTime())) {
+        const bln = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        tglIndo = d.getDate() + ' ' + bln[d.getMonth()] + ' ' + d.getFullYear();
+      }
+    } catch(e) {}
+  }
+  if (tempatLahir && tglIndo) ttlText = tempatLahir + ', ' + tglIndo;
+  else if (tempatLahir) ttlText = tempatLahir;
+  else if (tglIndo) ttlText = tglIndo;
+  
+  let usiaText = s.Usia ? s.Usia + ' Tahun' : '';
+  if (!usiaText && tglLahirRaw) {
+    try {
+      const bDate = new Date(tglLahirRaw);
+      if (!isNaN(bDate.getTime())) {
+        const diff = Date.now() - bDate.getTime();
+        const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+        if (age >= 0 && age < 100) usiaText = age + ' Tahun';
+      }
+    } catch(e) {}
+  }
+  if (usiaText && ttlText !== '-') ttlText += ' (' + usiaText + ')';
+  
+  const namaAyah = s.Nama_Ayah || s['Nama Ayah'] || '-';
+  const namaIbu = s.Nama_Ibu || s['Nama Ibu'] || '-';
+  const noWaAyah = s.No_WA_Ayah || s['No WA Ayah'] || '';
+  const noWaIbu = s.No_WA_Ibu || s['No WA Ibu'] || '';
+  const alamat = s.Alamat || s.Alamat_Lengkap || s['Alamat'] || s['Alamat Lengkap'] || '-';
+  const asalSekolah = s.Nama_Sekolah || s['Nama Sekolah'] || '-';
+  
+  const formatWa = function(no) {
+    if (!no) return '<span class="text-muted">-</span>';
+    const digits = String(no).replace(/\D/g, '');
+    if (!digits) return '<span class="text-muted">-</span>';
+    let waNum = digits.startsWith('0') ? '62' + digits.slice(1) : digits;
+    return '<a href="https://wa.me/' + waNum + '" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 font-monospace"><i class="fab fa-whatsapp me-1"></i>' + no + '</a>';
+  };
+  
+  const jkRaw = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+  const isL = jkRaw.includes('LAKI') || jkRaw === 'L';
+  const jkBadge = '<span class="badge ' + (isL ? 'bg-primary' : 'bg-danger') + '">' + (isL ? 'Laki-laki' : 'Perempuan') + '</span>';
+  
+  let fotoSantri = s.Foto_URL || s.Foto || s.foto || '';
+  if (fotoSantri && String(fotoSantri).includes('drive.google.com')) {
+    const m = String(fotoSantri).match(/[-\w]{25,}/);
+    if (m) fotoSantri = 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w400';
+  }
+  const avatarFallback = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(namaSantri) + '&background=' + (isL ? '0d6efd' : 'e83e8c') + '&color=fff&size=200';
+  const finalFoto = fotoSantri || avatarFallback;
+  
+  let modalEl = document.getElementById('modalSantriDetail');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'modalSantriDetail';
+    modalEl.className = 'modal fade';
+    modalEl.tabIndex = -1;
+    document.body.appendChild(modalEl);
+  }
+  
+  modalEl.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
+          <h5 class="modal-title fw-bold"><i class="fas fa-id-card me-2"></i> Biodata Lengkap Santri</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="d-flex flex-column flex-sm-row align-items-center gap-4 mb-4 pb-3 border-bottom">
+            <div class="d-flex flex-column align-items-center flex-shrink-0">
+              <div style="width: 100px; height: 130px; border-radius: 10px; overflow: hidden; background: #f8f9fa; flex-shrink: 0;" class="border shadow-sm">
+                <img id="imgFotoSantri_${nis}" src="${finalFoto}" alt="Foto" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='${avatarFallback}';">
+              </div>
+              <button type="button" class="btn btn-xs btn-outline-primary mt-2 py-1 px-2" style="font-size: 0.72rem; border-radius: 6px;" onclick="bukaModalUploadFotoSantri('${nis}', '${namaSantri.replace(/'/g, "\\'")}', '${finalFoto}')">
+                <i class="fas fa-camera me-1"></i> Ubah Foto
+              </button>
+            </div>
+            <div class="text-center text-sm-start flex-grow-1">
+              <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-sm-start gap-2 mb-2">
+                <span class="badge bg-primary px-2 py-1">NIS: ${nis}</span>
+                <span class="badge bg-warning text-dark px-2 py-1">Kelas ${kelas}</span>
+                <span class="badge bg-success px-2 py-1">${status}</span>
+              </div>
+              <h3 class="fw-bold mb-1">${namaSantri}</h3>
+              <p class="text-muted mb-0 small"><i class="fas fa-map-marker-alt text-danger me-1"></i> Ruang: ${lokasi}</p>
+            </div>
+          </div>
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded border h-100">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user me-2"></i> Identitas Diri</h6>
+                <table class="table table-sm table-borderless mb-0">
+                  <tr><td class="text-muted" style="width:120px;">NIS</td><td>:</td><td class="fw-bold font-monospace">${nis}</td></tr>
+                  <tr><td class="text-muted">Nama</td><td>:</td><td class="fw-semibold">${namaSantri}</td></tr>
+                  <tr><td class="text-muted">Jenis Kelamin</td><td>:</td><td>${jkBadge}</td></tr>
+                  <tr><td class="text-muted">TTL</td><td>:</td><td>${ttlText}</td></tr>
+                  <tr><td class="text-muted">Asal Sekolah</td><td>:</td><td>${asalSekolah}</td></tr>
+                  <tr><td class="text-muted">Alamat</td><td>:</td><td>${alamat}</td></tr>
+                </table>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 bg-light rounded border h-100">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-friends me-2"></i> Data Orang Tua</h6>
+                <table class="table table-sm table-borderless mb-0">
+                  <tr><td class="text-muted" style="width:120px;">Nama Ayah</td><td>:</td><td class="fw-semibold">${namaAyah}</td></tr>
+                  <tr><td class="text-muted">No. WA Ayah</td><td>:</td><td>${formatWa(noWaAyah)}</td></tr>
+                  <tr><td class="text-muted">Nama Ibu</td><td>:</td><td class="fw-semibold">${namaIbu}</td></tr>
+                  <tr><td class="text-muted">No. WA Ibu</td><td>:</td><td>${formatWa(noWaIbu)}</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
+}
+
+function deleteSantri(id) {
+  if (confirm('Yakin ingin menghapus data santri ini? Tindakan ini tidak dapat dibatalkan.')) {
+    showLoading('Menghapus data santri...');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideLoading();
+        showToast(result && result.message ? result.message : 'Data santri berhasil dihapus', 'success');
+        fetchSantriList();
+      })
+      .withFailureHandler(function(e) {
+        hideLoading();
+        showToast('Error: ' + e.message, 'error');
+      })
+      .deleteSantri(id);
+  }
+}
+
+function exportSantriExcel() {
+  showLoading('Menyiapkan file Excel...');
+  google.script.run
+    .withSuccessHandler(function(result) {
+      hideLoading();
+      if (result && result.success) {
+        window.open(result.downloadUrl, '_blank');
+        showToast('File Excel berhasil dibuat', 'success');
+      } else {
+        showToast('Gagal export: ' + (result ? result.message : 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Error: ' + e.message, 'error');
+    })
+    .exportToExcel('Data_Santri_TPQ_Al_Mabrur', _santriCache);
+}
+</script>

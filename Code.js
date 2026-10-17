@@ -378,6 +378,100 @@ function deleteSantri(nis) {
   }
 }
 
+/**
+ * Upload dan perbarui foto profil santri ke Google Drive dan simpan URL-nya di sheet Santri
+ */
+function uploadFotoSantri(data) {
+  try {
+    if (!data || !data.nis) {
+      throw new Error('NIS santri tidak ditemukan.');
+    }
+    if (!data.imageBase64) {
+      throw new Error('File foto tidak ditemukan atau kosong.');
+    }
+    
+    const nis = String(data.nis).trim();
+    let base64Str = String(data.imageBase64);
+    let mimeType = 'image/jpeg';
+    
+    // Parse data URL jika ada prefix base64
+    if (base64Str.indexOf(';base64,') !== -1) {
+      const parts = base64Str.split(';base64,');
+      const mimeMatch = parts[0].match(/data:(.*?)$/);
+      if (mimeMatch) mimeType = mimeMatch[1];
+      base64Str = parts[1];
+    }
+    
+    const decodedBytes = Utilities.base64Decode(base64Str);
+    const fileName = 'FOTO_' + nis + '_' + Utilities.formatDate(new Date(), 'GMT+7', 'yyyyMMdd_HHmmss') + '.jpg';
+    const blob = Utilities.newBlob(decodedBytes, mimeType, fileName);
+    
+    // Cari atau buat folder "Foto_Santri_TPQ" di Google Drive
+    let folder;
+    const folders = DriveApp.getFoldersByName('Foto_Santri_TPQ');
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder('Foto_Santri_TPQ');
+    }
+    try {
+      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(e) {}
+    
+    // Buat file foto
+    const file = folder.createFile(blob);
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(e) {}
+    const fileId = file.getId();
+    
+    // URL publik untuk thumbnail & direct view
+    const fileUrl = 'https://drive.google.com/uc?export=view&id=' + fileId;
+    const thumbUrl = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w500';
+    
+    // Update kolom Foto_URL di sheet Santri
+    const sheet = SHEETS.santri;
+    const dataRows = sheet.getDataRange().getValues();
+    const headers = dataRows[0];
+    
+    let idxFoto = headers.findIndex(h => h.toString().toLowerCase().includes('foto'));
+    if (idxFoto === -1) {
+      const nextCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, nextCol).setValue('Foto_URL');
+      idxFoto = nextCol - 1;
+    }
+    
+    const idxNIS = headers.findIndex(h => h.toString().toLowerCase() === 'nis');
+    const nisCol = idxNIS !== -1 ? idxNIS : 0;
+    
+    let foundRow = -1;
+    for (let i = 1; i < dataRows.length; i++) {
+      if (String(dataRows[i][nisCol] || '').trim() === nis) {
+        foundRow = i + 1;
+        break;
+      }
+    }
+    
+    if (foundRow === -1) {
+      throw new Error('Santri dengan NIS ' + nis + ' tidak ditemukan di database.');
+    }
+    
+    sheet.getRange(foundRow, idxFoto + 1).setValue(fileUrl);
+    
+    return {
+      success: true,
+      fileUrl: fileUrl,
+      thumbUrl: thumbUrl,
+      message: 'Foto santri berhasil diupload dan disimpan!'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message || err.toString()
+    };
+  }
+}
+
 // ===== PENDAFTARAN SANTRI BARU & NIS OTOMATIS =====
 
 /**
