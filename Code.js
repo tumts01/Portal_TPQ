@@ -697,8 +697,17 @@ function getPendaftaranList(tahunFilter) {
       result = result.filter(s => String(s.Tahun_Ajaran || '').trim() === String(tahunFilter).trim());
     }
     
-    // Urutkan dari NIS terbesar / pendaftar terbaru
+    // Urutkan: Pendaftar yang masih status 'mendaftar' (menunggu) berada di paling atas,
+    // disusul oleh pendaftar yang sudah diverifikasi berdasarkan NIS terbesar / terbaru
     result.sort((a, b) => {
+      const stA = String(a.Status || 'aktif').toLowerCase().trim();
+      const stB = String(b.Status || 'aktif').toLowerCase().trim();
+      const isMendaftarA = stA === 'mendaftar' || stA === 'pending' || stA.includes('daftar');
+      const isMendaftarB = stB === 'mendaftar' || stB === 'pending' || stB.includes('daftar');
+      
+      if (isMendaftarA && !isMendaftarB) return -1;
+      if (!isMendaftarA && isMendaftarB) return 1;
+      
       const nisA = parseInt(String(a.NIS || '').replace(/\D/g, ''), 10) || 0;
       const nisB = parseInt(String(b.NIS || '').replace(/\D/g, ''), 10) || 0;
       return nisB - nisA;
@@ -734,7 +743,6 @@ function getPendaftaranStats() {
     const tahunAktif = getTahunAjaranPendaftaran();
     let totalPendaftarBaru = 0;
     let totalAktifTahunIni = 0;
-    let totalSemua = data.length - 1;
     
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
@@ -752,13 +760,16 @@ function getPendaftaranStats() {
       }
     }
     
+    const totalPendaftar = totalPendaftarBaru + totalAktifTahunIni;
+    
     return {
       success: true,
       tahunAjaranAktif: tahunAktif,
       nisInfo: getNextNIS(),
       totalPendaftarBaru: totalPendaftarBaru,
       totalAktifTahunIni: totalAktifTahunIni,
-      totalSemua: totalSemua
+      totalPendaftar: totalPendaftar,
+      totalSemua: totalPendaftar > 0 ? totalPendaftar : totalPendaftarBaru
     };
   } catch (err) {
     return {
@@ -768,6 +779,7 @@ function getPendaftaranStats() {
       nisInfo: { nextNIS: '261066', lastNIS: '261065' },
       totalPendaftarBaru: 0,
       totalAktifTahunIni: 0,
+      totalPendaftar: 0,
       totalSemua: 0
     };
   }
