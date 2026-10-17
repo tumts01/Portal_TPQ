@@ -1461,6 +1461,69 @@ function renderDasborSantriWali() {
 
       <!-- Detail Biodata Lengkap Body -->
       <div class="card-body p-4 bg-white">
+        <!-- Kartu Rekap Kehadiran & Total SIA -->
+        <div class="p-3 mb-4 rounded-3 border bg-light shadow-sm" id="boxRekapPresensiWali">
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3 pb-2 border-bottom">
+            <div>
+              <h6 class="fw-bold mb-0 text-dark">
+                <i class="fas fa-clipboard-check text-success me-2"></i> Rekap Presensi & Kehadiran Santri
+              </h6>
+              <small class="text-muted" id="presensiSubTitle">Memuat data presensi...</small>
+            </div>
+            <div>
+              <span class="badge bg-danger fs-6 px-3 py-2 shadow-sm" id="badgeTotalSIA">
+                <i class="fas fa-exclamation-circle me-1"></i> Total SIA: <span id="valTotalSIA">-</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="row g-2 text-center mb-3">
+            <!-- Hadir -->
+            <div class="col-6 col-md-3">
+              <div class="p-2 bg-white rounded border border-success-subtle shadow-sm h-100">
+                <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.72rem;"><i class="fas fa-check-circle text-success me-1"></i> Hadir (H)</small>
+                <h3 class="fw-bold text-success mb-0" id="statPresensiHadir"><i class="fas fa-spinner fa-spin fs-5"></i></h3>
+                <small class="text-muted" style="font-size: 0.7rem;">Pertemuan</small>
+              </div>
+            </div>
+            <!-- Sakit -->
+            <div class="col-6 col-md-3">
+              <div class="p-2 bg-white rounded border border-warning-subtle shadow-sm h-100">
+                <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.72rem;"><i class="fas fa-procedures text-warning me-1"></i> Sakit (S)</small>
+                <h3 class="fw-bold text-warning mb-0" id="statPresensiSakit"><i class="fas fa-spinner fa-spin fs-5"></i></h3>
+                <small class="text-muted" style="font-size: 0.7rem;">Pertemuan</small>
+              </div>
+            </div>
+            <!-- Izin -->
+            <div class="col-6 col-md-3">
+              <div class="p-2 bg-white rounded border border-info-subtle shadow-sm h-100">
+                <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.72rem;"><i class="fas fa-envelope-open-text text-info me-1"></i> Izin (I)</small>
+                <h3 class="fw-bold text-info mb-0" id="statPresensiIzin"><i class="fas fa-spinner fa-spin fs-5"></i></h3>
+                <small class="text-muted" style="font-size: 0.7rem;">Pertemuan</small>
+              </div>
+            </div>
+            <!-- Alpa -->
+            <div class="col-6 col-md-3">
+              <div class="p-2 bg-white rounded border border-danger-subtle shadow-sm h-100">
+                <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.72rem;"><i class="fas fa-times-circle text-danger me-1"></i> Alpa (A)</small>
+                <h3 class="fw-bold text-danger mb-0" id="statPresensiAlpa"><i class="fas fa-spinner fa-spin fs-5"></i></h3>
+                <small class="text-muted" style="font-size: 0.7rem;">Tanpa Keterangan</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress Bar Kehadiran -->
+          <div>
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span>Tingkat Kehadiran: <strong class="text-dark" id="txtPersenKehadiran">0%</strong></span>
+              <span id="txtRasioKehadiran">0 dari 0 Tatap Muka</span>
+            </div>
+            <div class="progress" style="height: 10px; border-radius: 6px;">
+              <div id="progBarKehadiran" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
         <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
           <i class="fas fa-user-graduate text-success me-2"></i> Biodata Lengkap Santri
         </h5>
@@ -1587,6 +1650,56 @@ function renderDasborSantriWali() {
       </div>
     </div>
   `;
+
+  // Asynchronously load Rekap Presensi & Total SIA
+  loadSiaSantri(nis, namaSantri, s.Tahun_Ajaran);
+}
+
+function loadSiaSantri(nis, namaSantri, tahunAjaran) {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        const sub = document.getElementById('presensiSubTitle');
+        if (sub) sub.textContent = 'Belum ada data presensi tercatat.';
+        return;
+      }
+      
+      const elTotal = document.getElementById('valTotalSIA');
+      const elH = document.getElementById('statPresensiHadir');
+      const elS = document.getElementById('statPresensiSakit');
+      const elI = document.getElementById('statPresensiIzin');
+      const elA = document.getElementById('statPresensiAlpa');
+      const elPersen = document.getElementById('txtPersenKehadiran');
+      const elRasio = document.getElementById('txtRasioKehadiran');
+      const elBar = document.getElementById('progBarKehadiran');
+      const elSub = document.getElementById('presensiSubTitle');
+      
+      if (elTotal) elTotal.textContent = res.totalSIA + ' Pertemuan';
+      if (elH) elH.textContent = res.hadir;
+      if (elS) elS.textContent = res.sakit;
+      if (elI) elI.textContent = res.izin;
+      if (elA) elA.textContent = res.alpa;
+      if (elPersen) elPersen.textContent = res.persenKehadiran + '%';
+      if (elRasio) elRasio.textContent = res.hadir + ' dari ' + res.totalPertemuan + ' Pertemuan';
+      
+      if (elBar) {
+        elBar.style.width = res.persenKehadiran + '%';
+        elBar.classList.remove('bg-success', 'bg-warning', 'bg-danger');
+        if (res.persenKehadiran >= 80) elBar.classList.add('bg-success');
+        else if (res.persenKehadiran >= 60) elBar.classList.add('bg-warning');
+        else elBar.classList.add('bg-danger');
+      }
+      
+      if (elSub) {
+        elSub.textContent = 'Tahun Ajaran ' + (res.tahunAjaran || tahunAjaran || 'Aktif') + ' | Total Kehadiran: ' + res.hadir + ' dari ' + res.totalPertemuan + ' pertemuan';
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.warn('Gagal memuat rekap presensi santri:', err);
+      const sub = document.getElementById('presensiSubTitle');
+      if (sub) sub.textContent = 'Data presensi belum tersedia.';
+    })
+    .getRekapPresensiSantriByNIS(nis, namaSantri, tahunAjaran);
 }
 
 function pilihAnakSantriWali(idx) {
