@@ -332,6 +332,126 @@
         </button>
       </form>
       <div id="loginError" class="alert alert-danger mt-3" style="display:none;"></div>
+
+      <div class="mt-4 pt-3 border-top text-center">
+        <p class="text-muted small mb-2"><i class="fas fa-user-graduate text-success me-1"></i> Calon santri baru belum terdaftar?</p>
+        <button type="button" class="btn btn-outline-success w-100 fw-bold py-2 shadow-sm" onclick="openPublicPendaftaranModal()">
+          <i class="fas fa-user-plus me-1"></i> Pendaftaran Santri Baru
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Pendaftaran Santri Baru (Publik / Halaman Login) -->
+  <div class="modal fade" id="modalPendaftaranPublic" tabindex="-1" aria-labelledby="modalPendaftaranPublicTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
+          <div class="d-flex align-items-center gap-2">
+            <img src="https://i.ibb.co.com/5hcK4HTq/Logo-TPQ-Bilqolam-Al-Mabrur-versi-enteng-e-2.png" alt="Logo" style="height: 38px; width: 38px; object-fit: contain; background: white; border-radius: 8px; padding: 2px;">
+            <div>
+              <h5 class="modal-title fw-bold mb-0" id="modalPendaftaranPublicTitle">Formulir Pendaftaran Santri Baru</h5>
+              <small class="text-white-50">TPQ Al Mabrur Singosari</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="formPendaftaranPublic">
+          <div class="modal-body p-4">
+            <div class="alert alert-success py-2 px-3 mb-3 small d-flex align-items-center justify-content-between">
+              <div>
+                <i class="fas fa-calendar-check me-1"></i> Tahun Ajaran Pendaftaran: <strong id="publicTahunAjaranDisplay">20262</strong>
+              </div>
+              <span class="badge bg-success-subtle text-success border border-success">Pendaftaran Dibuka</span>
+            </div>
+
+            <div class="row g-3">
+              <!-- 1. Nama Lengkap Santri -->
+              <div class="col-md-7">
+                <label class="form-label fw-bold small text-dark">Nama Lengkap Santri <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="reg_nama_santri" required placeholder="Contoh: Muhammad Rayhan Al-Fatih">
+              </div>
+
+              <!-- 2. Jenis Kelamin -->
+              <div class="col-md-5">
+                <label class="form-label fw-bold small text-dark">Jenis Kelamin <span class="text-danger">*</span></label>
+                <select class="form-select" id="reg_jk" required>
+                  <option value="">-- Pilih Jenis Kelamin --</option>
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
+              </div>
+
+              <!-- 3. Tempat Lahir -->
+              <div class="col-md-5">
+                <label class="form-label fw-bold small text-dark">Tempat Lahir <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="reg_tempat_lahir" required placeholder="Kota kelahiran (contoh: Malang)">
+              </div>
+
+              <!-- 4. Tanggal Lahir -->
+              <div class="col-md-4">
+                <label class="form-label fw-bold small text-dark">Tanggal Lahir <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="reg_tgl_lahir" required onchange="calculatePublicUsia()">
+              </div>
+
+              <!-- 5. Usia -->
+              <div class="col-md-3">
+                <label class="form-label fw-bold small text-dark">Usia <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="reg_usia" required placeholder="Contoh: 7 Tahun">
+              </div>
+
+              <!-- 6. Nama Sekolah -->
+              <div class="col-12">
+                <label class="form-label fw-bold small text-dark">Nama Sekolah Formal (TK / RA / SD / MI) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="reg_nama_sekolah" required placeholder="Contoh: SDN 1 Candirenggo / RA Muslimat Singosari">
+              </div>
+
+              <!-- Data Orang Tua -->
+              <div class="col-12 mt-3">
+                <h6 class="fw-bold text-primary border-bottom pb-1 mb-0">
+                  <i class="fas fa-user-friends me-1"></i> Data Orang Tua / Wali
+                </h6>
+              </div>
+
+              <!-- 7. Nama Ayah -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Nama Ayah</label>
+                <input type="text" class="form-control" id="reg_nama_ayah" placeholder="Nama lengkap Ayah">
+              </div>
+
+              <!-- 8. No WA Ayah -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">No. WhatsApp Ayah <span class="text-muted">(Bisa dipakai login)</span></label>
+                <input type="tel" class="form-control" id="reg_wa_ayah" placeholder="08xxxxxxxxxx">
+              </div>
+
+              <!-- 9. Nama Ibu -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Nama Ibu</label>
+                <input type="text" class="form-control" id="reg_nama_ibu" placeholder="Nama lengkap Ibu">
+              </div>
+
+              <!-- 10. No WA Ibu -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">No. WhatsApp Ibu</label>
+                <input type="tel" class="form-control" id="reg_wa_ibu" placeholder="08xxxxxxxxxx">
+              </div>
+
+              <!-- 11. Alamat -->
+              <div class="col-12">
+                <label class="form-label fw-bold small text-dark">Alamat Lengkap Domisili <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="reg_alamat" rows="2" required placeholder="Jl. ..., RT/RW ..., Desa/Kel ..., Kec. Singosari"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light d-flex justify-content-between">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+            <button type="submit" class="btn btn-success fw-bold px-4">
+              <i class="fas fa-paper-plane me-1"></i> Kirim Pendaftaran
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
   
@@ -415,6 +535,7 @@
     const menuConfig = {
       super_admin: [
         { id: 'dashboard', icon: 'fa-home', label: 'Dashboard', page: 'dashboard' },
+        { id: 'pendaftaran', icon: 'fa-user-plus', label: 'Pendaftaran Santri', page: 'pendaftaran' },
         { id: 'santri', icon: 'fa-user-graduate', label: 'Data Santri', page: 'santri' },
         { id: 'kelas', icon: 'fa-school', label: 'Data Kelas', page: 'kelas' },
         { id: 'guru', icon: 'fa-chalkboard-teacher', label: 'Data Guru', page: 'guru' },
@@ -465,11 +586,116 @@
       }
       
       // Login form submit
-      document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        doLogin();
-      });
+      const loginFrm = document.getElementById('loginForm');
+      if (loginFrm) {
+        loginFrm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          doLogin();
+        });
+      }
+
+      // Public Registration form submit
+      const formPub = document.getElementById('formPendaftaranPublic');
+      if (formPub) {
+        formPub.addEventListener('submit', function(e) {
+          e.preventDefault();
+          submitPublicPendaftaran();
+        });
+      }
     });
+
+    // Public Registration Functions
+    function openPublicPendaftaranModal() {
+      const frm = document.getElementById('formPendaftaranPublic');
+      if (frm) frm.reset();
+
+      // Ambil tahun ajaran aktif pendaftaran
+      google.script.run
+        .withSuccessHandler(function(tahun) {
+          const el = document.getElementById('publicTahunAjaranDisplay');
+          if (el) el.textContent = tahun || '20262';
+        })
+        .withFailureHandler(function() {})
+        .getTahunAjaranPendaftaran();
+
+      const modalEl = document.getElementById('modalPendaftaranPublic');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
+
+    function calculatePublicUsia() {
+      const tgl = document.getElementById('reg_tgl_lahir').value;
+      if (!tgl) return;
+      try {
+        const bDate = new Date(tgl);
+        if (!isNaN(bDate.getTime())) {
+          const diff = Date.now() - bDate.getTime();
+          const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+          if (age >= 0 && age < 100) {
+            document.getElementById('reg_usia').value = age + ' Tahun';
+          }
+        }
+      } catch (e) {}
+    }
+
+    function submitPublicPendaftaran() {
+      const payload = {
+        Nama_Santri: document.getElementById('reg_nama_santri').value.trim(),
+        Jenis_Kelamin: document.getElementById('reg_jk').value,
+        Tempat_Lahir: document.getElementById('reg_tempat_lahir').value.trim(),
+        Tanggal_Lahir: document.getElementById('reg_tgl_lahir').value,
+        Usia: document.getElementById('reg_usia').value.trim(),
+        Nama_Sekolah: document.getElementById('reg_nama_sekolah').value.trim(),
+        Nama_Ayah: document.getElementById('reg_nama_ayah').value.trim(),
+        No_WA_Ayah: document.getElementById('reg_wa_ayah').value.trim(),
+        Nama_Ibu: document.getElementById('reg_nama_ibu').value.trim(),
+        No_WA_Ibu: document.getElementById('reg_wa_ibu').value.trim(),
+        Alamat: document.getElementById('reg_alamat').value.trim(),
+        Status: 'Mendaftar'
+      };
+
+      showLoading('Mengirim data pendaftaran...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          hideLoading();
+          if (res && res.success) {
+            const modalEl = document.getElementById('modalPendaftaranPublic');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            Swal.fire({
+              icon: 'success',
+              title: 'Alhamdulillah, Pendaftaran Berhasil!',
+              html: `
+                <p class="mb-2">Data calon santri <strong>${res.namaSantri}</strong> telah berhasil disimpan di database TPQ Al Mabrur.</p>
+                <div class="p-3 bg-light rounded border text-start my-3">
+                  <p class="mb-1 small">Nomor Induk Santri (NIS): <strong class="fs-5 text-primary font-monospace">${res.nis}</strong></p>
+                  <p class="mb-1 small">Tahun Ajaran: <strong>${res.tahunAjaran}</strong></p>
+                  <p class="mb-0 small text-muted">Status: <span class="badge bg-warning text-dark">Menunggu Verifikasi & Penempatan Kelas</span></p>
+                </div>
+                <p class="small text-muted mb-0">Silakan simpan nomor NIS ini. Pengurus TPQ akan segera memverifikasi pendaftaran Anda.</p>
+              `,
+              confirmButtonText: 'Tutup & Simpan',
+              confirmButtonColor: '#198754'
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Pendaftaran Gagal',
+              text: res ? res.message : 'Terjadi kesalahan sistem'
+            });
+          }
+        })
+        .withFailureHandler(function(err) {
+          hideLoading();
+          Swal.fire({
+            icon: 'error',
+            title: 'Terjadi Kesalahan',
+            text: err.message || err.toString()
+          });
+        })
+        .daftarSantriBaru(payload);
+    }
     
     // Login
     function doLogin() {
@@ -589,6 +815,7 @@
       // Update title
       const titles = {
         dashboard: 'Dashboard',
+        pendaftaran: 'Pendaftaran Santri Baru',
         santri: 'Data Santri',
         guru: 'Data Guru',
         presensi: 'Presensi',
@@ -623,6 +850,9 @@
       switch(page) {
         case 'dashboard':
           loadDashboard();
+          break;
+        case 'pendaftaran':
+          loadPendaftaranPage();
           break;
         case 'santri':
           loadSantriPage();
@@ -1306,6 +1536,840 @@ function pilihAnakSantriWali(idx) {
 </script>
 
   <script>
+let _pendaftaranData = [];
+let _pendaftaranTahunAktif = '20262';
+let _pendaftaranNisInfo = { nextNIS: '261066', lastNIS: '261065', yearPrefix: '26' };
+let _pendaftaranKelasList = [];
+
+function loadPendaftaranPage() {
+  const contentArea = document.getElementById('contentArea');
+  contentArea.innerHTML = `
+    <!-- Top Action Banner -->
+    <div class="content-card mb-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+          <h4 class="fw-bold mb-1"><i class="fas fa-user-plus text-primary me-2"></i> Pendaftaran Santri Baru</h4>
+          <p class="text-muted mb-0 small">Pantau calon santri yang mendaftar online, atur tahun ajaran pendaftaran, dan generate NIS otomatis dari nomor terbesar.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="refreshPendaftaranData()">
+            <i class="fas fa-sync-alt me-1"></i> Refresh
+          </button>
+          <button class="btn btn-success btn-sm" onclick="exportPendaftaranExcel()">
+            <i class="fas fa-file-excel me-1"></i> Export Excel
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="showModalTambahPendaftar()">
+            <i class="fas fa-plus me-1"></i> Tambah Pendaftar Manual
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Configuration & Summary Cards -->
+    <div class="row g-3 mb-4">
+      <!-- Card 1: Pengaturan Tahun Ajaran Pendaftaran -->
+      <div class="col-lg-5 col-md-6">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-muted small fw-bold text-uppercase"><i class="fas fa-calendar-alt text-primary me-1"></i> Tahun Ajaran Pendaftaran</span>
+              <span class="badge bg-primary px-2 py-1" id="badgeTahunAktifDisplay">-</span>
+            </div>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-light"><i class="fas fa-sliders-h"></i></span>
+              <input type="text" id="inputTahunAjaranPendaftaran" class="form-control font-monospace fw-bold" placeholder="Contoh: 20262 atau 20263">
+              <button class="btn btn-primary fw-semibold" type="button" onclick="simpanTahunAjaranPendaftaran()">
+                <i class="fas fa-save me-1"></i> Simpan
+              </button>
+            </div>
+            <small class="text-muted d-block mt-2" style="font-size: 0.76rem;">
+              <i class="fas fa-info-circle text-info me-1"></i> Tahun ajaran ini otomatis disematkan pada setiap santri yang mendaftar lewat halaman awal.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: NIS Otomatis Terbesar -->
+      <div class="col-lg-4 col-md-6">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+          <div class="card-body p-3">
+            <span class="text-muted small fw-bold text-uppercase d-block mb-1"><i class="fas fa-id-badge text-success me-1"></i> Penomoran NIS Otomatis</span>
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <small class="text-muted d-block" style="font-size: 0.75rem;">NIS Terakhir / Terbesar:</small>
+                <strong class="font-monospace text-secondary fs-6" id="dispLastNIS">-</strong>
+              </div>
+              <div class="text-end">
+                <small class="text-muted d-block" style="font-size: 0.75rem;">NIS Berikutnya:</small>
+                <span class="badge bg-success font-monospace fs-6 px-2 py-1 shadow-sm" id="dispNextNIS">-</span>
+              </div>
+            </div>
+            <small class="text-muted d-block mt-2" style="font-size: 0.76rem;">
+              <i class="fas fa-check-circle text-success me-1"></i> Format: <code>26</code> (Tahun) + 4 digit urut dari yang terbesar.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Statistik Ringkas Pendaftar -->
+      <div class="col-lg-3 col-md-12">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+          <div class="card-body p-3 d-flex flex-column justify-content-between">
+            <span class="text-muted small fw-bold text-uppercase mb-1"><i class="fas fa-user-clock text-warning me-1"></i> Status Verifikasi</span>
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <span class="badge bg-warning text-dark fw-bold px-2 py-1" id="statPendaftarBaru">0 Menunggu</span>
+              </div>
+              <div>
+                <span class="badge bg-success fw-bold px-2 py-1" id="statAktifTahunIni">0 Aktif</span>
+              </div>
+            </div>
+            <small class="text-muted d-block mt-2" style="font-size: 0.76rem;">
+              Total Calon Santri: <strong id="statTotalSemua">0</strong>
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter & Data Table Card -->
+    <div class="content-card">
+      <div class="row g-2 mb-3 align-items-center">
+        <div class="col-md-4">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchPendaftar" class="form-control" placeholder="Cari nama, NIS, sekolah, ortu..." onkeyup="filterPendaftaranTable()">
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select id="filterStatusPendaftar" class="form-select form-select-sm" onchange="filterPendaftaranTable()">
+            <option value="semua">Semua Status</option>
+            <option value="mendaftar" selected>Menunggu Verifikasi (Mendaftar)</option>
+            <option value="aktif">Aktif / Diterima</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select id="filterTahunPendaftar" class="form-select form-select-sm" onchange="filterPendaftaranTable()">
+            <option value="semua">Semua Tahun Ajaran</option>
+          </select>
+        </div>
+        <div class="col-md-2 text-md-end">
+          <span class="badge bg-primary" id="badgeCountFiltered">0 Data</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.88rem;">
+          <thead class="table-light text-nowrap">
+            <tr>
+              <th style="width: 40px;" class="text-center">No</th>
+              <th>Tgl Daftar</th>
+              <th>NIS</th>
+              <th>Nama Santri</th>
+              <th>L/P</th>
+              <th>TTL & Usia</th>
+              <th>Asal Sekolah</th>
+              <th>Data Orang Tua & WA</th>
+              <th>Alamat</th>
+              <th>Tahun Ajaran</th>
+              <th>Kelas</th>
+              <th>Status</th>
+              <th style="width: 140px;" class="text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="pendaftaranTableBody">
+            <tr><td colspan="13" class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i><br>Memuat data pendaftaran...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal: Verifikasi / Terima Santri & Penetapan NIS -->
+    <div class="modal fade" id="modalVerifikasiSantri" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
+            <h5 class="modal-title fw-bold"><i class="fas fa-user-check me-2"></i> Verifikasi & Terima Santri</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <form id="formVerifikasiSantri">
+            <div class="modal-body p-4">
+              <input type="hidden" id="verif_nis_lama">
+              <input type="hidden" id="verif_nama">
+
+              <div class="alert alert-info py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+                <i class="fas fa-info-circle fa-2x"></i>
+                <div>
+                  <strong class="d-block" id="verif_info_nama">Nama Santri</strong>
+                  <span class="text-muted" id="verif_info_detail">TTL & Sekolah</span>
+                </div>
+              </div>
+
+              <!-- Input NIS Otomatis -->
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label fw-bold mb-0">Nomor Induk Santri (NIS) *</label>
+                  <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.72rem;" onclick="isiNisOtomatisDiModalVerif()">
+                    <i class="fas fa-magic me-1"></i> Gunakan NIS Terbesar
+                  </button>
+                </div>
+                <div class="input-group">
+                  <span class="input-group-text bg-light font-monospace"><i class="fas fa-id-card"></i></span>
+                  <input type="text" id="verif_nis_baru" class="form-control font-monospace fw-bold fs-6" required placeholder="Contoh: 261066">
+                </div>
+                <small class="text-muted" style="font-size: 0.75rem;">NIS otomatis diisi dari urutan terbesar berikutnya (YY + 4 digit counter).</small>
+              </div>
+
+              <!-- Pilihan Kelas -->
+              <div class="mb-3">
+                <label class="form-label fw-bold">Tempatkan di Kelas *</label>
+                <select id="verif_kelas" class="form-select" required>
+                  <option value="">-- Pilih Kelas --</option>
+                </select>
+              </div>
+
+              <!-- Status -->
+              <div class="mb-3">
+                <label class="form-label fw-bold">Status Santri</label>
+                <select id="verif_status" class="form-select">
+                  <option value="Aktif" selected>Aktif (Diterima & Resmi Jadi Santri)</option>
+                  <option value="Mendaftar">Mendaftar (Pending)</option>
+                  <option value="Lulus">Lulus</option>
+                  <option value="Nonaktif">Non-Aktif</option>
+                </select>
+              </div>
+
+              <!-- Opsi Buat User -->
+              <div class="form-check form-switch p-2 bg-light rounded border">
+                <input class="form-check-input ms-0 me-2" type="checkbox" id="verif_buat_user" checked>
+                <label class="form-check-label fw-semibold small" for="verif_buat_user">
+                  Buat akun login otomatis untuk santri / wali santri
+                  <span class="d-block text-muted" style="font-size: 0.72rem;">Username & password login akan diset sesuai NIS baru.</span>
+                </label>
+              </div>
+            </div>
+            <div class="modal-footer bg-light">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-success btn-sm fw-bold">
+                <i class="fas fa-check-circle me-1"></i> Simpan & Terima Santri
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Tambah Pendaftar Manual (Admin) -->
+    <div class="modal fade" id="modalTambahPendaftarAdmin" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header text-white" style="background: linear-gradient(135deg, #0d6efd, #198754);">
+            <h5 class="modal-title fw-bold"><i class="fas fa-user-plus me-2"></i> Tambah Pendaftar Santri Baru</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <form id="formTambahPendaftarAdmin">
+            <div class="modal-body p-4">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Nama Lengkap Santri *</label>
+                  <input type="text" class="form-control" id="adm_nama_santri" required placeholder="Nama lengkap calon santri">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Jenis Kelamin *</label>
+                  <select class="form-select" id="adm_jk" required>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold small">Tempat Lahir</label>
+                  <input type="text" class="form-control" id="adm_tempat_lahir" placeholder="Kota lahir">
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label fw-bold small">Tanggal Lahir</label>
+                  <input type="date" class="form-control" id="adm_tgl_lahir" onchange="hitungUsiaAdmin()">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small">Usia</label>
+                  <input type="text" class="form-control" id="adm_usia" placeholder="Misal: 7 Tahun">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Asal Sekolah</label>
+                  <input type="text" class="form-control" id="adm_nama_sekolah" placeholder="Nama TK / SD">
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <label class="form-label fw-bold small mb-0">NIS (Otomatis dari Terbesar) *</label>
+                    <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size: 0.7rem;" onclick="isiNisOtomatisAdminForm()">
+                      <i class="fas fa-magic"></i> Auto NIS
+                    </button>
+                  </div>
+                  <input type="text" class="form-control font-monospace fw-bold mt-1" id="adm_nis" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Nama Ayah</label>
+                  <input type="text" class="form-control" id="adm_nama_ayah" placeholder="Nama ayah">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">No. WhatsApp Ayah</label>
+                  <input type="text" class="form-control" id="adm_wa_ayah" placeholder="08xxx / 628xxx">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Nama Ibu</label>
+                  <input type="text" class="form-control" id="adm_nama_ibu" placeholder="Nama ibu">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">No. WhatsApp Ibu</label>
+                  <input type="text" class="form-control" id="adm_wa_ibu" placeholder="08xxx / 628xxx">
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-bold small">Alamat Lengkap</label>
+                  <textarea class="form-control" id="adm_alamat" rows="2" placeholder="Alamat domisili lengkap"></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Kelas (Opsional)</label>
+                  <select class="form-select" id="adm_kelas">
+                    <option value="-">-- Belum Ditentukan (-) --</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small">Status Pendaftaran</label>
+                  <select class="form-select" id="adm_status">
+                    <option value="Mendaftar" selected>Mendaftar (Perlu Verifikasi)</option>
+                    <option value="Aktif">Aktif (Langsung Diterima)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer bg-light">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-primary btn-sm fw-bold">
+                <i class="fas fa-save me-1"></i> Simpan Pendaftar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Init Data
+  refreshPendaftaranData();
+
+  // Attach event handlers
+  document.getElementById('formVerifikasiSantri').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitVerifikasiSantri();
+  });
+
+  document.getElementById('formTambahPendaftarAdmin').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitTambahPendaftarAdmin();
+  });
+}
+
+function refreshPendaftaranData() {
+  showLoading('Memuat data pendaftaran...');
+
+  google.script.run
+    .withSuccessHandler(function(kelasList) {
+      _pendaftaranKelasList = kelasList || [];
+      updateKelasSelectOptions();
+
+      google.script.run
+        .withSuccessHandler(function(stats) {
+          if (stats && stats.success) {
+            _pendaftaranTahunAktif = stats.tahunAjaranAktif || '20262';
+            _pendaftaranNisInfo = stats.nisInfo || { nextNIS: '261066', lastNIS: '261065' };
+
+            document.getElementById('badgeTahunAktifDisplay').textContent = _pendaftaranTahunAktif;
+            document.getElementById('inputTahunAjaranPendaftaran').value = _pendaftaranTahunAktif;
+
+            document.getElementById('dispLastNIS').textContent = _pendaftaranNisInfo.lastNIS || '-';
+            document.getElementById('dispNextNIS').textContent = _pendaftaranNisInfo.nextNIS || '-';
+
+            document.getElementById('statPendaftarBaru').textContent = (stats.totalPendaftarBaru || 0) + ' Menunggu';
+            document.getElementById('statAktifTahunIni').textContent = (stats.totalAktifTahunIni || 0) + ' Aktif';
+            document.getElementById('statTotalSemua').textContent = stats.totalSemua || 0;
+          }
+
+          // Ambil data list pendaftaran
+          google.script.run
+            .withSuccessHandler(function(resp) {
+              hideLoading();
+              if (resp && resp.success) {
+                _pendaftaranData = resp.data || [];
+                updateTahunFilterOptions();
+                renderPendaftaranTable();
+              } else {
+                showToast('Gagal memuat daftar: ' + (resp ? resp.message : 'Unknown error'), 'error');
+              }
+            })
+            .withFailureHandler(function(err) {
+              hideLoading();
+              showToast('Error load pendaftaran: ' + err.message, 'error');
+            })
+            .getPendaftaranList('semua');
+        })
+        .withFailureHandler(function(err) {
+          hideLoading();
+          showToast('Error load stats: ' + err.message, 'error');
+        })
+        .getPendaftaranStats();
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showToast('Error load kelas: ' + err.message, 'error');
+    })
+    .getKelasList();
+}
+
+function updateKelasSelectOptions() {
+  const selVerif = document.getElementById('verif_kelas');
+  const selAdm = document.getElementById('adm_kelas');
+  let opts = '<option value="">-- Pilih Kelas --</option>';
+  let optsAdm = '<option value="-">-- Belum Ditentukan (-) --</option>';
+
+  _pendaftaranKelasList.forEach(k => {
+    const kName = k.Nama_Kelas || k['Nama Kelas'] || '';
+    if (kName) {
+      opts += `<option value="${kName}">Kelas ${kName}</option>`;
+      optsAdm += `<option value="${kName}">Kelas ${kName}</option>`;
+    }
+  });
+
+  if (selVerif) selVerif.innerHTML = opts;
+  if (selAdm) selAdm.innerHTML = optsAdm;
+}
+
+function updateTahunFilterOptions() {
+  const sel = document.getElementById('filterTahunPendaftar');
+  if (!sel) return;
+
+  const tahunSet = new Set();
+  tahunSet.add(_pendaftaranTahunAktif);
+  _pendaftaranData.forEach(s => {
+    if (s.Tahun_Ajaran) tahunSet.add(String(s.Tahun_Ajaran).trim());
+  });
+
+  let html = '<option value="semua">Semua Tahun Ajaran</option>';
+  Array.from(tahunSet).sort().reverse().forEach(t => {
+    const isSel = t === _pendaftaranTahunAktif ? 'selected' : '';
+    html += `<option value="${t}" ${isSel}>Tahun Ajaran ${t}</option>`;
+  });
+  sel.innerHTML = html;
+}
+
+function filterPendaftaranTable() {
+  const search = (document.getElementById('searchPendaftar').value || '').toLowerCase().trim();
+  const filterStatus = document.getElementById('filterStatusPendaftar').value;
+  const filterTahun = document.getElementById('filterTahunPendaftar').value;
+
+  const filtered = _pendaftaranData.filter(s => {
+    // Filter status
+    const st = String(s.Status || 'aktif').toLowerCase().trim();
+    if (filterStatus === 'mendaftar') {
+      if (!(st === 'mendaftar' || st === 'pending' || st.includes('daftar'))) return false;
+    } else if (filterStatus === 'aktif') {
+      if (st === 'mendaftar' || st === 'pending' || st.includes('daftar')) return false;
+    }
+
+    // Filter tahun
+    if (filterTahun !== 'semua') {
+      if (String(s.Tahun_Ajaran || '').trim() !== filterTahun) return false;
+    }
+
+    // Search query
+    if (search) {
+      const nama = String(s.Nama_Santri || s['Nama Santri'] || '').toLowerCase();
+      const nis = String(s.NIS || '').toLowerCase();
+      const sekolah = String(s.Nama_Sekolah || s['Nama Sekolah'] || '').toLowerCase();
+      const ayah = String(s.Nama_Ayah || s['Nama Ayah'] || '').toLowerCase();
+      const ibu = String(s.Nama_Ibu || s['Nama Ibu'] || '').toLowerCase();
+      const alamat = String(s.Alamat || s.Alamat_Lengkap || '').toLowerCase();
+      if (!nama.includes(search) && !nis.includes(search) && !sekolah.includes(search) && !ayah.includes(search) && !ibu.includes(search) && !alamat.includes(search)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  renderPendaftaranRows(filtered);
+}
+
+function renderPendaftaranTable() {
+  filterPendaftaranTable();
+}
+
+function renderPendaftaranRows(data) {
+  const tbody = document.getElementById('pendaftaranTableBody');
+  const countBadge = document.getElementById('badgeCountFiltered');
+  if (countBadge) countBadge.textContent = data.length + ' Data';
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted">Tidak ada data pendaftaran yang sesuai filter.</td></tr>`;
+    return;
+  }
+
+  const q = String.fromCharCode(39);
+  let html = '';
+
+  data.forEach((s, idx) => {
+    const nis = s.NIS || '-';
+    const hasNis = nis && nis !== '-' && !String(nis).startsWith('S');
+    const nama = s.Nama_Santri || s['Nama Santri'] || '-';
+    const jkRaw = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
+    const isL = jkRaw.includes('LAKI') || jkRaw === 'L';
+    const jkBadge = `<span class="badge ${isL ? 'bg-primary' : 'bg-danger'}">${isL ? 'L' : 'P'}</span>`;
+
+    // Format TTL & Usia
+    const tempat = s.Tempat_Lahir || s['Tempat Lahir'] || '';
+    const tglRaw = s.Tanggal_Lahir || s['Tanggal Lahir'] || '';
+    let ttl = '-';
+    if (tempat && tglRaw) {
+      try {
+        const d = new Date(tglRaw);
+        ttl = `${tempat}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+      } catch(e) { ttl = tempat; }
+    } else if (tempat) { ttl = tempat; }
+    const usia = s.Usia ? ` (${s.Usia})` : '';
+
+    // Tanggal Daftar
+    const tglDaftarRaw = s.Tanggal_Daftar || s['Tanggal_Daftar'] || s.created_at || '';
+    let tglDaftar = '-';
+    if (tglDaftarRaw) {
+      try {
+        const d = new Date(tglDaftarRaw);
+        if (!isNaN(d.getTime())) {
+          tglDaftar = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+        }
+      } catch(e) {}
+    }
+
+    // Status
+    const stRaw = String(s.Status || 'aktif').toLowerCase().trim();
+    const isMendaftar = stRaw === 'mendaftar' || stRaw === 'pending' || stRaw.includes('daftar');
+    const statusBadge = isMendaftar 
+      ? `<span class="badge bg-warning text-dark fw-bold px-2 py-1"><i class="fas fa-clock me-1"></i>Mendaftar</span>` 
+      : `<span class="badge bg-success fw-bold px-2 py-1"><i class="fas fa-check me-1"></i>${(s.Status || 'Aktif').toUpperCase()}</span>`;
+
+    // Ortu & WA
+    const namaAyah = s.Nama_Ayah || s['Nama Ayah'] || '';
+    const noWaAyah = s.No_WA_Ayah || s['No WA Ayah'] || '';
+    const namaIbu = s.Nama_Ibu || s['Nama Ibu'] || '';
+    const noWaIbu = s.No_WA_Ibu || s['No WA Ibu'] || '';
+    
+    let ortuHtml = '';
+    if (namaAyah) {
+      ortuHtml += `<div class="d-flex align-items-center justify-content-between gap-1 mb-1"><span class="small fw-semibold text-truncate" style="max-width:110px;" title="${namaAyah}">A: ${namaAyah}</span>`;
+      if (noWaAyah) {
+        const dW = String(noWaAyah).replace(/\D/g, '');
+        const waNum = dW.startsWith('0') ? '62' + dW.slice(1) : dW;
+        ortuHtml += `<a href="https://wa.me/${waNum}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:0.68rem;"><i class="fab fa-whatsapp"></i></a>`;
+      }
+      ortuHtml += `</div>`;
+    }
+    if (namaIbu) {
+      ortuHtml += `<div class="d-flex align-items-center justify-content-between gap-1"><span class="small fw-semibold text-truncate" style="max-width:110px;" title="${namaIbu}">I: ${namaIbu}</span>`;
+      if (noWaIbu) {
+        const dW = String(noWaIbu).replace(/\D/g, '');
+        const waNum = dW.startsWith('0') ? '62' + dW.slice(1) : dW;
+        ortuHtml += `<a href="https://wa.me/${waNum}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:0.68rem;"><i class="fab fa-whatsapp"></i></a>`;
+      }
+      ortuHtml += `</div>`;
+    }
+    if (!ortuHtml) ortuHtml = '<span class="text-muted small">-</span>';
+
+    // Aksi Buttons
+    const btnVerif = isMendaftar
+      ? `<button class="btn btn-sm btn-success text-white me-1" onclick="bukaModalVerifikasi(${q}${s.NIS || ''}${q}, ${q}${nama}${q})" title="Verifikasi & Terima Santri"><i class="fas fa-check-circle"></i> Terima</button>`
+      : `<button class="btn btn-sm btn-outline-primary me-1" onclick="bukaModalVerifikasi(${q}${s.NIS || ''}${q}, ${q}${nama}${q})" title="Ubah NIS / Kelas"><i class="fas fa-id-card"></i></button>`;
+
+    const btnDetail = `<button class="btn btn-sm btn-info text-white me-1" onclick="showSantriDetail(${q}${s.NIS}${q})" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i></button>`;
+    const btnHapus = `<button class="btn btn-sm btn-outline-danger" onclick="hapusPendaftar(${q}${s.NIS}${q}, ${q}${nama}${q})" title="Hapus"><i class="fas fa-trash"></i></button>`;
+
+    html += `
+      <tr>
+        <td class="text-center text-muted small">${idx + 1}</td>
+        <td class="small text-nowrap">${tglDaftar}</td>
+        <td>
+          ${hasNis ? `<span class="badge bg-primary font-monospace fs-6 px-2 py-1 shadow-sm">${nis}</span>` : `<span class="badge bg-secondary font-monospace" style="font-size:0.75rem;">(Belum NIS)</span>`}
+        </td>
+        <td><strong>${nama}</strong></td>
+        <td class="text-center">${jkBadge}</td>
+        <td class="small text-nowrap">${ttl}${usia}</td>
+        <td class="small text-truncate" style="max-width: 130px;" title="${s.Nama_Sekolah || '-'}">${s.Nama_Sekolah || '-'}</td>
+        <td style="min-width: 140px;">${ortuHtml}</td>
+        <td class="small text-truncate" style="max-width: 140px;" title="${s.Alamat || s.Alamat_Lengkap || '-'}">${s.Alamat || s.Alamat_Lengkap || '-'}</td>
+        <td class="text-center"><span class="badge bg-light text-dark font-monospace border">${s.Tahun_Ajaran || '-'}</span></td>
+        <td class="text-center"><span class="badge bg-info text-dark">${s.Kelas || '-'}</span></td>
+        <td class="text-center">${statusBadge}</td>
+        <td class="text-center text-nowrap">
+          ${btnVerif}
+          ${btnDetail}
+          ${btnHapus}
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function simpanTahunAjaranPendaftaran() {
+  const val = document.getElementById('inputTahunAjaranPendaftaran').value.trim();
+  if (!val) {
+    showToast('Tahun Ajaran tidak boleh kosong', 'warning');
+    return;
+  }
+
+  showLoading('Menyimpan Tahun Ajaran Pendaftaran...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      if (res && res.success) {
+        showToast(res.message, 'success');
+        _pendaftaranTahunAktif = val;
+        document.getElementById('badgeTahunAktifDisplay').textContent = val;
+        updateTahunFilterOptions();
+      } else {
+        showToast('Gagal: ' + (res ? res.message : 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showToast('Error: ' + err.message, 'error');
+    })
+    .setTahunAjaranPendaftaran(val);
+}
+
+// ===== MODAL VERIFIKASI & TERIMA SANTRI =====
+
+function bukaModalVerifikasi(nis, nama) {
+  const s = _pendaftaranData.find(x => (nis && String(x.NIS) === String(nis)) || (nama && String(x.Nama_Santri).toLowerCase() === String(nama).toLowerCase()));
+  if (!s) return;
+
+  document.getElementById('verif_nis_lama').value = s.NIS || '';
+  document.getElementById('verif_nama').value = s.Nama_Santri || '';
+  document.getElementById('verif_info_nama').textContent = s.Nama_Santri || '-';
+  document.getElementById('verif_info_detail').textContent = `${s.Tempat_Lahir || '-'}, ${s.Tanggal_Lahir || '-'} | Asal: ${s.Nama_Sekolah || '-'}`;
+
+  // Cek apakah santri sudah punya NIS valid
+  const existingNis = s.NIS && !String(s.NIS).startsWith('S') && String(s.NIS).length >= 5 ? String(s.NIS).trim() : '';
+  if (existingNis) {
+    document.getElementById('verif_nis_baru').value = existingNis;
+  } else {
+    // Otomatis isi dengan NIS terbesar berikutnya
+    isiNisOtomatisDiModalVerif();
+  }
+
+  // Set Kelas
+  const selKelas = document.getElementById('verif_kelas');
+  if (s.Kelas && s.Kelas !== '-') {
+    selKelas.value = s.Kelas;
+  } else {
+    selKelas.selectedIndex = selKelas.options.length > 1 ? 1 : 0;
+  }
+
+  document.getElementById('verif_status').value = 'Aktif';
+  document.getElementById('verif_buat_user').checked = true;
+
+  const modal = new bootstrap.Modal(document.getElementById('modalVerifikasiSantri'));
+  modal.show();
+}
+
+function isiNisOtomatisDiModalVerif() {
+  showLoading('Mengambil urutan NIS terbesar...');
+  google.script.run
+    .withSuccessHandler(function(info) {
+      hideLoading();
+      if (info && info.nextNIS) {
+        document.getElementById('verif_nis_baru').value = info.nextNIS;
+        showToast(`NIS otomatis diset: ${info.nextNIS}`, 'info');
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      document.getElementById('verif_nis_baru').value = _pendaftaranNisInfo.nextNIS || '261066';
+    })
+    .getNextNIS();
+}
+
+function submitVerifikasiSantri() {
+  const nisLama = document.getElementById('verif_nis_lama').value;
+  const nama = document.getElementById('verif_nama').value;
+  const nisBaru = document.getElementById('verif_nis_baru').value.trim();
+  const kelas = document.getElementById('verif_kelas').value;
+  const status = document.getElementById('verif_status').value;
+  const buatUser = document.getElementById('verif_buat_user').checked;
+
+  if (!nisBaru) {
+    showToast('NIS wajib diisi!', 'warning');
+    return;
+  }
+  if (!kelas) {
+    showToast('Silakan pilih Kelas untuk santri!', 'warning');
+    return;
+  }
+
+  const payload = {
+    nisLama: nisLama,
+    nama: nama,
+    Nama_Santri: nama,
+    nisBaru: nisBaru,
+    NIS: nisBaru,
+    Kelas: kelas,
+    Status: status,
+    buatUser: buatUser,
+    Tahun_Ajaran: _pendaftaranTahunAktif
+  };
+
+  showLoading('Menyimpan verifikasi santri...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      if (res && res.success) {
+        showToast(res.message, 'success');
+        const modalEl = document.getElementById('modalVerifikasiSantri');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        refreshPendaftaranData();
+      } else {
+        showToast('Gagal: ' + (res ? res.message : 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showToast('Error: ' + err.message, 'error');
+    })
+    .verifikasiPendaftaranSantri(payload);
+}
+
+// ===== TAMBAH PENDAFTAR MANUAL (ADMIN) =====
+
+function showModalTambahPendaftar() {
+  document.getElementById('formTambahPendaftarAdmin').reset();
+  isiNisOtomatisAdminForm();
+
+  const modal = new bootstrap.Modal(document.getElementById('modalTambahPendaftarAdmin'));
+  modal.show();
+}
+
+function isiNisOtomatisAdminForm() {
+  showLoading('Mengambil urutan NIS terbesar...');
+  google.script.run
+    .withSuccessHandler(function(info) {
+      hideLoading();
+      if (info && info.nextNIS) {
+        document.getElementById('adm_nis').value = info.nextNIS;
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      document.getElementById('adm_nis').value = _pendaftaranNisInfo.nextNIS || '261066';
+    })
+    .getNextNIS();
+}
+
+function hitungUsiaAdmin() {
+  const tgl = document.getElementById('adm_tgl_lahir').value;
+  if (!tgl) return;
+  try {
+    const bDate = new Date(tgl);
+    if (!isNaN(bDate.getTime())) {
+      const diff = Date.now() - bDate.getTime();
+      const age = Math.abs(new Date(diff).getUTCFullYear() - 1970);
+      if (age >= 0 && age < 100) {
+        document.getElementById('adm_usia').value = age + ' Tahun';
+      }
+    }
+  } catch(e) {}
+}
+
+function submitTambahPendaftarAdmin() {
+  const payload = {
+    Nama_Santri: document.getElementById('adm_nama_santri').value.trim(),
+    Jenis_Kelamin: document.getElementById('adm_jk').value,
+    Tempat_Lahir: document.getElementById('adm_tempat_lahir').value.trim(),
+    Tanggal_Lahir: document.getElementById('adm_tgl_lahir').value,
+    Usia: document.getElementById('adm_usia').value.trim(),
+    Nama_Sekolah: document.getElementById('adm_nama_sekolah').value.trim(),
+    NIS: document.getElementById('adm_nis').value.trim(),
+    Nama_Ayah: document.getElementById('adm_nama_ayah').value.trim(),
+    No_WA_Ayah: document.getElementById('adm_wa_ayah').value.trim(),
+    Nama_Ibu: document.getElementById('adm_nama_ibu').value.trim(),
+    No_WA_Ibu: document.getElementById('adm_wa_ibu').value.trim(),
+    Alamat: document.getElementById('adm_alamat').value.trim(),
+    Kelas: document.getElementById('adm_kelas').value,
+    Status: document.getElementById('adm_status').value,
+    Tahun_Ajaran: _pendaftaranTahunAktif,
+    buatUser: document.getElementById('adm_status').value === 'Aktif'
+  };
+
+  showLoading('Menyimpan pendaftar baru...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      if (res && res.success) {
+        showToast(res.message, 'success');
+        const modalEl = document.getElementById('modalTambahPendaftarAdmin');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        refreshPendaftaranData();
+      } else {
+        showToast('Gagal: ' + (res ? res.message : 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showToast('Error: ' + err.message, 'error');
+    })
+    .daftarSantriBaru(payload);
+}
+
+function hapusPendaftar(nis, nama) {
+  if (confirm(`Yakin ingin menghapus calon santri "${nama}" (${nis || 'Belum NIS'})?`)) {
+    showLoading('Menghapus data...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        hideLoading();
+        showToast('Data santri berhasil dihapus', 'success');
+        refreshPendaftaranData();
+      })
+      .withFailureHandler(function(err) {
+        hideLoading();
+        showToast('Error: ' + err.message, 'error');
+      })
+      .deleteSantri(nis);
+  }
+}
+
+function exportPendaftaranExcel() {
+  if (!_pendaftaranData || _pendaftaranData.length === 0) {
+    showToast('Tidak ada data untuk diexport', 'warning');
+    return;
+  }
+  showLoading('Menyiapkan file Excel...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      if (res && res.success) {
+        window.open(res.downloadUrl, '_blank');
+        showToast('Excel berhasil digenerate', 'success');
+      } else {
+        showToast('Gagal export: ' + (res ? res.message : 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showToast('Error export: ' + err.message, 'error');
+    })
+    .exportToExcel(`Pendaftaran_Santri_TPQ_Al_Mabrur_${_pendaftaranTahunAktif}`, _pendaftaranData);
+}
+</script>
+
+  <script>
 function loadSantriPage() {
   const contentArea = document.getElementById('contentArea');
   const isReadonly = currentUser.role === 'ustadz' || currentUser.role === 'wali_santri';
@@ -1587,6 +2651,12 @@ function showSantriForm() {
   document.getElementById('formSantriTitle').textContent = 'Tambah Santri Baru';
   document.getElementById('formSantri').reset();
   document.getElementById('s_nis').value = '';
+  google.script.run.withSuccessHandler(function(info) {
+    if (info && info.nextNIS) {
+      const elNis = document.getElementById('s_nis');
+      if (elNis && !elNis.value) elNis.value = info.nextNIS;
+    }
+  }).getNextNIS();
 }
 
 function hideSantriForm() {
