@@ -472,6 +472,95 @@ function uploadFotoSantri(data) {
   }
 }
 
+/**
+ * Update biodata mandiri oleh Orang Tua / Wali Santri dari Dasbor Santri
+ * Memperbarui Identitas Diri dan Data Orang Tua / Wali di sheet Santri
+ */
+function updateBiodataSantriWali(formData) {
+  try {
+    if (!formData || !formData.NIS) {
+      throw new Error('NIS santri tidak ditemukan.');
+    }
+    
+    const nis = String(formData.NIS).trim();
+    const sheet = SHEETS.santri;
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    const idxNIS = headers.findIndex(h => h.toString().toLowerCase() === 'nis');
+    const nisCol = idxNIS !== -1 ? idxNIS : 0;
+    
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][nisCol] || '').trim() === nis) {
+        rowIndex = i + 1; // 1-indexed for Sheets
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) {
+      throw new Error('Data santri dengan NIS ' + nis + ' tidak ditemukan di database.');
+    }
+    
+    // Mapping kolom yang diizinkan untuk diubah oleh Orang Tua / Wali
+    const allowedFields = {
+      'nama_santri': formData.Nama_Santri || formData.nama || '',
+      'nama': formData.Nama_Santri || formData.nama || '',
+      'jenis_kelamin': formData.Jenis_Kelamin || formData.jk || 'L',
+      'l/p': formData.Jenis_Kelamin || formData.jk || 'L',
+      'tempat_lahir': formData.Tempat_Lahir || '',
+      'tanggal_lahir': formData.Tanggal_Lahir || '',
+      'usia': formData.Usia || '',
+      'nama_sekolah': formData.Nama_Sekolah || '',
+      'alamat': formData.Alamat || formData.Alamat_Lengkap || '',
+      'alamat_lengkap': formData.Alamat || formData.Alamat_Lengkap || '',
+      'nama_ayah': formData.Nama_Ayah || '',
+      'no_wa_ayah': formData.No_WA_Ayah || '',
+      'wa_ayah': formData.No_WA_Ayah || '',
+      'nama_ibu': formData.Nama_Ibu || '',
+      'no_wa_ibu': formData.No_WA_Ibu || '',
+      'wa_ibu': formData.No_WA_Ibu || ''
+    };
+    
+    // Perbarui cell pada baris santri tersebut
+    headers.forEach((header, colIdx) => {
+      const hRaw = header.toString().toLowerCase().trim();
+      const hKey = hRaw.replace(/\s+/g, '_');
+      let valToSet = undefined;
+      
+      if (allowedFields.hasOwnProperty(hRaw)) {
+        valToSet = allowedFields[hRaw];
+      } else if (allowedFields.hasOwnProperty(hKey)) {
+        valToSet = allowedFields[hKey];
+      }
+      
+      if (valToSet !== undefined) {
+        sheet.getRange(rowIndex, colIdx + 1).setValue(valToSet);
+      }
+    });
+    
+    // Ambil data santri terbaru setelah update
+    const updatedRow = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+    const updatedSantri = {};
+    headers.forEach((h, idx) => {
+      let val = updatedRow[idx];
+      if (val instanceof Date) val = Utilities.formatDate(val, 'GMT+7', 'yyyy-MM-dd');
+      updatedSantri[h] = val;
+    });
+    
+    return {
+      success: true,
+      message: 'Biodata santri dan data orang tua berhasil diperbarui!',
+      santri: updatedSantri
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message || err.toString()
+    };
+  }
+}
+
 // ===== PENDAFTARAN SANTRI BARU & NIS OTOMATIS =====
 
 /**
