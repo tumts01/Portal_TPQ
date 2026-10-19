@@ -3128,9 +3128,9 @@ function renderSantriTable(data) {
   
   data.forEach(s => {
     const status = (s.Status || 'aktif').toLowerCase();
+    const jk = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase().trim();
     if (status === 'aktif') {
       totalAktif++;
-      const jk = (s.Jenis_Kelamin || s['L/P'] || '').toUpperCase();
       if (jk === 'L' || jk === 'LAKI-LAKI' || jk === 'LAKI LAKI' || jk.includes('LAKI')) totalL++;
       else if (jk === 'P' || jk === 'PEREMPUAN' || jk.includes('PEREMPUAN')) totalP++;
     }
