@@ -7294,228 +7294,443 @@ function loadPengumumanData() {
 }
 </script>
   <script>
-function loadPembayaranWali() {
+let _waliPaymentCache = null;
+
+function loadPembayaranWali(forceRefresh) {
   const contentArea = document.getElementById('contentArea');
+  if (!contentArea) return;
   
   contentArea.innerHTML = `
     <div class="content-card">
       <div id="hasilTagihan">
         <div class="text-center py-5">
-          <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-          <h5>Sedang memuat data tagihan...</h5>
-          <p class="text-muted">Mencari data berdasarkan akun Anda...</p>
+          <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <h5 class="fw-bold">Sedang memuat data tagihan...</h5>
+          <p class="text-muted small">Mencari dan memvalidasi data berdasarkan akun Anda...</p>
         </div>
       </div>
     </div>
   `;
   
-  // Langsung cari tagihan tanpa perlu input
-  cariTagihanAnak();
+  if (forceRefresh) {
+    _waliPaymentCache = null;
+  }
+  
+  // Jika santri sudah terhubung dari dasbor santri, langsung pakai
+  if (window._waliMatchedSantri && window._waliMatchedSantri.length > 0) {
+    fetchTagihanWali(window._waliMatchedSantri);
+  } else {
+    cariSantriDanTagihanWali();
+  }
 }
 
-function cariTagihanAnak() {
-  const keyword = currentUser.username; // Ambil otomatis dari username login
+function cariSantriDanTagihanWali() {
   const container = document.getElementById('hasilTagihan');
+  if (!container) return;
   
   google.script.run
     .withSuccessHandler(function(santriList) {
-      const found = santriList.find(s => 
-        s.NIS === keyword || 
-        s.No_WA_Ayah === keyword || 
-        s.No_WA_Ibu === keyword
-      );
-      
-      if (!found) {
+      const cleanPhone = (num) => {
+        let n = String(num || '').replace(/\D/g, '');
+        if (n.startsWith('62')) n = n.slice(2);
+        if (n.startsWith('0')) n = n.slice(1);
+        return n;
+      };
+
+      const usernameClean = String((currentUser && currentUser.username) || '').trim().toLowerCase();
+      const usernameDigits = cleanPhone(currentUser && currentUser.username);
+      const userHpDigits = cleanPhone(currentUser && currentUser.noHp);
+      const userNamaClean = String((currentUser && currentUser.nama) || '').trim().toLowerCase();
+
+      // Kumpulkan nomor WA orang tua atau NIS yang terhubung
+      const matchedPhones = new Set();
+      if (userHpDigits && userHpDigits.length >= 7) matchedPhones.add(userHpDigits);
+      if (usernameDigits && usernameDigits.length >= 7) matchedPhones.add(usernameDigits);
+
+      // Cek jika login pakai NIS, temukan nomor WA orang tuanya dari data santri
+      (santriList || []).forEach(s => {
+        const sNis = String(s.NIS || '').trim().toLowerCase();
+        const waAyah = cleanPhone(s.No_WA_Ayah || s['No WA Ayah']);
+        const waIbu = cleanPhone(s.No_WA_Ibu || s['No WA Ibu']);
+        
+        if (sNis && (sNis === usernameClean || sNis === usernameDigits)) {
+          if (waAyah) matchedPhones.add(waAyah);
+          if (waIbu) matchedPhones.add(waIbu);
+        }
+        if (matchedPhones.has(waAyah) || matchedPhones.has(waIbu)) {
+          if (waAyah) matchedPhones.add(waAyah);
+          if (waIbu) matchedPhones.add(waIbu);
+        }
+      });
+
+      // Cocokkan seluruh santri/anak yang memiliki nomor WA atau NIS terkait
+      let matched = (santriList || []).filter(s => {
+        const nisStr = String(s.NIS || '').trim().toLowerCase();
+        const namaStr = String(s.Nama_Santri || s['Nama Santri'] || s.Nama || '').trim().toLowerCase();
+        const waAyah = cleanPhone(s.No_WA_Ayah || s['No WA Ayah']);
+        const waIbu = cleanPhone(s.No_WA_Ibu || s['No WA Ibu']);
+        
+        // Cocok NIS langsung (dengan normalisasi dan toleransi type)
+        if (nisStr && (nisStr === usernameClean || nisStr === usernameDigits || nisStr == usernameClean)) return true;
+        
+        // Cocok Nomor WhatsApp Ayah / Ibu
+        if (waAyah && matchedPhones.has(waAyah)) return true;
+        if (waIbu && matchedPhones.has(waIbu)) return true;
+        
+        // Cocok nama akun jika ada
+        if (userNamaClean && namaStr && (namaStr === userNamaClean || namaStr.includes(userNamaClean) || userNamaClean.includes(namaStr))) return true;
+        
+        return false;
+      });
+
+      // Hilangkan duplikasi santri
+      const uniqueMap = new Map();
+      matched.forEach(s => {
+        const key = String(s.NIS || s.Nama_Santri || Math.random());
+        if (!uniqueMap.has(key)) uniqueMap.set(key, s);
+      });
+      matched = Array.from(uniqueMap.values());
+
+      if (matched.length === 0) {
         container.innerHTML = `
-          <div class="alert alert-danger">
-            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Data Tidak Ditemukan</h5>
+          <div class="alert alert-warning p-4 shadow-sm" style="border-radius: 12px;">
+            <h5 class="alert-heading fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Data Santri Belum Terhubung</h5>
             <hr>
-            <p class="mb-0">Sistem tidak dapat menemukan data santri yang terhubung dengan akun Anda.</p>
-            <p class="mb-0 mt-2"><strong>Solusi:</strong> Pastikan <strong>Username</strong> login Anda sama persis dengan <strong>NIS Santri</strong>, atau <strong>Nomor WA Ayah/Ibu</strong> yang terdaftar di Data Santri.</p>
+            <p class="mb-2">Sistem belum dapat menemukan data santri yang terhubung dengan akun Anda:</p>
+            <ul class="mb-3 small">
+              <li><strong>Username:</strong> ${currentUser ? currentUser.username : '-'}</li>
+              <li><strong>Nama Akun:</strong> ${currentUser ? currentUser.nama : '-'}</li>
+              <li><strong>No. WhatsApp:</strong> ${currentUser ? (currentUser.noHp || '-') : '-'}</li>
+            </ul>
+            <p class="mb-0 text-muted small"><i class="fas fa-info-circle me-1"></i> <strong>Solusi:</strong> Pastikan Anda login menggunakan <strong>NIS Santri</strong> atau <strong>Nomor WhatsApp</strong> yang terdaftar resmi di database TPQ Al Mabrur. Silakan hubungi admin / bendahara jika nomor Anda perlu diperbarui.</p>
           </div>
         `;
         return;
       }
-      
-      // Load data pembayaran dari Google Sheet external lama
-      google.script.run
-        .withSuccessHandler(function(paymentResult) {
-          try {
-            let pembayaran = [];
-            if (paymentResult && paymentResult.students) {
-                // Cari nama santri di data eksternal secara super aman
-                const namaSantriRaw = found.Nama_Santri || found['Nama Santri'] || found.Nama || found.nama || '';
-                const namaSantri = String(namaSantriRaw).toLowerCase().trim();
-                
-                const studentPayment = paymentResult.students.find(s => String(s.nama).toLowerCase().trim() === namaSantri);
-                
-                if (studentPayment) {
-                    const processBulan = (tagihanObj, prefix) => {
-                        if (!tagihanObj) return;
-                        for (const bulan in tagihanObj) {
-                            if (!tagihanObj[bulan]) continue;
-                            let statusRaw = String(tagihanObj[bulan].status || '').toLowerCase().trim();
-                            
-                            let pStatus = 'belum';
-                            
-                            // Deteksi kata kunci lunas
-                            if (statusRaw.includes('lunas') || statusRaw === 'l') {
-                                pStatus = 'lunas';
-                            } 
-                            // Deteksi kata kunci pengecualian tagihan (untuk mutasi masuk / bebas biaya)
-                            else if (statusRaw.includes('mutasi') || statusRaw.includes('bebas') || statusRaw.includes('keringanan') || statusRaw === '-' || statusRaw === 'n/a') {
-                                pStatus = 'bebas';
-                            }
-                            
-                            // Jika statusnya 'bebas', kita skip (jangan dimasukkan ke daftar tagihan)
-                            if (pStatus === 'bebas') continue;
-                            
-                            let nominalTagihan = 50000; // Default jika tidak ada tulisan Rp
-                            let jenisTagihan = 'SPP/Syahriyah';
-                            let namaPeriode = bulan;
-                            
-                            // Ekstrak nominal jika ada format RP. 50.000 atau sejenisnya
-                            const rpMatch = bulan.match(/-?\s*RP\.?\s*([\d\.]+)/i);
-                            if (rpMatch) {
-                                // Ambil angkanya dan hilangkan titik
-                                nominalTagihan = parseInt(rpMatch[1].replace(/\./g, ''));
-                                // Bersihkan teks " - RP. 50.000" dari nama periode
-                                namaPeriode = bulan.replace(rpMatch[0], '').trim();
-                            }
-                            
-                            // Cek jenis tagihan dari namanya
-                            const pLower = namaPeriode.toLowerCase();
-                            if (pLower.includes('daftar ulang')) {
-                                jenisTagihan = 'Daftar Ulang';
-                            } else if (pLower.includes('ujian')) {
-                                jenisTagihan = 'Ujian';
-                            }
-                            
-                            pembayaran.push({
-                                periode: namaPeriode + ' ' + prefix,
-                                jenis_tagihan: jenisTagihan,
-                                nominal: nominalTagihan, 
-                                status: pStatus,
-                                tanggal: tagihanObj[bulan].tanggal || ''
-                            });
-                        }
-                    };
-                    
-                    processBulan(studentPayment.tagihan20262, '(2026.2)');
-                    processBulan(studentPayment.tagihan20261, '(2026.1)');
-                    processBulan(studentPayment.tagihan20252, '(2025.2)');
-                }
-            }
-            
-            google.script.run
-              .withSuccessHandler(function(kelasList) {
-                google.script.run
-                  .withSuccessHandler(function(guruList) {
-                    hideLoading();
-                    renderTagihanWali(found, pembayaran, kelasList, guruList);
-                  })
-                  .withFailureHandler(function(error) {
-                    container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat data guru: ' + error.message + '</div>';
-                  }).getGuruList();
-              })
-              .withFailureHandler(function(error) {
-                container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat data kelas: ' + error.message + '</div>';
-              }).getKelasList();
-          } catch (err) {
-             container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Terjadi kesalahan memproses data tagihan (Client): ' + err.message + '</div>';
-          }
-        })
-        .withFailureHandler(function(error) {
-          container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal mengambil data tagihan: ' + error.message + '</div>';
-        })
-        .getPaymentStatus();
+
+      window._waliMatchedSantri = matched;
+      if (typeof window._waliActiveSantriIdx === 'undefined' || window._waliActiveSantriIdx >= matched.length) {
+        window._waliActiveSantriIdx = 0;
+      }
+
+      fetchTagihanWali(matched);
     })
     .withFailureHandler(function(error) {
-      document.getElementById('hasilTagihan').innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat profil santri: ' + error.message + '</div>';
+      container.innerHTML = '<div class="alert alert-danger p-4"><i class="fas fa-exclamation-triangle me-2"></i> Gagal memuat profil santri: ' + (error.message || error) + '</div>';
     })
     .getSantriList();
 }
 
-function renderTagihanWali(santri, pembayaran, kelasList, guruList) {
+function fetchTagihanWali(matchedSantri) {
   const container = document.getElementById('hasilTagihan');
+  if (!container) return;
   
-  try {
-    // Ambil hanya tagihan yang belum lunas
-    const tagihanBelumLunas = (pembayaran || []).filter(p => p.status === 'belum');
-    const totalTunggakan = tagihanBelumLunas.reduce((sum, p) => sum + parseFloat(p.nominal || 0), 0);
-    const waBendahara = "6282132733855";
-    
-    let html = `
-      <div class="card shadow-sm border-warning">
-        <div class="card-header bg-warning text-white">
-          <h6 class="mb-0"><i class="fas fa-file-invoice-dollar"></i> Tagihan Belum Lunas (${santri.Nama_Santri})</h6>
+  if (_waliPaymentCache) {
+    renderTagihanWaliComplete(matchedSantri, _waliPaymentCache);
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(paymentResult) {
+      _waliPaymentCache = paymentResult;
+      renderTagihanWaliComplete(matchedSantri, paymentResult);
+    })
+    .withFailureHandler(function(error) {
+      container.innerHTML = `
+        <div class="alert alert-danger p-4" style="border-radius: 12px;">
+          <h5 class="fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Gagal Memuat Data Tagihan</h5>
+          <p class="mb-3">${error.message || error}</p>
+          <button class="btn btn-outline-danger btn-sm" onclick="loadPembayaranWali(true)">
+            <i class="fas fa-sync-alt me-1"></i> Coba Lagi
+          </button>
         </div>
-        <div class="card-body">
-    `;
-    
-    if (tagihanBelumLunas.length === 0) {
-      html += `
-          <div class="text-center py-4">
-            <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
-            <h5>Alhamdulillah, Lunas!</h5>
-            <p class="text-muted">Tidak ada tagihan pembayaran yang tertunggak untuk santri ini.</p>
-          </div>
       `;
-    } else {
-      html += `
-          <div class="alert alert-danger mb-4">
-            <h4 class="alert-heading">Total Tagihan: <strong>${formatRupiah(totalTunggakan)}</strong></h4>
-            <p class="mb-0">Mohon untuk segera melakukan pelunasan tagihan di bawah ini.</p>
-          </div>
-          
-          <div class="table-responsive mb-4">
-            <table class="table table-bordered table-striped">
-              <thead class="table-light">
-                <tr>
-                  <th>Periode / Bulan</th>
-                  <th>Jenis Tagihan</th>
-                  <th class="text-end">Nominal</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tagihanBelumLunas.map(p => `
-                  <tr>
-                    <td>${p.periode || formatDate(p.tanggal)}</td>
-                    <td>${p.jenis_tagihan}</td>
-                    <td class="text-end">${formatRupiah(p.nominal)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-              <tfoot class="table-light fw-bold">
-                <tr>
-                  <td colspan="2" class="text-end">TOTAL</td>
-                  <td class="text-end text-danger">${formatRupiah(totalTunggakan)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          
-          <div class="text-center bg-light p-4 rounded border">
-            <h5 class="mb-3">Konfirmasi / Pembayaran</h5>
-            <p>Silakan hubungi Bendahara TPQ melalui WhatsApp untuk melakukan pembayaran atau konfirmasi transfer.</p>
-            <a href="https://wa.me/${waBendahara}?text=Assalamualaikum%20Bendahara%20TPQ,%20saya%20Wali%20dari%20Santri%20bernama%20${encodeURIComponent(santri.Nama_Santri)}%20(NIS:%20${santri.NIS}).%20Saya%20ingin%20mengkonfirmasi%20pembayaran..." 
-               target="_blank" 
-               class="btn btn-success btn-lg px-4">
-              <i class="fab fa-whatsapp fs-5 me-2"></i> Hubungi Bendahara
-            </a>
-          </div>
-      `;
+    })
+    .getPaymentStatus();
+}
+
+function pilihAnakPembayaranWali(idx) {
+  window._waliActiveSantriIdx = idx;
+  if (window._waliMatchedSantri && _waliPaymentCache) {
+    renderTagihanWaliComplete(window._waliMatchedSantri, _waliPaymentCache);
+  } else {
+    loadPembayaranWali();
+  }
+}
+
+function renderTagihanWaliComplete(matchedSantri, paymentResult) {
+  const container = document.getElementById('hasilTagihan');
+  if (!container) return;
+
+  const activeIdx = (typeof window._waliActiveSantriIdx !== 'undefined' && window._waliActiveSantriIdx < matchedSantri.length) 
+    ? window._waliActiveSantriIdx 
+    : 0;
+  const santri = matchedSantri[activeIdx] || matchedSantri[0];
+
+  const formatTanggalLocal = (val) => {
+    if (!val) return '-';
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      return String(val);
+    } catch (e) {
+      return String(val);
     }
-    
-    html += `
+  };
+
+  // 1. Switcher Santri jika memiliki lebih dari 1 anak
+  let childSwitcher = '';
+  if (matchedSantri.length > 1) {
+    childSwitcher = `
+      <div class="card p-3 mb-4 bg-white border-2 border-primary shadow-sm" style="border-radius: 12px;">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #0d6efd, #198754);" class="d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-sm">
+              <i class="fas fa-users fs-5"></i>
+            </div>
+            <div>
+              <strong class="d-block text-dark" style="font-size: 0.95rem;">
+                Pilih Tagihan Santri / Anak (${matchedSantri.length} Santri Terdaftar):
+              </strong>
+              <small class="text-muted">Klik nama ananda di bawah untuk melihat rincian tagihan masing-masing</small>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            ${matchedSantri.map((cs, cIdx) => `
+              <button type="button" class="btn ${cIdx === activeIdx ? 'btn-primary fw-bold shadow' : 'btn-outline-primary bg-light'} px-3 py-2" onclick="pilihAnakPembayaranWali(${cIdx})" style="border-radius: 8px;">
+                <i class="fas fa-user-graduate me-1"></i> ${cs.Nama_Santri || cs.Nama || 'Santri ' + (cIdx+1)}
+                <span class="badge ${cIdx === activeIdx ? 'bg-white text-primary' : 'bg-primary text-white'} ms-1">${cs.Kelas || '-'}</span>
+              </button>
+            `).join('')}
+          </div>
         </div>
       </div>
     `;
-    
-    container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Terjadi kesalahan saat merender tampilan: ' + e.message + '</div>';
   }
+
+  // 2. Cari santri di data eksternal pembayaran
+  const normalizeName = str => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const namaSantriRaw = santri.Nama_Santri || santri['Nama Santri'] || santri.Nama || santri.nama || '';
+  const namaSantriClean = normalizeName(namaSantriRaw);
+
+  const studentPayment = (paymentResult && paymentResult.students) ? paymentResult.students.find(s => {
+    const payNamaClean = normalizeName(s.nama);
+    return payNamaClean === namaSantriClean || (namaSantriClean.length >= 5 && (payNamaClean.includes(namaSantriClean) || namaSantriClean.includes(payNamaClean)));
+  }) : null;
+
+  let semuaTagihan = [];
+
+  if (studentPayment) {
+    const processBulan = (tagihanObj, prefix) => {
+      if (!tagihanObj) return;
+      for (const bulan in tagihanObj) {
+        if (!tagihanObj[bulan]) continue;
+        let statusRaw = String(tagihanObj[bulan].status || '').toLowerCase().trim();
+        let pStatus = 'belum';
+
+        // Deteksi status lunas
+        if (statusRaw.includes('lunas') || statusRaw === 'l') {
+          pStatus = 'lunas';
+        } 
+        // Deteksi status bebas biaya / mutasi
+        else if (statusRaw.includes('mutasi') || statusRaw.includes('bebas') || statusRaw.includes('keringanan') || statusRaw === '-' || statusRaw === 'n/a') {
+          pStatus = 'bebas';
+        }
+
+        if (pStatus === 'bebas') continue;
+
+        let nominalTagihan = 50000;
+        let jenisTagihan = 'SPP/Syahriyah';
+        let namaPeriode = bulan;
+
+        const rpMatch = bulan.match(/-?\s*RP\.?\s*([\d\.]+)/i);
+        if (rpMatch) {
+          nominalTagihan = parseInt(rpMatch[1].replace(/\./g, ''));
+          namaPeriode = bulan.replace(rpMatch[0], '').trim();
+        }
+
+        const pLower = namaPeriode.toLowerCase();
+        if (pLower.includes('daftar ulang')) {
+          jenisTagihan = 'Daftar Ulang';
+        } else if (pLower.includes('ujian')) {
+          jenisTagihan = 'Ujian';
+        } else if (pLower.includes('iuran') || pLower.includes('maulid')) {
+          jenisTagihan = 'Iuran / Kegiatan';
+        }
+
+        semuaTagihan.push({
+          periode: namaPeriode + ' ' + prefix,
+          jenis_tagihan: jenisTagihan,
+          nominal: nominalTagihan,
+          status: pStatus,
+          tanggal: tagihanObj[bulan].tanggal || ''
+        });
+      }
+    };
+
+    processBulan(studentPayment.tagihan20262, '(2026.2)');
+    processBulan(studentPayment.tagihan20261, '(2026.1)');
+    processBulan(studentPayment.tagihan20252, '(2025.2)');
+  }
+
+  const tagihanBelumLunas = semuaTagihan.filter(p => p.status === 'belum');
+  const tagihanLunas = semuaTagihan.filter(p => p.status === 'lunas');
+  const totalTunggakan = tagihanBelumLunas.reduce((sum, p) => sum + parseFloat(p.nominal || 0), 0);
+  const waBendahara = "6282132733855";
+
+  let html = `
+    ${childSwitcher}
+
+    <!-- Header Info Santri -->
+    <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 14px;">
+      <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+          <div style="width: 48px; height: 48px; border-radius: 12px; background: #e8f5e9; color: #198754;" class="d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm">
+            <i class="fas fa-file-invoice-dollar fs-4"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-0 text-dark">${santri.Nama_Santri}</h5>
+            <small class="text-muted">NIS: <strong class="text-dark">${santri.NIS}</strong> &bull; Kelas: <strong class="text-dark">${santri.Kelas || '-'}</strong></small>
+          </div>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-sm" onclick="loadPembayaranWali(true)" title="Perbarui Data Tagihan">
+          <i class="fas fa-sync-alt me-1"></i> Refresh Data
+        </button>
+      </div>
+
+      <div class="card-body p-4">
+  `;
+
+  if (!studentPayment) {
+    html += `
+      <div class="alert alert-info d-flex align-items-center gap-3 mb-0" style="border-radius: 10px;">
+        <i class="fas fa-info-circle fa-2x text-info"></i>
+        <div>
+          <h6 class="fw-bold mb-1">Data Pembayaran Belum Terdaftar di Buku Kas Bendahara</h6>
+          <small class="text-muted">Nama ananda <strong>${santri.Nama_Santri}</strong> belum tercatat pada buku rekap tagihan bendahara, atau belum memiliki kewajiban tagihan aktif. Silakan hubungi bendahara untuk konfirmasi status administrasi.</small>
+        </div>
+      </div>
+    `;
+  } else if (tagihanBelumLunas.length === 0) {
+    html += `
+      <div class="text-center py-4">
+        <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+        <h4 class="fw-bold text-success mb-1">Alhamdulillah, Lunas!</h4>
+        <p class="text-muted mb-0">Tidak ada tagihan pembayaran yang tertunggak untuk ananda <strong>${santri.Nama_Santri}</strong>.</p>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="alert alert-danger mb-4 shadow-sm border-0 d-flex align-items-center justify-content-between flex-wrap gap-3" style="border-radius: 12px; background: linear-gradient(135deg, #fff5f5, #ffe3e3);">
+        <div>
+          <span class="text-danger fw-semibold d-block small mb-1"><i class="fas fa-exclamation-circle me-1"></i> Total Tagihan Tertunggak</span>
+          <h2 class="fw-bold text-danger mb-0">${formatRupiah(totalTunggakan)}</h2>
+        </div>
+        <a href="https://wa.me/${waBendahara}?text=Assalamualaikum%20Bendahara%20TPQ,%20saya%20Wali%20dari%20Santri%20bernama%20${encodeURIComponent(santri.Nama_Santri)}%20(NIS:%20${santri.NIS},%20Kelas:%20${encodeURIComponent(santri.Kelas || '-')}).%20Saya%20ingin%20mengkonfirmasi%20pembayaran..." 
+           target="_blank" 
+           class="btn btn-success fw-bold px-4 py-2 shadow-sm rounded-pill">
+          <i class="fab fa-whatsapp fs-5 me-2"></i> Konfirmasi Pembayaran via WA
+        </a>
+      </div>
+
+      <h6 class="fw-bold text-dark mb-3"><i class="fas fa-list-ul text-danger me-2"></i>Rincian Tagihan Belum Lunas (${tagihanBelumLunas.length})</h6>
+      <div class="table-responsive mb-4">
+        <table class="table table-bordered table-hover align-middle mb-0" style="border-radius: 10px; overflow: hidden;">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 50px;" class="text-center">No</th>
+              <th>Periode / Bulan</th>
+              <th>Jenis Tagihan</th>
+              <th class="text-end">Nominal</th>
+              <th class="text-center" style="width: 130px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tagihanBelumLunas.map((p, pIdx) => `
+              <tr>
+                <td class="text-center text-muted">${pIdx + 1}</td>
+                <td class="fw-semibold text-dark">${p.periode || formatTanggalLocal(p.tanggal)}</td>
+                <td><span class="badge bg-light text-dark border">${p.jenis_tagihan}</span></td>
+                <td class="text-end fw-bold text-danger">${formatRupiah(p.nominal)}</td>
+                <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger">Belum Lunas</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+          <tfoot class="table-light fw-bold">
+            <tr>
+              <td colspan="3" class="text-end">TOTAL TAGIHAN</td>
+              <td class="text-end text-danger fs-5">${formatRupiah(totalTunggakan)}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+  }
+
+  // Riwayat Pembayaran yang Sudah Lunas (Collapsible)
+  if (tagihanLunas.length > 0) {
+    html += `
+      <div class="mt-4 pt-3 border-top">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="fw-bold text-dark mb-0">
+            <i class="fas fa-history text-success me-2"></i>Riwayat Tagihan Lunas (${tagihanLunas.length})
+          </h6>
+          <button class="btn btn-sm btn-outline-success rounded-pill px-3 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLunas" aria-expanded="false" aria-controls="collapseLunas">
+            <i class="fas fa-eye me-1"></i> Tampilkan / Sembunyikan
+          </button>
+        </div>
+        <div class="collapse" id="collapseLunas">
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm table-striped align-middle small mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 40px;" class="text-center">No</th>
+                  <th>Periode / Bulan</th>
+                  <th>Jenis Tagihan</th>
+                  <th class="text-end">Nominal</th>
+                  <th class="text-center">Tanggal Bayar</th>
+                  <th class="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tagihanLunas.map((p, lIdx) => `
+                  <tr>
+                    <td class="text-center text-muted">${lIdx + 1}</td>
+                    <td class="fw-semibold">${p.periode}</td>
+                    <td>${p.jenis_tagihan}</td>
+                    <td class="text-end text-muted">${formatRupiah(p.nominal)}</td>
+                    <td class="text-center text-muted">${formatTanggalLocal(p.tanggal)}</td>
+                    <td class="text-center"><span class="badge bg-success-subtle text-success border border-success"><i class="fas fa-check me-1"></i>Lunas</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Footer Call to Action
+  html += `
+      </div>
+      <div class="card-footer bg-light p-3 text-center border-top">
+        <small class="text-muted d-block mb-2">Punya pertanyaan seputar tagihan atau ingin konfirmasi bukti transfer?</small>
+        <a href="https://wa.me/${waBendahara}?text=Assalamualaikum%20Bendahara%20TPQ,%20saya%20Wali%20dari%20Santri%20bernama%20${encodeURIComponent(santri.Nama_Santri)}%20(NIS:%20${santri.NIS},%20Kelas:%20${encodeURIComponent(santri.Kelas || '-')}).%20Saya%20ingin%20bertanya%20mengenai%20pembayaran..." 
+           target="_blank" 
+           class="btn btn-outline-success btn-sm rounded-pill px-4 fw-semibold shadow-sm">
+          <i class="fab fa-whatsapp me-1"></i> Hubungi Bendahara TPQ (0821-3273-3855)
+        </a>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
 }
 </script>
   <script>
