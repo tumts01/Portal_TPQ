@@ -3364,22 +3364,87 @@ function exportPendaftaranExcel() {
     showToast('Tidak ada data untuk diexport', 'warning');
     return;
   }
-  showLoading('Menyiapkan file Excel...');
-  google.script.run
-    .withSuccessHandler(function(res) {
-      hideLoading();
-      if (res && res.success) {
-        window.open(res.downloadUrl, '_blank');
-        showToast('Excel berhasil digenerate', 'success');
-      } else {
-        showToast('Gagal export: ' + (res ? res.message : 'Unknown error'), 'error');
-      }
-    })
-    .withFailureHandler(function(err) {
-      hideLoading();
-      showToast('Error export: ' + err.message, 'error');
-    })
-    .exportToExcel(`Pendaftaran_Santri_TPQ_Al_Mabrur_${_pendaftaranTahunAktif}`, _pendaftaranData);
+
+  try {
+    showLoading('Mengekspor file Excel pendaftaran...');
+
+    const formatTgl = (val) => {
+      if (!val) return '-';
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+      } catch (e) {}
+      return String(val);
+    };
+
+    const excelRows = _pendaftaranData.map((s, index) => {
+      const jk = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase().trim();
+      let jkLabel = jk;
+      if (jk === 'L' || jk.includes('LAKI')) jkLabel = 'Laki-laki';
+      else if (jk === 'P' || jk.includes('PEREMPUAN')) jkLabel = 'Perempuan';
+
+      return {
+        'No': index + 1,
+        'NIS': s.NIS ? String(s.NIS) : '-',
+        'Nama Santri': s.Nama_Santri || s['Nama Santri'] || '-',
+        'Jenis Kelamin': jkLabel,
+        'Kelas': s.Kelas || '-',
+        'Tempat Lahir': s.Tempat_Lahir || '-',
+        'Tanggal Lahir': formatTgl(s.Tanggal_Lahir),
+        'Usia': s.Usia ? String(s.Usia) : '-',
+        'Nama Sekolah': s.Nama_Sekolah || s['Nama Sekolah'] || '-',
+        'Nama Ayah': s.Nama_Ayah || s['Nama Ayah'] || '-',
+        'No. WA Ayah': (s.No_WA_Ayah || s['No WA Ayah']) ? String(s.No_WA_Ayah || s['No WA Ayah']) : '-',
+        'Nama Ibu': s.Nama_Ibu || s['Nama Ibu'] || '-',
+        'No. WA Ibu': (s.No_WA_Ibu || s['No WA Ibu']) ? String(s.No_WA_Ibu || s['No WA Ibu']) : '-',
+        'Alamat': s.Alamat_Lengkap || s.Alamat || s['Alamat Lengkap'] || '-',
+        'Kemampuan Mengaji': s.Kemampuan_Mengaji || s['Kemampuan Mengaji'] || '-',
+        'Status': (s.Status || 'AKTIF').toUpperCase(),
+        'Tanggal Daftar': formatTgl(s.Tanggal_Daftar || s.Created_At)
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(excelRows);
+
+    // Atur lebar kolom
+    ws['!cols'] = [
+      { wch: 5 },  // No
+      { wch: 12 }, // NIS
+      { wch: 28 }, // Nama Santri
+      { wch: 14 }, // JK
+      { wch: 16 }, // Kelas
+      { wch: 16 }, // Tempat Lahir
+      { wch: 14 }, // Tanggal Lahir
+      { wch: 8 },  // Usia
+      { wch: 22 }, // Nama Sekolah
+      { wch: 20 }, // Nama Ayah
+      { wch: 16 }, // No WA Ayah
+      { wch: 20 }, // Nama Ibu
+      { wch: 16 }, // No WA Ibu
+      { wch: 35 }, // Alamat
+      { wch: 20 }, // Kemampuan Mengaji
+      { wch: 12 }, // Status
+      { wch: 14 }  // Tanggal Daftar
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pendaftaran Santri");
+
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const filename = `Pendaftaran_Santri_TPQ_Al_Mabrur_${_pendaftaranTahunAktif || ''}_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    hideLoading();
+    showToast('File Excel pendaftaran berhasil diunduh', 'success');
+  } catch (err) {
+    hideLoading();
+    console.error('Export pendaftaran error:', err);
+    showToast('Gagal export Excel: ' + err.message, 'error');
+  }
 }
 </script>
 
@@ -3901,22 +3966,122 @@ function deleteSantri(id) {
 }
 
 function exportSantriExcel() {
-  showLoading('Menyiapkan file Excel...');
-  google.script.run
-    .withSuccessHandler(function(result) {
+  const doExport = (dataList) => {
+    if (!dataList || dataList.length === 0) {
+      showToast('Tidak ada data santri untuk diexport', 'warning');
+      return;
+    }
+
+    try {
+      showLoading('Mengekspor file Excel...');
+
+      const formatTgl = (val) => {
+        if (!val) return '-';
+        try {
+          const d = new Date(val);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          }
+        } catch (e) {}
+        return String(val);
+      };
+
+      const excelRows = dataList.map((s, index) => {
+        let waliKelas = '-';
+        if (typeof _kelasCache !== 'undefined' && Array.isArray(_kelasCache)) {
+          const kInfo = _kelasCache.find(k => k.Nama_Kelas === s.Kelas || k['Nama Kelas'] === s.Kelas);
+          if (kInfo && kInfo.Ustadz_Wali) waliKelas = kInfo.Ustadz_Wali;
+        }
+        if (waliKelas === '-' && (s.Wali_Kelas || s['Wali Kelas'])) {
+          waliKelas = s.Wali_Kelas || s['Wali Kelas'];
+        }
+
+        const jk = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase().trim();
+        let jkLabel = jk;
+        if (jk === 'L' || jk.includes('LAKI')) jkLabel = 'Laki-laki';
+        else if (jk === 'P' || jk.includes('PEREMPUAN')) jkLabel = 'Perempuan';
+
+        return {
+          'No': index + 1,
+          'NIS': s.NIS ? String(s.NIS) : '-',
+          'Nama Santri': s.Nama_Santri || s['Nama Santri'] || '-',
+          'Jenis Kelamin': jkLabel,
+          'Kelas': s.Kelas || '-',
+          'Wali Kelas': waliKelas,
+          'Lokasi Kelas': s.Lokasi_Kelas || '-',
+          'Tempat Lahir': s.Tempat_Lahir || '-',
+          'Tanggal Lahir': formatTgl(s.Tanggal_Lahir),
+          'Usia': s.Usia ? String(s.Usia) : '-',
+          'Nama Sekolah': s.Nama_Sekolah || s['Nama Sekolah'] || '-',
+          'Nama Ayah': s.Nama_Ayah || s['Nama Ayah'] || '-',
+          'No. WA Ayah': (s.No_WA_Ayah || s['No WA Ayah']) ? String(s.No_WA_Ayah || s['No WA Ayah']) : '-',
+          'Nama Ibu': s.Nama_Ibu || s['Nama Ibu'] || '-',
+          'No. WA Ibu': (s.No_WA_Ibu || s['No WA Ibu']) ? String(s.No_WA_Ibu || s['No WA Ibu']) : '-',
+          'Alamat': s.Alamat_Lengkap || s.Alamat || s['Alamat Lengkap'] || '-',
+          'Kemampuan Mengaji': s.Kemampuan_Mengaji || s['Kemampuan Mengaji'] || '-',
+          'Status': (s.Status || 'AKTIF').toUpperCase(),
+          'Tanggal Daftar': formatTgl(s.Tanggal_Daftar || s.Created_At)
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(excelRows);
+
+      // Atur lebar kolom
+      ws['!cols'] = [
+        { wch: 5 },  // No
+        { wch: 12 }, // NIS
+        { wch: 28 }, // Nama Santri
+        { wch: 14 }, // JK
+        { wch: 16 }, // Kelas
+        { wch: 22 }, // Wali Kelas
+        { wch: 22 }, // Lokasi Kelas
+        { wch: 16 }, // Tempat Lahir
+        { wch: 14 }, // Tanggal Lahir
+        { wch: 8 },  // Usia
+        { wch: 22 }, // Nama Sekolah
+        { wch: 20 }, // Nama Ayah
+        { wch: 16 }, // No WA Ayah
+        { wch: 20 }, // Nama Ibu
+        { wch: 16 }, // No WA Ibu
+        { wch: 35 }, // Alamat
+        { wch: 20 }, // Kemampuan Mengaji
+        { wch: 12 }, // Status
+        { wch: 14 }  // Tanggal Daftar
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Data Santri");
+
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      const filename = `Data_Santri_TPQ_Al_Mabrur_${timestamp}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
       hideLoading();
-      if (result && result.success) {
-        window.open(result.downloadUrl, '_blank');
-        showToast('File Excel berhasil dibuat', 'success');
-      } else {
-        showToast('Gagal export: ' + (result ? result.message : 'Unknown error'), 'error');
-      }
-    })
-    .withFailureHandler(function(e) {
+      showToast('File Excel santri berhasil diunduh', 'success');
+    } catch (err) {
       hideLoading();
-      showToast('Error: ' + e.message, 'error');
-    })
-    .exportToExcel('Data_Santri_TPQ_Al_Mabrur', _santriCache);
+      console.error('Export error:', err);
+      showToast('Gagal export Excel: ' + err.message, 'error');
+    }
+  };
+
+  if (_santriCache && _santriCache.length > 0) {
+    doExport(_santriCache);
+  } else {
+    showLoading('Mengambil data santri...');
+    google.script.run
+      .withSuccessHandler(function(santriList) {
+        _santriCache = santriList || [];
+        doExport(_santriCache);
+      })
+      .withFailureHandler(function(e) {
+        hideLoading();
+        showToast('Gagal memuat data santri: ' + e.message, 'error');
+      })
+      .getSantriList();
+  }
 }
 </script>
   <script>
