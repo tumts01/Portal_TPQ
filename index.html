@@ -6769,12 +6769,13 @@ function hitungDataRaporSantri(santri, cache) {
     }
   }
 
-  // Sikap & Catatan dari Nilai_Rapor
+  // Sikap & Catatan Penguji dari Nilai_Rapor (menu Input Nilai)
   const firstNilai = nilaiSantri.find(x => x.perilaku || x.kedisiplinan || x.keaktifan || x.catatan_penguji) || nilaiSantri[0] || {};
+  const rowWithCatatan = nilaiSantri.find(x => x.catatan_penguji && String(x.catatan_penguji).trim() !== '');
   const perilaku = String(firstNilai.perilaku || 'B').trim().toUpperCase();
   const kedisiplinan = String(firstNilai.kedisiplinan || 'B').trim().toUpperCase();
   const keaktifan = String(firstNilai.keaktifan || 'B').trim().toUpperCase();
-  const catatanPenguji = String(firstNilai.catatan_penguji || '').trim();
+  const catatanPenguji = String((rowWithCatatan ? rowWithCatatan.catatan_penguji : firstNilai.catatan_penguji) || '').trim();
 
   // 2. Nilai Harian (Bupres)
   const bupresRec = (cache.bupresList || []).find(b => {
@@ -6818,13 +6819,8 @@ function hitungDataRaporSantri(santri, cache) {
   });
   const totalSIA = totalSakit + totalIzin + totalAlpha;
 
-  // 4. Catatan Gabungan
-  let catatanFinal = catatanPenguji;
-  if (!catatanFinal && catatanBupres) {
-    catatanFinal = catatanBupres;
-  } else if (catatanFinal && catatanBupres && catatanFinal.toLowerCase() !== catatanBupres.toLowerCase()) {
-    catatanFinal = catatanFinal + ' | ' + catatanBupres;
-  }
+  // 4. Catatan Penguji (diambil dari Catatan Penguji yang diinput di menu Input Nilai)
+  const catatanFinal = catatanPenguji;
 
   // 5. Rumus Kenaikan Kelas: ((Total Nilai Ujian * 2) + Nilai Harian) / 3
   const kkm = 80;
@@ -7017,7 +7013,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
             <td style="padding:3px 6px; font-weight:bold;">${d.nis}</td>
             <td style="padding:3px 6px; font-weight:bold;">Nilai KKM</td>
             <td style="padding:3px 2px;">:</td>
-            <td style="padding:3px 6px;"><strong style="padding:1px 6px; border:1px solid #000; background:#dceeff;">${d.kkm}</strong> <span style="font-size:10px; color:#333;">(TA: ${d.ta})</span></td>
+            <td style="padding:3px 6px;"><strong style="padding:1px 8px; border:1px solid #000; background:#dceeff;">${d.kkm}</strong></td>
           </tr>
         </tbody>
       </table>
@@ -7128,10 +7124,10 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         </tbody>
       </table>
 
-      <!-- 7. CATATAN PENGAJAR / PENGUJI -->
+      <!-- 7. CATATAN PENGAJAR / PENGUJI (Diambil dari Catatan Penguji di Menu Input Nilai) -->
       <div class="rapor-section-title">E. CATATAN PENGAJAR / PENGUJI</div>
       <div style="border:1px solid #000; padding:5px 8px; min-height:34px; font-size:11px; margin-bottom:7px; background:#fff;">
-        ${d.catatan ? `<span>${d.catatan}</span>` : `<span style="color:#444; font-style:italic;">Tetap semangat dalam belajar, tingkatkan kelancaran membaca dan rajin muroja'ah di rumah.</span>`}
+        ${d.catatan ? `<span>${d.catatan}</span>` : `<span style="color:#666;">-</span>`}
       </div>
 
       <!-- 8. KETERANGAN NAIK KELAS / MENGULANG & RUMUS NILAI AKHIR -->
@@ -7163,27 +7159,34 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
       </table>
 
       <!-- 9. TANGGAL DAN MENGETAHUI TTD 3 ORANG (Ortu/Wali, Wali Kelas, Kepala TPQ) -->
-      <div style="text-align:right; font-size:11px; margin-bottom:3px; padding-right:16px;">
-        ${meta.tanggal || 'Singosari, ..............................'}
-      </div>
-      <table style="width:100%; border-collapse:collapse; font-size:11px; text-align:center;">
+      <table style="width:100%; border-collapse:collapse; font-size:11px; text-align:center; margin-top:2px;">
         <tbody>
           <tr>
-            <td style="width:33%; vertical-align:top; padding:2px 4px;">
-              <div>Orang Tua / Wali Santri</div>
-              <div style="height:52px;"></div>
-              <div>( ............................................ )</div>
+            <td style="width:33%; padding:0 4px;">&nbsp;</td>
+            <td style="width:33%; padding:0 4px;">&nbsp;</td>
+            <td style="width:34%; padding:0 4px; text-align:center;">
+              ${meta.tanggal || 'Singosari, ..............................'}
             </td>
-            <td style="width:33%; vertical-align:top; padding:2px 4px;">
-              <div>Wali Kelas</div>
-              <div style="height:52px;"></div>
-              <div style="font-weight:bold; text-decoration:underline;">${meta.waliKelas || '............................................'}</div>
-            </td>
-            <td style="width:34%; vertical-align:top; padding:2px 4px;">
-              <div>Mengetahui,<br>Kepala TPQ Al Mabrur</div>
-              <div style="height:38px;"></div>
-              <div style="font-weight:bold; text-decoration:underline;">${meta.kepalaTpq || 'M. RAGIL WAHYUDI, M.Pd.'}</div>
-            </td>
+          </tr>
+          <tr>
+            <td style="padding:1px 4px;">&nbsp;</td>
+            <td style="padding:1px 4px;">&nbsp;</td>
+            <td style="padding:1px 4px; text-align:center;">Mengetahui,</td>
+          </tr>
+          <tr>
+            <td style="padding:1px 4px; text-align:center;">Orang Tua / Wali Santri</td>
+            <td style="padding:1px 4px; text-align:center;">Wali Kelas</td>
+            <td style="padding:1px 4px; text-align:center;">Kepala TPQ Al Mabrur</td>
+          </tr>
+          <tr>
+            <td style="height:50px;"></td>
+            <td style="height:50px;"></td>
+            <td style="height:50px;"></td>
+          </tr>
+          <tr>
+            <td style="padding:2px 4px; text-align:center;">( ............................................ )</td>
+            <td style="padding:2px 4px; text-align:center; font-weight:bold; text-decoration:underline;">${meta.waliKelas || '............................................'}</td>
+            <td style="padding:2px 4px; text-align:center; font-weight:bold; text-decoration:underline;">${meta.kepalaTpq || 'M. RAGIL WAHYUDI, M.Pd.'}</td>
           </tr>
         </tbody>
       </table>
