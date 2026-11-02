@@ -1061,12 +1061,38 @@ function matchMateriKelas_(materiKelasName, targetKelasName) {
   
   // Keyword checks for non-numbered classes
   if (cleanT.includes('PRA') && cleanM.includes('PRA')) return true;
-  if (cleanT.includes('TAHFIDH') && cleanM.includes('TAHFIDH')) return true;
   if (cleanT.includes('DINIYAH') && cleanM.includes('DINIYAH')) return true;
-  if ((cleanT.includes('JUZAMMA') || cleanT.includes('TADARUS') || cleanT.includes('TAKHOSSUS')) &&
-      (cleanM.includes('JUZAMMA') || cleanM.includes('TADARUS') || cleanM.includes('TAKHOSSUS'))) return true;
+
+  // Distinguish TAHFIDH JUZ AMMA from TAKHOSSUS TAHFIDH / JUZ AMMA - TADARUS
+  const isTargetTahfidhJuzAmma = cleanT === 'TAHFIDHJUZAMMA' || (cleanT.includes('TAHFIDH') && !cleanT.includes('TAKHOSSUS'));
+  const isMateriTahfidhJuzAmma = cleanM === 'TAHFIDHJUZAMMA' || (cleanM.includes('TAHFIDH') && !cleanM.includes('TAKHOSSUS'));
+  if (isTargetTahfidhJuzAmma || isMateriTahfidhJuzAmma) {
+    return isTargetTahfidhJuzAmma && isMateriTahfidhJuzAmma;
+  }
+
+  if ((cleanT.includes('JUZAMMA') || cleanT.includes('TADARUS') || cleanT.includes('TAKHOSSUS') || cleanT.includes('WISUDA')) &&
+      (cleanM.includes('JUZAMMA') || cleanM.includes('TADARUS') || cleanM.includes('TAKHOSSUS') || cleanM.includes('WISUDA'))) return true;
       
   return false;
+}
+
+function getAllMateriKelas() {
+  const data = SHEETS.materiKelas.getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    list.push({
+      id_materi: row[0],
+      kelas: String(row[1] || '').trim(),
+      materi: String(row[2] || '').trim(),
+      bobot: row[3],
+      urutan: row[4],
+      tipe: String(row[5] || 'regular').trim(),
+    });
+  }
+  list.sort((a, b) => (Number(a.urutan) || 0) - (Number(b.urutan) || 0));
+  return list;
 }
 
 function getDaftarKelasMateri() {
@@ -1571,7 +1597,7 @@ function hitungNilaiRapor(nis, kelas, tahunAjaran) {
   let nilaiAkhir = 0;
   const upperKelas = String(kelas || '').toUpperCase();
   
-  if (upperKelas.includes('TAHFIDH')) {
+  if (upperKelas.includes('TAHFIDH') && !upperKelas.includes('TAKHOSSUS')) {
     // Weighted score
     nilaiAkhir = weightedTotal;
   } else if (upperKelas.includes('DINIYAH')) {
@@ -1710,6 +1736,140 @@ function getBupresByKelas(kelas, tahunAjaran) {
     return result;
   } catch (e) {
     return [];
+  }
+}
+
+function getDataCetakRapor(kelas, tahunAjaran) {
+  try {
+    ensureSheetHeaders_();
+    const allSantri = getSantriList() || [];
+    const kelasList = getKelasList() || [];
+    const materiList = getMateriByKelas(kelas) || [];
+    const tmConfig = getTatapMukaConfig(tahunAjaran, kelas) || { tatap_muka: 24 };
+    const config = getConfig() || {};
+
+    // Filter santri aktif di kelas ini untuk mendapatkan himpunan NIS & Nama
+    const santriNisSet = new Set();
+    const santriNamaSet = new Set();
+    allSantri.forEach(s => {
+      const sK = s.Kelas || s.kelas || '';
+      const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
+      if ((!kelas || isKelasMatch_(sK, kelas)) && (status === 'aktif' || status === '')) {
+        const nis = String(s.NIS || s.nis || s.Nis || '').trim();
+        const nama = String(s.Nama_Santri || s.nama_santri || s.Nama || s.nama || '').trim().toLowerCase();
+        if (nis) santriNisSet.add(nis);
+        if (nama) santriNamaSet.add(nama);
+      }
+    });
+
+    // Ambil Nilai Rapor (cocokkan kelas ATAU NIS santri di kelas ini)
+    const targetTA = String(tahunAjaran || '').trim();
+    const nilaiData = SHEETS.nilaiRapor.getDataRange().getValues();
+    const nilaiList = [];
+    for (let i = 1; i < nilaiData.length; i++) {
+      const row = nilaiData[i];
+      if (!row[1] && !row[5]) continue;
+      const rTA = String(row[1] || '').trim();
+      const rNis = String(row[3] || '').trim();
+      const rKelas = String(row[5] || '').trim();
+      const matchTA = !targetTA || !rTA || rTA === targetTA;
+      const matchKelas = !kelas || isKelasMatch_(rKelas, kelas) || (rNis && santriNisSet.has(rNis));
+      if (matchTA && matchKelas) {
+        nilaiList.push({
+          id_nilai: row[0],
+          tahun_ajaran: row[1],
+          semester: row[2],
+          nis: rNis,
+          nama_santri: row[4],
+          kelas: row[5],
+          id_materi: row[6],
+          materi: row[7],
+          bobot: Number(row[8]) || 0,
+          jumlah_kesalahan: Number(row[9]) || 0,
+          nilai_materi: Number(row[10]) || 0,
+          tipe: row[11] || 'regular',
+          wali_kelas: row[12] || '',
+          kepala_tpq: row[13] || '',
+          tanggal_cetak: row[14] || '',
+          perilaku: row[16] || 'B',
+          kedisiplinan: row[17] || 'B',
+          keaktifan: row[18] || 'B',
+          catatan_penguji: row[19] || ''
+        });
+      }
+    }
+
+    // Ambil Nilai Bupres (cocokkan kelas ATAU NIS santri di kelas ini)
+    const bupresData = SHEETS.nilaiBupres.getDataRange().getValues();
+    const bupresList = [];
+    for (let i = 1; i < bupresData.length; i++) {
+      const row = bupresData[i];
+      if (!row[3] && !row[4]) continue;
+      const rTA = String(row[1] || '').trim();
+      const rKelas = String(row[2] || '').trim();
+      const rNis = String(row[3] || '').trim();
+      const matchTA = !targetTA || !rTA || rTA === targetTA;
+      const matchKelas = !kelas || isKelasMatch_(rKelas, kelas) || (rNis && santriNisSet.has(rNis));
+      if (matchTA && matchKelas) {
+        bupresList.push({
+          id_bupres: row[0],
+          tahun_ajaran: row[1],
+          kelas: row[2],
+          nis: rNis,
+          nama_santri: row[4],
+          b: Number(row[5]) || 0,
+          b_minus: Number(row[6]) || 0,
+          c_plus: Number(row[7]) || 0,
+          c: Number(row[8]) || 0,
+          c_minus: Number(row[9]) || 0,
+          k: Number(row[10]) || 0,
+          total_nilai: Number(row[11]) || 0,
+          tatap_muka: Number(row[12]) || 0,
+          poin_bck: Number(row[13]) || 0,
+          catatan: row[14] || ''
+        });
+      }
+    }
+
+    // Ambil Presensi Santri (cocokkan kelas ATAU NIS ATAU Nama santri di kelas ini)
+    const presensiData = SHEETS.presensiSantri.getDataRange().getValues();
+    const absenList = [];
+    for (let i = 1; i < presensiData.length; i++) {
+      const row = presensiData[i];
+      if (!row[3] && !row[4]) continue;
+      const rNis = String(row[2] || '').trim();
+      const rNama = String(row[3] || '').trim().toLowerCase();
+      const rKelas = String(row[4] || '').trim();
+      const rTA = String(row[9] || '').trim();
+      const matchTA = !targetTA || !rTA || rTA === targetTA;
+      const matchKelas = !kelas || isKelasMatch_(rKelas, kelas) || (rNis && santriNisSet.has(rNis)) || (rNama && santriNamaSet.has(rNama));
+      if (matchTA && matchKelas) {
+        absenList.push({
+          nis: rNis || '-',
+          nama_santri: row[3] || '',
+          kelas: rKelas || '-',
+          status: String(row[5] || 'H').trim().toUpperCase(),
+          tahun_ajaran: rTA
+        });
+      }
+    }
+
+    return {
+      success: true,
+      santriList: allSantri,
+      kelasList: kelasList,
+      materiList: materiList,
+      nilaiList: nilaiList,
+      bupresList: bupresList,
+      tmConfig: tmConfig,
+      absenList: absenList,
+      config: config
+    };
+  } catch (e) {
+    return {
+      success: false,
+      message: e.toString()
+    };
   }
 }
 
@@ -2215,7 +2375,7 @@ function exportToExcel(sheetName, data) {
     const headers = Object.keys(data[0]);
     const csvData = [
       headers.join(','),
-      ...data.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
+      ...data.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(','))
     ];
     
     const csvString = csvData.join('\n');
@@ -2223,7 +2383,7 @@ function exportToExcel(sheetName, data) {
     
     // Create file in Drive
     const file = DriveApp.createFile(blob);
-    file.setName(sheetName + '_' + Utilities.formatDate(new Date(), 'GMT+7', 'yyyyMMdd_HHmmss') + '.xlsx');
+    file.setName(sheetName + '_' + Utilities.formatDate(new Date(), 'GMT+7', 'yyyyMMdd_HHmmss') + '.csv');
     
     return {
       success: true,
