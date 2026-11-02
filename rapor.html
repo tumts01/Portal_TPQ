@@ -1263,14 +1263,14 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         <td colspan="4" style="text-align:right; font-weight:600; padding-right:8px;">Nilai Lagu / Suara (Nilai Plus 1 &ndash; 5)</td>
         <td style="text-align:center; font-weight:bold;">${d.nilaiLagu}</td>
       </tr>
-      <tr style="background-color:#f0f4f8;">
+      <tr style="background-color:#dceeff;">
         <td colspan="4" style="text-align:right; font-weight:800; padding-right:8px;">TOTAL NILAI UJIAN (95 &minus; Jumlah Pengurangan + Nilai Lagu)</td>
         <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
       </tr>
     `;
   } else {
     materiSummaryHtml = `
-      <tr style="background-color:#f0f4f8;">
+      <tr style="background-color:#dceeff;">
         <td colspan="4" style="text-align:right; font-weight:800; padding-right:8px;">TOTAL NILAI UJIAN</td>
         <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
       </tr>
@@ -1305,11 +1305,11 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
       </div>
 
       <!-- 1. KOP SURAT -->
-      <div class="rapor-section-kop" style="text-align:center; margin-bottom:6px;">
+      <div class="rapor-section-kop" style="text-align:center; margin-bottom:8px;">
         <img src="${kopUrl}" alt="Kop TPQ Al Mabrur"
              onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='kop%20tpq.jpg';}"
-             style="width:100%; max-height:108px; object-fit:contain; display:block; margin:0 auto 4px auto;">
-        <div style="font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; text-decoration:underline; margin-top:2px;">
+             style="width:100%; height:auto; max-height:165px; object-fit:contain; display:block; margin:0 auto 6px auto;">
+        <div style="font-size:13.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; text-decoration:underline; margin-top:2px;">
           LAPORAN HASIL BELAJAR SANTRI (RAPOR)
         </div>
       </div>
@@ -1331,7 +1331,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
             <td style="padding:3px 6px; font-weight:bold;">${d.nis}</td>
             <td style="padding:3px 6px; font-weight:bold;">Nilai KKM</td>
             <td style="padding:3px 2px;">:</td>
-            <td style="padding:3px 6px;"><strong style="padding:1px 6px; border:1px solid #000; background:#f2f2f2;">${d.kkm}</strong> <span style="font-size:10px; color:#333;">(TA: ${d.ta})</span></td>
+            <td style="padding:3px 6px;"><strong style="padding:1px 6px; border:1px solid #000; background:#dceeff;">${d.kkm}</strong> <span style="font-size:10px; color:#333;">(TA: ${d.ta})</span></td>
           </tr>
         </tbody>
       </table>
@@ -1383,7 +1383,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
             <td style="text-align:center;">${d.bupres.k}</td>
             <td style="text-align:center;">${d.bupres.totalPertemuan} / ${d.bupres.tatapMuka}</td>
             <td style="text-align:center;">${d.bupres.totalPoin}</td>
-            <td style="text-align:center; font-weight:800; font-size:12px; background-color:#f0f4f8;">${nilaiHarianStr}</td>
+            <td style="text-align:center; font-weight:800; font-size:12px; background-color:#dceeff;">${nilaiHarianStr}</td>
           </tr>
         </tbody>
       </table>
@@ -1404,7 +1404,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
             <td style="text-align:center; font-weight:600;">${d.sia.sakit} Hari</td>
             <td style="text-align:center; font-weight:600;">${d.sia.izin} Hari</td>
             <td style="text-align:center; font-weight:600;">${d.sia.alpha} Hari</td>
-            <td style="text-align:center; font-weight:800; background-color:#f0f4f8;">${d.sia.totalSIA} Hari</td>
+            <td style="text-align:center; font-weight:800; background-color:#dceeff;">${d.sia.totalSIA} Hari</td>
           </tr>
         </tbody>
       </table>
@@ -1460,7 +1460,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
                 <span style="margin-left:8px; font-size:10px;">(Batas KKM: <strong>${d.kkm}</strong>)</span>
               </div>
             </td>
-            <td style="width:35%; text-align:center; background-color:#f0f4f8; padding:4px 8px;">
+            <td style="width:35%; text-align:center; background-color:#dceeff; padding:4px 8px;">
               <div style="font-size:10px; font-weight:bold; text-transform:uppercase;">Nilai Akhir Rapor</div>
               <div style="font-size:15px; font-weight:800;">${hasilAkhirStr}</div>
             </td>
@@ -1626,7 +1626,8 @@ function getRaporF4InlineStyles() {
       vertical-align: middle;
     }
     .rapor-grid-table thead th {
-      background-color: #e9ecef !important;
+      background-color: #9ec5fe !important;
+      color: #000000 !important;
       text-align: center;
       font-weight: 700;
     }
