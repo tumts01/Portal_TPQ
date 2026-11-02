@@ -5848,22 +5848,35 @@ function loadRaporPage() {
         
         <!-- Tab Pengaturan Materi -->
         <div class="tab-pane fade" id="tabPengaturanMateri">
-          <div class="row mb-3">
+          <div class="row g-2 mb-3 align-items-end">
             <div class="col-md-4">
-              <label>Pilih Kelas</label>
+              <label class="form-label fw-bold small mb-1"><i class="fas fa-school text-primary me-1"></i> Pilih Kelas / Kategori Materi</label>
               <select class="form-select" id="pm_kelas" onchange="loadPengaturanMateri()">
                 <option value="">-- Pilih Kelas --</option>
               </select>
             </div>
+            <div class="col-md-8 d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-success fw-bold shadow-sm" onclick="bukaModalCetakTabelUjian()">
+                <i class="fas fa-print me-1"></i> Cetak Tabel Penilaian Ujian
+              </button>
+              <button type="button" class="btn btn-outline-success fw-semibold shadow-sm" onclick="bukaModalCetakTabelUjian(true)">
+                <i class="fas fa-file-excel me-1"></i> Export Excel Tabel Ujian
+              </button>
+            </div>
           </div>
           
           <div id="pm_materiContainer" style="display:none;">
-            <div class="card mb-3">
-              <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Daftar Materi Kelas</h6>
-                <button class="btn btn-sm btn-primary" onclick="showFormTambahMateri()">
-                  <i class="fas fa-plus"></i> Tambah Materi
-                </button>
+            <div class="card mb-3 shadow-sm">
+              <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-list-ul text-primary me-1"></i> Daftar Materi Kelas <span id="pm_labelKelasAktif" class="badge bg-success ms-1"></span></h6>
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-sm btn-success fw-semibold shadow-sm" onclick="bukaModalCetakTabelUjian()">
+                    <i class="fas fa-print me-1"></i> Cetak Tabel Penilaian Ujian
+                  </button>
+                  <button class="btn btn-sm btn-primary shadow-sm" onclick="showFormTambahMateri()">
+                    <i class="fas fa-plus me-1"></i> Tambah Materi
+                  </button>
+                </div>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
@@ -6573,16 +6586,24 @@ function prosesCetakRapor() {
   }
 
 // ==== PENGATURAN MATERI ====
+let _pmCurrentMateriList = [];
+let _examSantriCache = null;
+let _examKelasCache = null;
+let _examAllMateriCache = null;
+
 function loadPengaturanMateri() {
   const kelas = document.getElementById('pm_kelas').value;
   const container = document.getElementById('pm_materiContainer');
   const tbody = document.getElementById('pm_materiTable');
+  const labelAktif = document.getElementById('pm_labelKelasAktif');
   
   if (!kelas) {
     container.style.display = 'none';
+    if (labelAktif) labelAktif.textContent = '';
     return;
   }
   
+  if (labelAktif) labelAktif.textContent = kelas;
   container.style.display = 'block';
   document.getElementById('formTambahMateri').style.display = 'none';
   
@@ -6590,6 +6611,7 @@ function loadPengaturanMateri() {
   google.script.run
     .withSuccessHandler(function(materiList) {
       hideLoading();
+      _pmCurrentMateriList = materiList || [];
       if (!materiList || materiList.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Belum ada materi untuk kelas ini. Klik tombol "+ Tambah Materi" di atas untuk menambahkan.</td></tr>';
         return;
@@ -6652,6 +6674,7 @@ function simpanMateri() {
       hideLoading();
       showToast(res.message, res.success ? 'success' : 'error');
       if (res.success) {
+        _examAllMateriCache = null;
         document.getElementById('formTambahMateri').style.display = 'none';
         loadPengaturanMateri();
       }
@@ -6670,11 +6693,727 @@ function hapusMateri(idMateri) {
       .withSuccessHandler(function(res) {
         hideLoading();
         showToast(res.message, res.success ? 'success' : 'error');
-        if (res.success) loadPengaturanMateri();
+        if (res.success) {
+          _examAllMateriCache = null;
+          loadPengaturanMateri();
+        }
       })
       .deleteMateriKelas(idMateri);
   }
 }
+
+// =========================================================
+// ===== CETAK TABEL PENILAIAN UJIAN (UNTUK PENGUJI) =======
+// =========================================================
+
+function matchMateriKelasClient(materiKelasName, targetKelasName) {
+  if (!materiKelasName || !targetKelasName) return false;
+  const m = String(materiKelasName).trim().toUpperCase();
+  const t = String(targetKelasName).trim().toUpperCase();
+  if (m === t) return true;
+
+  const cleanM = m.replace(/^JILID\s*/i, '').replace(/[^A-Z0-9]/g, '');
+  const cleanT = t.replace(/^JILID\s*/i, '').replace(/[^A-Z0-9]/g, '');
+  if (cleanM === cleanT) return true;
+
+  const tBase = cleanT.replace(/[A-Z]$/, '');
+  const mBase = cleanM.replace(/[A-Z]$/, '');
+  if (tBase && (tBase === cleanM || tBase === mBase)) return true;
+
+  if (cleanT.includes('PRA') && cleanM.includes('PRA')) return true;
+  if (cleanT.includes('DINIYAH') && cleanM.includes('DINIYAH')) return true;
+
+  const isTargetTahfidhJuzAmma = cleanT === 'TAHFIDHJUZAMMA' || (cleanT.includes('TAHFIDH') && !cleanT.includes('TAKHOSSUS'));
+  const isMateriTahfidhJuzAmma = cleanM === 'TAHFIDHJUZAMMA' || (cleanM.includes('TAHFIDH') && !cleanM.includes('TAKHOSSUS'));
+  if (isTargetTahfidhJuzAmma || isMateriTahfidhJuzAmma) {
+    return isTargetTahfidhJuzAmma && isMateriTahfidhJuzAmma;
+  }
+
+  if ((cleanT.includes('JUZAMMA') || cleanT.includes('TADARUS') || cleanT.includes('TAKHOSSUS') || cleanT.includes('WISUDA')) &&
+      (cleanM.includes('JUZAMMA') || cleanM.includes('TADARUS') || cleanM.includes('TAKHOSSUS') || cleanM.includes('WISUDA'))) {
+    return true;
+  }
+
+  return false;
+}
+
+function resolveMateriForKelasClient(namaKelas, allMateri) {
+  if (!namaKelas || !allMateri) return [];
+  const target = String(namaKelas).trim();
+
+  let list = allMateri.filter(m => String(m.kelas || '').trim().toUpperCase() === target.toUpperCase());
+  if (list.length === 0) {
+    list = allMateri.filter(m => matchMateriKelasClient(m.kelas, target));
+  }
+
+  return list.slice().sort((a, b) => (Number(a.urutan) || 0) - (Number(b.urutan) || 0));
+}
+
+function ensureModalCetakTabelUjian() {
+  if (document.getElementById('modalCetakTabelUjian')) return;
+
+  const modalDiv = document.createElement('div');
+  modalDiv.id = 'modalCetakTabelUjian';
+  modalDiv.className = 'modal fade';
+  modalDiv.tabIndex = -1;
+  modalDiv.setAttribute('aria-hidden', 'true');
+  modalDiv.innerHTML = `
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
+          <div>
+            <h5 class="modal-title fw-bold mb-0"><i class="fas fa-clipboard-list me-2"></i>Cetak Tabel Penilaian Ujian (Untuk Penguji)</h5>
+            <small class="text-white-50">Lembar penilaian berisi daftar nama santri dan kolom materi sesuai kelasnya</small>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3 p-md-4 bg-light">
+          <!-- Pengaturan Cetak -->
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-3">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-school text-primary me-1"></i> Pilih Kelas yang Dicetak</label>
+                  <select class="form-select form-select-sm fw-semibold" id="ctu_select_kelas" onchange="renderPreviewTabelUjian()">
+                    <option value="">-- Pilih Kelas --</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-calendar-day text-success me-1"></i> Hari / Tanggal Ujian (Opsional)</label>
+                  <input type="text" class="form-control form-control-sm" id="ctu_tanggal_ujian" placeholder="Kosongkan jika ditulis tangan..." oninput="renderPreviewTabelUjian()">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-user-tie text-info me-1"></i> Nama Penguji (Opsional)</label>
+                  <input type="text" class="form-control form-control-sm" id="ctu_nama_penguji" placeholder="Kosongkan jika ditulis tangan..." oninput="renderPreviewTabelUjian()">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label fw-bold small mb-1" title="Baris tambahan kosong di bagian bawah tabel untuk santri susulan"><i class="fas fa-plus-square text-secondary me-1"></i> Baris Cadangan</label>
+                  <input type="number" class="form-control form-control-sm text-center" id="ctu_extra_rows" value="3" min="0" max="15" onchange="renderPreviewTabelUjian()">
+                </div>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-2 border-top gap-2">
+                <div id="ctu_summary_badge" class="small text-muted fw-semibold"></div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button" class="btn btn-sm btn-outline-success fw-semibold" onclick="exportTabelUjianExcel()">
+                    <i class="fas fa-file-excel me-1"></i> Download Excel (.xlsx)
+                  </button>
+                  <button type="button" class="btn btn-sm btn-success fw-bold px-3 shadow-sm" onclick="prosesPrintTabelUjian()">
+                    <i class="fas fa-print me-1"></i> Cetak / Print Lembar Ujian
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Area Preview Lembar Ujian -->
+          <div id="ctu_preview_area" class="bg-white p-3 p-md-4 rounded shadow-sm border" style="overflow-x: auto;">
+            <div class="text-center py-5 text-muted">
+              <i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+              <div>Menyiapkan pratinjau tabel penilaian ujian...</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-white">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+          <button type="button" class="btn btn-outline-success fw-semibold" onclick="exportTabelUjianExcel()">
+            <i class="fas fa-file-excel me-1"></i> Download Excel (.xlsx)
+          </button>
+          <button type="button" class="btn btn-success fw-bold px-4 shadow-sm" onclick="prosesPrintTabelUjian()">
+            <i class="fas fa-print me-1"></i> Cetak / Print Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modalDiv);
+}
+
+function getValidStudentClassesList(santriList, kelasList) {
+  const nonSantri = new Set(['RAPAT', 'ISTIGHOSAH', 'LAIN-LAIN']);
+  const classSet = new Set();
+
+  (kelasList || []).forEach(k => {
+    const name = String(k.Nama_Kelas || k['Nama Kelas'] || '').trim();
+    if (name && !nonSantri.has(name.toUpperCase())) {
+      classSet.add(name);
+    }
+  });
+
+  (santriList || []).forEach(s => {
+    const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
+    const k = String(s.Kelas || s.kelas || '').trim();
+    if ((status === 'aktif' || status === '') && k && !nonSantri.has(k.toUpperCase())) {
+      classSet.add(k);
+    }
+  });
+
+  return Array.from(classSet).sort((a, b) => a.localeCompare(b));
+}
+
+function getActiveSantriForClass(santriList, targetKelas) {
+  return (santriList || []).filter(s => {
+    const sK = String(s.Kelas || s.kelas || '').trim();
+    const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
+    return isKelasMatch(sK, targetKelas) && (status === 'aktif' || status === '');
+  }).sort((a, b) => {
+    const nameA = String(a.Nama_Santri || a.nama_santri || a.Nama || a.nama || '');
+    const nameB = String(b.Nama_Santri || b.nama_santri || b.Nama || b.nama || '');
+    return nameA.localeCompare(nameB);
+  });
+}
+
+function bukaModalCetakTabelUjian(autoExportExcel) {
+  ensureModalCetakTabelUjian();
+
+  const selectedPmKelas = document.getElementById('pm_kelas') ? document.getElementById('pm_kelas').value : '';
+  const modalEl = document.getElementById('modalCetakTabelUjian');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  if (!autoExportExcel) {
+    modal.show();
+  }
+
+  const runAfterLoad = () => {
+    const validClasses = getValidStudentClassesList(_examSantriCache, _examKelasCache);
+    const categories = Array.from(new Set((_examAllMateriCache || []).map(m => String(m.kelas || '').trim()).filter(Boolean)));
+
+    const selectEl = document.getElementById('ctu_select_kelas');
+    if (selectEl) {
+      let htmlOpts = '<option value="">-- Pilih Kelas --</option>';
+
+      // 1. Kelas Spesifik
+      htmlOpts += '<optgroup label="Pilih Kelas Spesifik">';
+      validClasses.forEach(cName => {
+        const count = getActiveSantriForClass(_examSantriCache, cName).length;
+        htmlOpts += `<option value="${cName}">${cName} (${count} Santri)</option>`;
+      });
+      htmlOpts += '</optgroup>';
+
+      // 2. Kategori Materi (Gabungan Sub-Kelas)
+      if (categories.length > 0) {
+        htmlOpts += '<optgroup label="Pilih Per Tingkat / Kategori Materi">';
+        categories.forEach(cat => {
+          const subClasses = validClasses.filter(cName => matchMateriKelasClient(cat, cName));
+          if (subClasses.length > 1 || !validClasses.includes(cat)) {
+            htmlOpts += `<option value="KAT:${cat}">Kategori: ${cat} (${subClasses.length} Kelas)</option>`;
+          }
+        });
+        htmlOpts += '</optgroup>';
+      }
+
+      // 3. Semua Kelas Sekaligus
+      htmlOpts += '<optgroup label="Cetak Massal">';
+      htmlOpts += `<option value="__ALL__">Semua Kelas Aktif TPQ Sekaligus (${validClasses.length} Kelas)</option>`;
+      htmlOpts += '</optgroup>';
+
+      selectEl.innerHTML = htmlOpts;
+
+      // Tentukan pilihan awal berdasarkan pm_kelas
+      if (selectedPmKelas) {
+        if (validClasses.includes(selectedPmKelas)) {
+          selectEl.value = selectedPmKelas;
+        } else if (categories.includes(selectedPmKelas)) {
+          selectEl.value = 'KAT:' + selectedPmKelas;
+        } else {
+          selectEl.value = validClasses[0] || '';
+        }
+      } else {
+        selectEl.value = validClasses[0] || '';
+      }
+    }
+
+    renderPreviewTabelUjian();
+
+    if (autoExportExcel) {
+      exportTabelUjianExcel();
+    }
+  };
+
+  if (_examSantriCache && _examKelasCache && _examAllMateriCache) {
+    runAfterLoad();
+    return;
+  }
+
+  showLoading('Memuat data santri & materi kelas...');
+  google.script.run
+    .withSuccessHandler(function(santriList) {
+      _examSantriCache = santriList || [];
+      google.script.run
+        .withSuccessHandler(function(kelasList) {
+          _examKelasCache = kelasList || [];
+          google.script.run
+            .withSuccessHandler(function(allMateri) {
+              hideLoading();
+              _examAllMateriCache = allMateri || [];
+              runAfterLoad();
+            })
+            .withFailureHandler(function() {
+              // Fallback jika getAllMateriKelas belum tersedia
+              hideLoading();
+              _examAllMateriCache = _pmCurrentMateriList || [];
+              runAfterLoad();
+            })
+            .getAllMateriKelas();
+        })
+        .withFailureHandler(function(err) {
+          hideLoading();
+          showToast('Gagal memuat kelas: ' + err.message, 'error');
+        })
+        .getKelasList();
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      showToast('Gagal memuat santri: ' + err.message, 'error');
+    })
+    .getSantriList();
+}
+
+function getResolvedTargetClassesForExam() {
+  const selectEl = document.getElementById('ctu_select_kelas');
+  const val = selectEl ? selectEl.value : '';
+  const validClasses = getValidStudentClassesList(_examSantriCache, _examKelasCache);
+
+  if (!val) return [];
+  if (val === '__ALL__') {
+    return validClasses.filter(c => getActiveSantriForClass(_examSantriCache, c).length > 0);
+  }
+  if (val.startsWith('KAT:')) {
+    const cat = val.slice(4);
+    const matched = validClasses.filter(c => matchMateriKelasClient(cat, c) && getActiveSantriForClass(_examSantriCache, c).length > 0);
+    return matched.length > 0 ? matched : [cat];
+  }
+  return [val];
+}
+
+function buildSingleExamSheetHtml(kelasName, santriList, materiList, waliKelas, lokasiKelas, opts, isLastPage) {
+  const ta = (document.getElementById('rn_ta') && document.getElementById('rn_ta').value) || '20262';
+  const tanggalUjian = opts.tanggalUjian || '................................................';
+  const namaPenguji = opts.namaPenguji || '';
+  const extraRows = typeof opts.extraRows === 'number' ? opts.extraRows : 3;
+
+  const upperKelas = String(kelasName || '').trim().toUpperCase();
+  const isManual = materiList.some(m => m.tipe === 'manual') || upperKelas.includes('DINIYAH');
+  const isWeighted = !isManual && materiList.some(m => m.tipe === 'weighted');
+
+  const regularMateri = materiList.filter(m => m.tipe !== 'plus');
+  const plusMateri = materiList.filter(m => m.tipe === 'plus');
+
+  // Build table header
+  let theadHtml = '';
+  let totalCols = 5;
+
+  if (materiList.length === 0) {
+    totalCols = 6;
+    theadHtml = `
+      <tr>
+        <th style="width: 32px;">NO</th>
+        <th style="width: 70px;">NIS</th>
+        <th style="min-width: 190px;">NAMA SANTRI</th>
+        <th>NILAI UJIAN</th>
+        <th style="width: 75px;">NILAI AKHIR</th>
+        <th style="width: 150px;">KET / CATATAN PENGUJI</th>
+      </tr>
+    `;
+  } else if (isManual) {
+    totalCols = 3 + materiList.length + 2;
+    theadHtml = `
+      <tr>
+        <th rowspan="2" style="width: 32px;">NO</th>
+        <th rowspan="2" style="width: 70px;">NIS</th>
+        <th rowspan="2" style="min-width: 190px;">NAMA SANTRI</th>
+        <th colspan="${materiList.length}">MATERI UJIAN (NILAI 0 - 100)</th>
+        <th rowspan="2" style="width: 68px;">RATA-RATA</th>
+        <th rowspan="2" style="width: 150px;">KET / CATATAN PENGUJI</th>
+      </tr>
+      <tr>
+        ${materiList.map(m => `
+          <th style="min-width: 85px;">
+            <div>${m.materi}</div>
+            <div style="font-size: 9px; font-weight: normal;">(0 - 100)</div>
+          </th>
+        `).join('')}
+      </tr>
+    `;
+  } else if (isWeighted) {
+    totalCols = 3 + materiList.length + 2;
+    theadHtml = `
+      <tr>
+        <th rowspan="2" style="width: 32px;">NO</th>
+        <th rowspan="2" style="width: 70px;">NIS</th>
+        <th rowspan="2" style="min-width: 190px;">NAMA SANTRI</th>
+        <th colspan="${materiList.length}">MATERI PENILAIAN UJIAN</th>
+        <th rowspan="2" style="width: 68px;">TOTAL NILAI<br><span style="font-size:9px;font-weight:normal;">(Maks 100)</span></th>
+        <th rowspan="2" style="width: 150px;">KET / CATATAN PENGUJI</th>
+      </tr>
+      <tr>
+        ${materiList.map(m => `
+          <th style="min-width: 80px;">
+            <div>${m.materi}</div>
+            <div style="font-size: 9px; font-weight: normal;">(Maks: ${m.bobot})</div>
+          </th>
+        `).join('')}
+      </tr>
+    `;
+  } else {
+    // Reguler Bilqolam (Jml Kesalahan + Lagu/Suara)
+    const regCount = regularMateri.length;
+    const plusCount = plusMateri.length;
+    totalCols = 3 + regCount + plusCount + 2;
+
+    theadHtml = `
+      <tr>
+        <th rowspan="2" style="width: 30px;">NO</th>
+        <th rowspan="2" style="width: 65px;">NIS</th>
+        <th rowspan="2" style="min-width: 185px;">NAMA SANTRI</th>
+        ${regCount > 0 ? `<th colspan="${regCount}">MATERI PENILAIAN UJIAN (JUMLAH KESALAHAN)</th>` : ''}
+        ${plusCount > 0 ? `<th colspan="${plusCount}">NILAI PLUS</th>` : ''}
+        <th rowspan="2" style="width: 60px;">NILAI<br>AKHIR</th>
+        <th rowspan="2" style="width: 135px;">KET / CATATAN<br>PENGUJI</th>
+      </tr>
+      <tr>
+        ${regularMateri.map(m => `
+          <th style="min-width: 68px; max-width: 95px;">
+            <div style="line-height: 1.15;">${m.materi}</div>
+            <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">(Bobot: ${m.bobot})</div>
+          </th>
+        `).join('')}
+        ${plusMateri.map(m => `
+          <th style="min-width: 68px;">
+            <div style="line-height: 1.15;">${m.materi}</div>
+            <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">(Skor: 1-${m.bobot || 5})</div>
+          </th>
+        `).join('')}
+      </tr>
+    `;
+  }
+
+  // Build rows
+  const blankScoreCellsCount = totalCols - 3;
+  const blankCellsHtml = Array(blankScoreCellsCount).fill('<td>&nbsp;</td>').join('');
+
+  let tbodyHtml = '';
+  santriList.forEach((s, idx) => {
+    const sNis = s.NIS || s.nis || '-';
+    const sNama = s.Nama_Santri || s.nama_santri || s.Nama || s.nama || '-';
+    tbodyHtml += `
+      <tr>
+        <td style="text-align: center;">${idx + 1}</td>
+        <td style="text-align: center;">${sNis}</td>
+        <td style="font-weight: 600; padding-left: 6px;">${sNama}</td>
+        ${blankCellsHtml}
+      </tr>
+    `;
+  });
+
+  for (let e = 0; e < extraRows; e++) {
+    const rowNum = santriList.length + e + 1;
+    tbodyHtml += `
+      <tr>
+        <td style="text-align: center; color: #555;">${rowNum}</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        ${blankCellsHtml}
+      </tr>
+    `;
+  }
+
+  // Petunjuk rumus sesuai tipe kelas
+  let rumusHint = '';
+  if (isManual) {
+    rumusHint = '• Isikan nilai pada masing-masing kolom materi dengan rentang angka <strong>0 s/d 100</strong>.';
+  } else if (isWeighted) {
+    rumusHint = '• Isikan skor perolehan pada masing-masing kolom materi sesuai batas <strong>Nilai Maksimal</strong>.<br>• <strong>Total Nilai</strong> = Jumlah seluruh skor materi (Maksimal 100).';
+  } else {
+    rumusHint = '• Kolom materi diisi <strong>jumlah kesalahan</strong> bacaan santri saat ujian.<br>• <strong>Rumus Nilai Akhir</strong> = <strong>95 - &Sigma;(Bobot &times; Jumlah Kesalahan) + Nilai Lagu (1 s/d 5)</strong>.';
+  }
+
+  return `
+    <div class="exam-sheet-page" style="${!isLastPage ? 'page-break-after: always; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px dashed #ccc;' : ''}">
+      <!-- KOP LEMBAR UJIAN -->
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <img src="https://i.ibb.co.com/5hcK4HTq/Logo-TPQ-Bilqolam-Al-Mabrur-versi-enteng-e-2.png" alt="Logo" style="width: 52px; height: 52px; object-fit: contain;">
+          <div>
+            <div style="font-size: 15px; font-weight: 800; letter-spacing: 0.3px; color: #000;">LEMBAR PENILAIAN UJIAN SANTRI</div>
+            <div style="font-size: 13px; font-weight: 700; color: #000;">TPQ AL MABRUR SINGOSARI</div>
+            <div style="font-size: 10.5px; color: #333;">Jl. Raya Singosari, Kab. Malang | Tahun Ajaran: <strong>${ta}</strong></div>
+          </div>
+        </div>
+        <div style="text-align: right; border: 1.5px solid #000; padding: 5px 12px; border-radius: 4px;">
+          <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #333;">KELAS / JILID</div>
+          <div style="font-size: 16px; font-weight: 800; color: #000;">${kelasName}</div>
+        </div>
+      </div>
+
+      <!-- INFO KELAS & PENGUJI -->
+      <table style="width: 100%; font-size: 11.5px; margin-bottom: 10px; border: none;">
+        <tr>
+          <td style="width: 13%; font-weight: bold; padding: 2px 0; border: none;">Kelas</td>
+          <td style="width: 37%; padding: 2px 0; border: none;">: <strong>${kelasName}</strong> (${santriList.length} Santri)</td>
+          <td style="width: 16%; font-weight: bold; padding: 2px 0; border: none;">Hari / Tanggal Ujian</td>
+          <td style="width: 34%; padding: 2px 0; border: none;">: ${tanggalUjian}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: bold; padding: 2px 0; border: none;">Wali Kelas</td>
+          <td style="padding: 2px 0; border: none;">: ${waliKelas || '-'} ${lokasiKelas && lokasiKelas !== '-' ? '(' + lokasiKelas + ')' : ''}</td>
+          <td style="font-weight: bold; padding: 2px 0; border: none;">Nama Penguji</td>
+          <td style="padding: 2px 0; border: none;">: <strong>${namaPenguji || '................................................'}</strong></td>
+        </tr>
+      </table>
+
+      <!-- TABEL PENILAIAN -->
+      <table class="exam-grid-table" style="width: 100%; border-collapse: collapse; font-size: 11px; color: #000;">
+        <thead>
+          ${theadHtml}
+        </thead>
+        <tbody>
+          ${tbodyHtml}
+        </tbody>
+      </table>
+
+      <!-- FOOTER PETUNJUK & TANDA TANGAN PENGUJI -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 12px; font-size: 11px; page-break-inside: avoid;">
+        <div style="max-width: 60%; border: 1px solid #555; padding: 6px 10px; border-radius: 4px; background: #fafafa;">
+          <div style="font-weight: bold; margin-bottom: 2px; text-decoration: underline;">Pedoman Penilaian Penguji:</div>
+          <div style="line-height: 1.4;">${rumusHint}</div>
+        </div>
+        <div style="text-align: center; min-width: 210px; padding-right: 10px;">
+          <div>Singosari, ${opts.tanggalUjian || '....................................'}</div>
+          <div style="font-weight: bold; margin-top: 2px;">Penguji Ujian,</div>
+          <div style="height: 48px;"></div>
+          <div style="font-weight: bold;">( ${namaPenguji ? namaPenguji : '............................................'} )</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPreviewTabelUjian() {
+  const previewArea = document.getElementById('ctu_preview_area');
+  const summaryBadge = document.getElementById('ctu_summary_badge');
+  if (!previewArea) return;
+
+  const targetClasses = getResolvedTargetClassesForExam();
+  if (targetClasses.length === 0) {
+    previewArea.innerHTML = '<div class="alert alert-warning mb-0">Silakan pilih kelas terlebih dahulu pada dropdown di atas.</div>';
+    if (summaryBadge) summaryBadge.textContent = '';
+    return;
+  }
+
+  const opts = {
+    tanggalUjian: (document.getElementById('ctu_tanggal_ujian') ? document.getElementById('ctu_tanggal_ujian').value.trim() : ''),
+    namaPenguji: (document.getElementById('ctu_nama_penguji') ? document.getElementById('ctu_nama_penguji').value.trim() : ''),
+    extraRows: parseInt(document.getElementById('ctu_extra_rows') ? document.getElementById('ctu_extra_rows').value : '3', 10) || 0
+  };
+
+  let totalSantriCount = 0;
+  let sheetsHtml = `
+    <style>
+      .exam-grid-table th, .exam-grid-table td {
+        border: 1px solid #000 !important;
+        padding: 4px 5px;
+        vertical-align: middle;
+      }
+      .exam-grid-table thead th {
+        background-color: #f0f2f5 !important;
+        text-align: center;
+        font-weight: 700;
+        color: #000;
+      }
+      .exam-grid-table tbody tr {
+        height: 25px;
+      }
+    </style>
+  `;
+
+  targetClasses.forEach((kelasName, idx) => {
+    const santriInClass = getActiveSantriForClass(_examSantriCache, kelasName);
+    totalSantriCount += santriInClass.length;
+
+    const materiList = resolveMateriForKelasClient(kelasName, _examAllMateriCache);
+    const kInfo = (_examKelasCache || []).find(k => isKelasMatch(k.Nama_Kelas || k['Nama Kelas'], kelasName));
+    const waliKelas = kInfo ? (kInfo.Ustadz_Wali || '-') : '-';
+    const lokasiKelas = (santriInClass[0] && santriInClass[0].Lokasi_Kelas) || (kInfo && kInfo.Lokasi_Kelas) || '-';
+
+    const isLast = (idx === targetClasses.length - 1);
+    sheetsHtml += buildSingleExamSheetHtml(kelasName, santriInClass, materiList, waliKelas, lokasiKelas, opts, isLast);
+  });
+
+  previewArea.innerHTML = sheetsHtml;
+  if (summaryBadge) {
+    summaryBadge.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i> Menampilkan <strong>${targetClasses.length} Kelas</strong> dengan total <strong>${totalSantriCount} Santri Aktif</strong>`;
+  }
+}
+
+function prosesPrintTabelUjian() {
+  const previewArea = document.getElementById('ctu_preview_area');
+  if (!previewArea || !previewArea.innerHTML) {
+    showToast('Tidak ada tabel untuk dicetak', 'warning');
+    return;
+  }
+
+  const fullPrintHtml = `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+      <meta charset="UTF-8">
+      <title>Cetak Lembar Penilaian Ujian - TPQ Al Mabrur</title>
+      <style>
+        @page {
+          size: A4 landscape;
+          margin: 10mm;
+        }
+        * {
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          font-family: Arial, Helvetica, sans-serif;
+          color: #000;
+          margin: 0;
+          padding: 0;
+          background: #fff;
+        }
+        .exam-sheet-page {
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
+          border-bottom: none !important;
+        }
+        .exam-grid-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 11px;
+        }
+        .exam-grid-table th, .exam-grid-table td {
+          border: 1px solid #000 !important;
+          padding: 4px 5px;
+          vertical-align: middle;
+        }
+        .exam-grid-table thead th {
+          background-color: #efefef !important;
+          text-align: center;
+          font-weight: bold;
+        }
+        .exam-grid-table tbody tr {
+          height: 24px;
+        }
+      </style>
+    </head>
+    <body>
+      ${previewArea.innerHTML}
+    </body>
+    </html>
+  `;
+
+  let printFrame = document.getElementById('printExamFrame');
+  if (printFrame) printFrame.remove();
+
+  printFrame = document.createElement('iframe');
+  printFrame.id = 'printExamFrame';
+  printFrame.style.position = 'fixed';
+  printFrame.style.right = '0';
+  printFrame.style.bottom = '0';
+  printFrame.style.width = '0';
+  printFrame.style.height = '0';
+  printFrame.style.border = '0';
+  document.body.appendChild(printFrame);
+
+  const frameDoc = printFrame.contentWindow || printFrame.contentDocument.document || printFrame.contentDocument;
+  frameDoc.document.open();
+  frameDoc.document.write(fullPrintHtml);
+  frameDoc.document.close();
+
+  setTimeout(() => {
+    printFrame.contentWindow.focus();
+    printFrame.contentWindow.print();
+  }, 450);
+}
+
+function exportTabelUjianExcel() {
+  const targetClasses = getResolvedTargetClassesForExam();
+  if (targetClasses.length === 0) {
+    showToast('Silakan pilih kelas terlebih dahulu', 'warning');
+    return;
+  }
+
+  try {
+    const ta = (document.getElementById('rn_ta') && document.getElementById('rn_ta').value) || '20262';
+    const tanggalUjian = document.getElementById('ctu_tanggal_ujian') ? document.getElementById('ctu_tanggal_ujian').value.trim() : '';
+    const namaPenguji = document.getElementById('ctu_nama_penguji') ? document.getElementById('ctu_nama_penguji').value.trim() : '';
+    const extraRows = parseInt(document.getElementById('ctu_extra_rows') ? document.getElementById('ctu_extra_rows').value : '3', 10) || 0;
+
+    const wb = XLSX.utils.book_new();
+
+    targetClasses.forEach((kelasName, idx) => {
+      const santriInClass = getActiveSantriForClass(_examSantriCache, kelasName);
+      const materiList = resolveMateriForKelasClient(kelasName, _examAllMateriCache);
+      const kInfo = (_examKelasCache || []).find(k => isKelasMatch(k.Nama_Kelas || k['Nama Kelas'], kelasName));
+      const waliKelas = kInfo ? (kInfo.Ustadz_Wali || '-') : '-';
+
+      const upperKelas = String(kelasName || '').trim().toUpperCase();
+      const isManual = materiList.some(m => m.tipe === 'manual') || upperKelas.includes('DINIYAH');
+      const isWeighted = !isManual && materiList.some(m => m.tipe === 'weighted');
+
+      const aoa = [];
+      aoa.push(['LEMBAR PENILAIAN UJIAN SANTRI - TPQ AL MABRUR SINGOSARI']);
+      aoa.push(['Kelas', kelasName, '', 'Hari / Tanggal Ujian', tanggalUjian || '..............................']);
+      aoa.push(['Wali Kelas', waliKelas, '', 'Nama Penguji', namaPenguji || '..............................']);
+      aoa.push(['Tahun Ajaran', ta, '', 'Jumlah Peserta', santriInClass.length + ' Santri']);
+      aoa.push([]);
+
+      const headerRow = ['No', 'NIS', 'Nama Santri'];
+      if (isManual) {
+        materiList.forEach(m => headerRow.push(`${m.materi} (0-100)`));
+        headerRow.push('Rata-rata', 'Catatan Penguji');
+      } else if (isWeighted) {
+        materiList.forEach(m => headerRow.push(`${m.materi} (Maks ${m.bobot})`));
+        headerRow.push('Total Nilai', 'Catatan Penguji');
+      } else {
+        materiList.filter(m => m.tipe !== 'plus').forEach(m => headerRow.push(`${m.materi} (Bobot ${m.bobot})`));
+        materiList.filter(m => m.tipe === 'plus').forEach(m => headerRow.push(`${m.materi} (Skor 1-${m.bobot || 5})`));
+        headerRow.push('Nilai Akhir', 'Catatan Penguji');
+      }
+      aoa.push(headerRow);
+
+      const blankCount = headerRow.length - 3;
+      santriInClass.forEach((s, sIdx) => {
+        const row = [
+          sIdx + 1,
+          s.NIS ? String(s.NIS) : '-',
+          s.Nama_Santri || s.nama_santri || s.Nama || '-'
+        ];
+        for (let b = 0; b < blankCount; b++) row.push('');
+        aoa.push(row);
+      });
+
+      for (let e = 0; e < extraRows; e++) {
+        const row = [santriInClass.length + e + 1, '', ''];
+        for (let b = 0; b < blankCount; b++) row.push('');
+        aoa.push(row);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const colWidths = [{ wch: 5 }, { wch: 12 }, { wch: 28 }];
+      for (let c = 3; c < headerRow.length - 1; c++) colWidths.push({ wch: 18 });
+      colWidths.push({ wch: 24 });
+      ws['!cols'] = colWidths;
+
+      let sheetName = kelasName.replace(/[\\/?*\[\]:]/g, ' ').trim().slice(0, 28);
+      if (!sheetName) sheetName = 'Kelas_' + (idx + 1);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    });
+
+    const cleanFileLabel = targetClasses.length === 1
+      ? targetClasses[0].replace(/[^a-zA-Z0-9]/g, '_')
+      : 'Semua_Kelas';
+    XLSX.writeFile(wb, `Tabel_Penilaian_Ujian_${cleanFileLabel}_${ta}.xlsx`);
+    showToast('File Excel Tabel Penilaian Ujian berhasil diunduh', 'success');
+  } catch (err) {
+    console.error('Export tabel ujian error:', err);
+    showToast('Gagal export Excel: ' + err.message, 'error');
+  }
+}
+
 
 // ==========================================
 // ===== BUPRES (BUKU PRESTASI) FUNCTIONS =====
