@@ -349,6 +349,47 @@
         transform: translate(-50%, 40px);
       }
     }
+
+    /* Perbaikan Scroll Modal di HP / Mobile (terutama bila ada <form> di dalam .modal-content) */
+    .modal-dialog-scrollable .modal-content > form {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: 100%;
+      overflow: hidden;
+    }
+    .modal-dialog-scrollable .modal-content > form > .modal-body,
+    .modal-dialog-scrollable .modal-body,
+    #modalPendaftaranPublic .modal-body {
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: calc(100vh - 150px);
+      max-height: calc(100dvh - 150px);
+    }
+    .modal-dialog-scrollable .modal-content > form > .modal-footer,
+    #modalPendaftaranPublic .modal-footer {
+      flex-shrink: 0;
+    }
+    @media (max-width: 576px) {
+      #modalPendaftaranPublic .modal-dialog {
+        margin: 0.5rem;
+        height: calc(100% - 1rem);
+        max-height: calc(100dvh - 1rem);
+      }
+      #modalPendaftaranPublic .modal-content {
+        max-height: calc(100vh - 1rem);
+        max-height: calc(100dvh - 1rem);
+      }
+      #modalPendaftaranPublic .modal-body {
+        padding: 1rem !important;
+        max-height: calc(100vh - 135px);
+        max-height: calc(100dvh - 135px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -403,7 +444,7 @@
   <!-- Modal: Pendaftaran Santri Baru (Publik / Halaman Login) -->
   <div class="modal fade" id="modalPendaftaranPublic" tabindex="-1" aria-labelledby="modalPendaftaranPublicTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-      <div class="modal-content border-0 shadow-lg">
+      <form id="formPendaftaranPublic" class="modal-content border-0 shadow-lg">
         <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
           <div class="d-flex align-items-center gap-2">
             <img src="https://i.ibb.co.com/5hcK4HTq/Logo-TPQ-Bilqolam-Al-Mabrur-versi-enteng-e-2.png" alt="Logo" style="height: 38px; width: 38px; object-fit: contain; background: white; border-radius: 8px; padding: 2px;">
@@ -414,8 +455,7 @@
           </div>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <form id="formPendaftaranPublic">
-          <div class="modal-body p-4">
+        <div class="modal-body p-4">
             <div class="alert alert-success py-2 px-3 mb-3 small d-flex align-items-center justify-content-between">
               <div>
                 <i class="fas fa-calendar-check me-1"></i> Tahun Ajaran Pendaftaran: <strong id="publicTahunAjaranDisplay">20262</strong>
@@ -508,8 +548,7 @@
               <i class="fas fa-paper-plane me-1"></i> Kirim Pendaftaran
             </button>
           </div>
-        </form>
-      </div>
+      </form>
     </div>
   </div>
   
@@ -2679,7 +2718,7 @@ function loadPendaftaranPage() {
 
     <!-- Modal: Tambah Pendaftar Manual (Admin) -->
     <div class="modal fade" id="modalTambahPendaftarAdmin" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content border-0 shadow">
           <div class="modal-header text-white" style="background: linear-gradient(135deg, #0d6efd, #198754);">
             <h5 class="modal-title fw-bold"><i class="fas fa-user-plus me-2"></i> Tambah Pendaftar Santri Baru</h5>

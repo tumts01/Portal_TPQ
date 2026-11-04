@@ -239,7 +239,7 @@ function loadPendaftaranPage() {
 
     <!-- Modal: Tambah Pendaftar Manual (Admin) -->
     <div class="modal fade" id="modalTambahPendaftarAdmin" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content border-0 shadow">
           <div class="modal-header text-white" style="background: linear-gradient(135deg, #0d6efd, #198754);">
             <h5 class="modal-title fw-bold"><i class="fas fa-user-plus me-2"></i> Tambah Pendaftar Santri Baru</h5>
@@ -924,21 +924,86 @@ function exportPendaftaranExcel() {
     showToast('Tidak ada data untuk diexport', 'warning');
     return;
   }
-  showLoading('Menyiapkan file Excel...');
-  google.script.run
-    .withSuccessHandler(function(res) {
-      hideLoading();
-      if (res && res.success) {
-        window.open(res.downloadUrl, '_blank');
-        showToast('Excel berhasil digenerate', 'success');
-      } else {
-        showToast('Gagal export: ' + (res ? res.message : 'Unknown error'), 'error');
-      }
-    })
-    .withFailureHandler(function(err) {
-      hideLoading();
-      showToast('Error export: ' + err.message, 'error');
-    })
-    .exportToExcel(`Pendaftaran_Santri_TPQ_Al_Mabrur_${_pendaftaranTahunAktif}`, _pendaftaranData);
+
+  try {
+    showLoading('Mengekspor file Excel pendaftaran...');
+
+    const formatTgl = (val) => {
+      if (!val) return '-';
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+      } catch (e) {}
+      return String(val);
+    };
+
+    const excelRows = _pendaftaranData.map((s, index) => {
+      const jk = String(s.Jenis_Kelamin || s['L/P'] || '').toUpperCase().trim();
+      let jkLabel = jk;
+      if (jk === 'L' || jk.includes('LAKI')) jkLabel = 'Laki-laki';
+      else if (jk === 'P' || jk.includes('PEREMPUAN')) jkLabel = 'Perempuan';
+
+      return {
+        'No': index + 1,
+        'NIS': s.NIS ? String(s.NIS) : '-',
+        'Nama Santri': s.Nama_Santri || s['Nama Santri'] || '-',
+        'Jenis Kelamin': jkLabel,
+        'Kelas': s.Kelas || '-',
+        'Tempat Lahir': s.Tempat_Lahir || '-',
+        'Tanggal Lahir': formatTgl(s.Tanggal_Lahir),
+        'Usia': s.Usia ? String(s.Usia) : '-',
+        'Nama Sekolah': s.Nama_Sekolah || s['Nama Sekolah'] || '-',
+        'Nama Ayah': s.Nama_Ayah || s['Nama Ayah'] || '-',
+        'No. WA Ayah': (s.No_WA_Ayah || s['No WA Ayah']) ? String(s.No_WA_Ayah || s['No WA Ayah']) : '-',
+        'Nama Ibu': s.Nama_Ibu || s['Nama Ibu'] || '-',
+        'No. WA Ibu': (s.No_WA_Ibu || s['No WA Ibu']) ? String(s.No_WA_Ibu || s['No WA Ibu']) : '-',
+        'Alamat': s.Alamat_Lengkap || s.Alamat || s['Alamat Lengkap'] || '-',
+        'Kemampuan Mengaji': s.Kemampuan_Mengaji || s['Kemampuan Mengaji'] || '-',
+        'Status': (s.Status || 'AKTIF').toUpperCase(),
+        'Tanggal Daftar': formatTgl(s.Tanggal_Daftar || s.Created_At)
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(excelRows);
+
+    // Atur lebar kolom
+    ws['!cols'] = [
+      { wch: 5 },  // No
+      { wch: 12 }, // NIS
+      { wch: 28 }, // Nama Santri
+      { wch: 14 }, // JK
+      { wch: 16 }, // Kelas
+      { wch: 16 }, // Tempat Lahir
+      { wch: 14 }, // Tanggal Lahir
+      { wch: 8 },  // Usia
+      { wch: 22 }, // Nama Sekolah
+      { wch: 20 }, // Nama Ayah
+      { wch: 16 }, // No WA Ayah
+      { wch: 20 }, // Nama Ibu
+      { wch: 16 }, // No WA Ibu
+      { wch: 35 }, // Alamat
+      { wch: 20 }, // Kemampuan Mengaji
+      { wch: 12 }, // Status
+      { wch: 14 }  // Tanggal Daftar
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pendaftaran Santri");
+
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const filename = `Pendaftaran_Santri_TPQ_Al_Mabrur_${_pendaftaranTahunAktif || ''}_${timestamp}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+    hideLoading();
+    showToast('File Excel pendaftaran berhasil diunduh', 'success');
+  } catch (err) {
+    hideLoading();
+    console.error('Export pendaftaran error:', err);
+    showToast('Gagal export Excel: ' + err.message, 'error');
+  }
 }
 </script>
