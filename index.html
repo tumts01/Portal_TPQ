@@ -7,7 +7,7 @@
   <title>Aplikasi TPQ Al Mabrur Singosari</title>
   
   <!-- App Icons & PWA Manifest -->
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json?v=3">
   <link rel="icon" href="https://faizabdau-dotcom.github.io/portal-almabrur/icon-192.png">
   <link rel="apple-touch-icon" href="https://faizabdau-dotcom.github.io/portal-almabrur/icon-192.png">
   <meta name="theme-color" content="#198754">
@@ -363,6 +363,10 @@
     }
 
     /* Perbaikan Scroll Modal di HP / Mobile (terutama bila ada <form> di dalam .modal-content) */
+    #modalPendaftaranPublic {
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
     .modal-dialog-scrollable .modal-content > form {
       display: flex;
       flex-direction: column;
@@ -379,27 +383,24 @@
       overscroll-behavior: contain;
       flex: 1 1 auto;
       min-height: 0;
-      max-height: calc(100vh - 150px);
-      max-height: calc(100dvh - 150px);
+      max-height: 65vh;
+      max-height: 65dvh;
     }
     .modal-dialog-scrollable .modal-content > form > .modal-footer,
     #modalPendaftaranPublic .modal-footer {
       flex-shrink: 0;
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
     }
     @media (max-width: 576px) {
       #modalPendaftaranPublic .modal-dialog {
         margin: 0.5rem;
-        height: calc(100% - 1rem);
-        max-height: calc(100dvh - 1rem);
-      }
-      #modalPendaftaranPublic .modal-content {
-        max-height: calc(100vh - 1rem);
-        max-height: calc(100dvh - 1rem);
       }
       #modalPendaftaranPublic .modal-body {
         padding: 1rem !important;
-        max-height: calc(100vh - 135px);
-        max-height: calc(100dvh - 135px);
+        max-height: 62vh;
+        max-height: 62dvh;
       }
     }
     /* Optimasi Mode Landscape di HP */
@@ -485,13 +486,19 @@
           </button>
           <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">Pasang di layar HP agar mudah diakses tanpa buka browser.</small>
         </div>
+
+        <div class="mt-2 pt-2 border-top border-light-subtle d-md-none">
+          <button type="button" class="btn btn-sm btn-outline-secondary w-100 rounded-pill" onclick="toggleAppOrientation()">
+            <i class="fas fa-sync-alt me-1"></i> Putar Layar (Landscape / Portrait)
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Modal: Pendaftaran Santri Baru (Publik / Halaman Login) -->
   <div class="modal fade" id="modalPendaftaranPublic" tabindex="-1" aria-labelledby="modalPendaftaranPublicTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg">
       <form id="formPendaftaranPublic" class="modal-content border-0 shadow-lg">
         <div class="modal-header text-white" style="background: linear-gradient(135deg, #198754, #0d6efd);">
           <div class="d-flex align-items-center gap-2">
@@ -617,7 +624,7 @@
         <!-- Menu akan di-generate berdasarkan role -->
       </ul>
       
-      <div style="position:absolute;bottom:1rem;width:100%;padding:0 1rem;">
+      <div style="padding: 1rem;">
         <button class="btn btn-outline-light w-100" onclick="logout()">
           <i class="fas fa-sign-out-alt"></i> Logout
         </button>
@@ -631,11 +638,14 @@
           <button class="btn btn-sm btn-outline-primary" onclick="toggleSidebar()" title="Toggle Sidebar">
             <i class="fas fa-bars"></i>
           </button>
-          <h5 class="d-inline-block ms-2" id="pageTitle">Dashboard</h5>
+          <h5 class="d-inline-block ms-2 mb-0" id="pageTitle">Dashboard</h5>
         </div>
-        <div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="toggleAppOrientation()" title="Putar Layar (Landscape / Portrait)">
+            <i class="fas fa-sync-alt"></i>
+          </button>
           <span id="userName"></span>
-          <span class="badge bg-info ms-2" id="userRole"></span>
+          <span class="badge bg-info" id="userRole"></span>
         </div>
       </div>
       
@@ -1165,9 +1175,52 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('PWA ServiceWorker registered with scope:', reg.scope))
+        navigator.serviceWorker.register('sw.js?v=3')
+          .then(reg => {
+            reg.update();
+            console.log('PWA ServiceWorker registered with scope:', reg.scope);
+          })
           .catch(err => console.log('PWA ServiceWorker registration note:', err.message));
+      });
+    }
+
+    async function toggleAppOrientation() {
+      try {
+        const isLandscape = window.innerWidth > window.innerHeight;
+        const targetOrientation = isLandscape ? 'portrait' : 'landscape';
+
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (fsErr) {}
+        }
+
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock(targetOrientation);
+          if (targetOrientation === 'portrait' && document.fullscreenElement && document.exitFullscreen) {
+            try { await document.exitFullscreen(); } catch (e) {}
+          }
+          return;
+        }
+      } catch (err) {
+        console.log('Orientation lock note:', err);
+      }
+
+      Swal.fire({
+        icon: 'info',
+        title: 'Cara Aktifkan Mode Landscape',
+        html: `
+          <div class="text-start small">
+            <p class="mb-2">Jika Anda membuka dari <b>Aplikasi yang sudah di-install di HP</b> dan layar belum mau berputar:</p>
+            <ol class="ps-3 mb-2">
+              <li class="mb-1">Pastikan fitur <b>Putar Otomatis (Auto-Rotate)</b> di HP sudah aktif.</li>
+              <li class="mb-1">Karena aplikasi di-install sebelum fitur Landscape diaktifkan, sistem Android masih menyimpan kunci Portrait lama di ikon aplikasi HP.</li>
+              <li><b>Solusi:</b> Hapus (Uninstall) ikon aplikasi <b>Al Mabrur</b> di layar HP, lalu buka kembali di Chrome dan klik <b>Install Aplikasi TPQ</b> ulang.</li>
+            </ol>
+          </div>
+        `,
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#198754'
       });
     }
 
