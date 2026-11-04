@@ -72,20 +72,25 @@
       top: 0;
       left: 0;
       height: 100vh;
+      height: 100dvh;
       width: var(--sidebar-width);
       background: linear-gradient(180deg, var(--primary-color) 0%, #0d6efd 100%);
       color: white;
-      padding: 1rem 0;
+      padding: 1rem 0 0 0;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       z-index: 1000;
       transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
     }
     
     .sidebar-header {
       padding: 1rem;
       text-align: center;
       border-bottom: 1px solid rgba(255,255,255,0.1);
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
+      flex-shrink: 0;
     }
     
     .sidebar-logo {
@@ -97,6 +102,17 @@
     .sidebar-menu {
       list-style: none;
       padding: 0;
+      margin-bottom: 0;
+      flex: 1 0 auto;
+    }
+
+    .sidebar-footer {
+      flex-shrink: 0;
+      margin-top: auto;
+      padding: 0.85rem 1rem 1.25rem 1rem;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      position: static !important;
+      width: 100%;
     }
     
     .sidebar-menu li {
@@ -324,13 +340,13 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 1060;
-      width: calc(100% - 32px);
+      z-index: 9999;
+      width: calc(100% - 28px);
       max-width: 440px;
       background: #ffffff;
-      border: 1px solid rgba(25, 135, 84, 0.25);
+      border: 2px solid #198754;
       border-radius: 18px;
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.18);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
       animation: slideUpPwa 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     .pwa-banner-icon {
@@ -437,6 +453,26 @@
         padding: 0.75rem 1rem !important;
         max-height: calc(100vh - 105px);
         max-height: calc(100dvh - 105px);
+      }
+      /* Rapikan Sidebar & Tombol Logout saat Landscape */
+      .sidebar-header {
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.25rem;
+      }
+      .sidebar-logo {
+        width: 38px;
+        height: 38px;
+        margin-bottom: 0.2rem;
+      }
+      .sidebar-menu li {
+        margin: 0.15rem 0;
+      }
+      .sidebar-menu a {
+        padding: 0.45rem 1.25rem;
+        font-size: 0.88rem;
+      }
+      .sidebar-footer {
+        padding: 0.6rem 1rem 0.85rem 1rem;
       }
     }
   </style>
@@ -624,7 +660,10 @@
         <!-- Menu akan di-generate berdasarkan role -->
       </ul>
       
-      <div style="padding: 1rem;">
+      <div class="sidebar-footer">
+        <button class="btn btn-light btn-sm w-100 fw-bold text-success mb-2 shadow-sm" id="sidebarInstallBtn" style="display: none;" onclick="triggerPwaInstall()">
+          <i class="fas fa-download me-1"></i> Install Aplikasi
+        </button>
         <button class="btn btn-outline-light w-100" onclick="logout()">
           <i class="fas fa-sign-out-alt"></i> Logout
         </button>
@@ -1229,12 +1268,15 @@
       deferredPrompt = e;
       console.log('beforeinstallprompt event captured');
 
-      const loginInstallSec = document.getElementById('loginInstallSection');
-      if (loginInstallSec && !isRunningStandalone()) {
-        loginInstallSec.style.display = 'block';
+      if (!isRunningStandalone()) {
+        const loginInstallSec = document.getElementById('loginInstallSection');
+        if (loginInstallSec) loginInstallSec.style.display = 'block';
+        const sidebarInstallBtn = document.getElementById('sidebarInstallBtn');
+        if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'block';
       }
 
-      checkAndShowPwaBanner();
+      sessionStorage.removeItem(PWA_DISMISS_KEY);
+      checkAndShowPwaBanner(true);
     });
 
     window.addEventListener('appinstalled', () => {
@@ -1243,22 +1285,27 @@
       hidePwaBanner();
       const loginInstallSec = document.getElementById('loginInstallSection');
       if (loginInstallSec) loginInstallSec.style.display = 'none';
+      const sidebarInstallBtn = document.getElementById('sidebarInstallBtn');
+      if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
     });
 
-    function checkAndShowPwaBanner() {
+    function checkAndShowPwaBanner(forceShow) {
       if (isRunningStandalone()) return;
 
-      const dismissedUntil = localStorage.getItem(PWA_DISMISS_KEY);
-      if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) {
-        return;
+      if (!forceShow) {
+        const dismissedSession = sessionStorage.getItem(PWA_DISMISS_KEY);
+        if (dismissedSession === '1') {
+          return;
+        }
       }
 
       setTimeout(() => {
+        if (isRunningStandalone()) return;
         const banner = document.getElementById('pwaInstallBanner');
         if (banner) {
           banner.style.display = 'block';
         }
-      }, 1500);
+      }, 800);
     }
 
     function dismissPwaBanner() {
@@ -1270,8 +1317,7 @@
           banner.style.animation = '';
         }, 300);
       }
-      const expireTime = Date.now() + (PWA_DISMISS_DAYS * 24 * 60 * 60 * 1000);
-      localStorage.setItem(PWA_DISMISS_KEY, expireTime.toString());
+      sessionStorage.setItem(PWA_DISMISS_KEY, '1');
     }
 
     function hidePwaBanner() {
@@ -1306,13 +1352,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      localStorage.removeItem(PWA_DISMISS_KEY);
       if (!isRunningStandalone()) {
         const loginInstallSec = document.getElementById('loginInstallSection');
         if (loginInstallSec) loginInstallSec.style.display = 'block';
+        const sidebarInstallBtn = document.getElementById('sidebarInstallBtn');
+        if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'block';
 
-        setTimeout(() => {
-          checkAndShowPwaBanner();
-        }, 2000);
+        checkAndShowPwaBanner(true);
       }
     });
 </script>
@@ -11564,6 +11611,8 @@ function exportMonitoringExcel() {
         </div>
       </div>
     </div>
+  </div>
+
   <!-- Floating PWA Install Banner -->
   <div id="pwaInstallBanner" class="pwa-install-banner shadow-lg" style="display: none;">
     <div class="d-flex align-items-center justify-content-between p-3">
