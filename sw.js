@@ -1,4 +1,4 @@
-const CACHE_NAME = "portal-almabrur-v1";
+const CACHE_NAME = "portal-almabrur-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

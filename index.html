@@ -42,6 +42,8 @@
     /* Login Page */
     .login-container {
       min-height: 100vh;
+      min-height: 100dvh;
+      padding: 1rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -264,8 +266,8 @@
       letter-spacing: 0.02em;
     }
     
-    /* Responsive */
-    @media (max-width: 768px) {
+    /* Responsive (Portrait & Landscape Mobile) */
+    @media (max-width: 768px), (max-width: 932px) and (max-height: 550px) and (orientation: landscape) {
       .sidebar {
         transform: translateX(-100%);
       }
@@ -276,10 +278,20 @@
       
       .main-content {
         margin-left: 0;
+        padding: 1rem;
+      }
+
+      .header {
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .content-card {
+        padding: 1rem;
       }
     }
 
-    @media (min-width: 769px) {
+    @media (min-width: 769px) and (min-height: 551px), (min-width: 933px) {
       .sidebar.hide-desktop {
         transform: translateX(-100%);
       }
@@ -388,6 +400,42 @@
         padding: 1rem !important;
         max-height: calc(100vh - 135px);
         max-height: calc(100dvh - 135px);
+      }
+    }
+    /* Optimasi Mode Landscape di HP */
+    @media (max-height: 550px) and (orientation: landscape) {
+      .login-container {
+        align-items: flex-start;
+        padding: 0.75rem;
+      }
+      .login-box {
+        padding: 1.25rem;
+        max-width: 520px;
+      }
+      .logo-login {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 0.5rem;
+      }
+      #modalPendaftaranPublic .modal-dialog,
+      .modal-dialog-scrollable {
+        margin: 0.35rem auto;
+        height: calc(100% - 0.7rem);
+        max-height: calc(100dvh - 0.7rem);
+      }
+      #modalPendaftaranPublic .modal-header,
+      .modal-dialog-scrollable .modal-header {
+        padding: 0.45rem 1rem;
+      }
+      #modalPendaftaranPublic .modal-footer,
+      .modal-dialog-scrollable .modal-footer {
+        padding: 0.4rem 1rem;
+      }
+      #modalPendaftaranPublic .modal-body,
+      .modal-dialog-scrollable .modal-body {
+        padding: 0.75rem 1rem !important;
+        max-height: calc(100vh - 105px);
+        max-height: calc(100dvh - 105px);
       }
     }
   </style>
@@ -901,8 +949,8 @@
       const activeMenu = document.getElementById('menu-' + page);
       if (activeMenu) activeMenu.classList.add('active');
 
-      // Auto-sembunyikan sidebar ketika menu diklik di HP
-      if (window.innerWidth <= 768) {
+      // Auto-sembunyikan sidebar ketika menu diklik di HP (portrait maupun landscape)
+      if (isMobileViewport()) {
         const sidebar = document.getElementById('sidebar');
         if (sidebar && sidebar.classList.contains('show')) {
           sidebar.classList.remove('show');
@@ -1007,12 +1055,16 @@
       });
     }
     
+    function isMobileViewport() {
+      return window.innerWidth <= 768 || (window.innerWidth <= 932 && window.innerHeight <= 550);
+    }
+
     // Toggle sidebar (mobile & desktop)
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('.main-content');
       
-      if (window.innerWidth <= 768) {
+      if (isMobileViewport()) {
         sidebar.classList.toggle('show');
       } else {
         sidebar.classList.toggle('hide-desktop');
@@ -1022,7 +1074,7 @@
 
     // Auto-tutup sidebar jika klik di luar area sidebar pada layar HP
     document.addEventListener('click', function(e) {
-      if (window.innerWidth <= 768) {
+      if (isMobileViewport()) {
         const sidebar = document.getElementById('sidebar');
         const isToggleBtn = e.target.closest('[onclick*="toggleSidebar"]');
         if (sidebar && sidebar.classList.contains('show') && !sidebar.contains(e.target) && !isToggleBtn) {
