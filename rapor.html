@@ -97,19 +97,19 @@ function loadRaporPage() {
             </div>
           </div>
 
-          <!-- Petunjuk Bobot Nilai & Rumus -->
+          <!-- Petunjuk Bobot Nilai & Pintasan Keyboard -->
           <div class="alert alert-secondary py-2 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="font-size: 0.85rem;">
             <div class="d-flex flex-wrap align-items-center gap-2">
-              <strong class="text-dark"><i class="fas fa-info-circle text-primary me-1"></i> Poin Nilai BCK:</strong>
-              <span class="badge bg-success px-2 py-1">B : 95</span>
-              <span class="badge bg-info text-dark px-2 py-1">B- : 90</span>
-              <span class="badge bg-primary px-2 py-1">C+ : 83</span>
-              <span class="badge bg-warning text-dark px-2 py-1">C : 80</span>
-              <span class="badge bg-secondary px-2 py-1">C- : 73</span>
-              <span class="badge bg-danger px-2 py-1">K : 70</span>
+              <strong class="text-dark"><i class="fas fa-keyboard text-primary me-1"></i> Pintasan Keyboard (F&ndash;L) &amp; Poin BCK:</strong>
+              <span class="badge bg-success px-2 py-1"><kbd class="bg-dark text-white me-1">F</kbd> B : 95</span>
+              <span class="badge bg-info text-dark px-2 py-1"><kbd class="bg-dark text-white me-1">G</kbd> B- : 90</span>
+              <span class="badge bg-primary px-2 py-1"><kbd class="bg-dark text-white me-1">H</kbd> C+ : 83</span>
+              <span class="badge bg-warning text-dark px-2 py-1"><kbd class="bg-dark text-white me-1">J</kbd> C : 80</span>
+              <span class="badge bg-secondary px-2 py-1"><kbd class="bg-dark text-white me-1">K</kbd> C- : 73</span>
+              <span class="badge bg-danger px-2 py-1"><kbd class="bg-dark text-white me-1">L</kbd> K : 70</span>
             </div>
             <div class="fst-italic text-muted">
-              <strong>Rumus:</strong> Poin BCK = Total Nilai ÷ Jumlah Tatap Muka
+              <strong>Rumus:</strong> Poin BCK = Total Nilai &divide; Jumlah Tatap Muka
             </div>
           </div>
 
@@ -2756,6 +2756,7 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
   });
 
   currentBupresData = filteredSantri;
+  _bupresKeyUndoStack = [];
   if (searchContainer) {
     searchContainer.style.display = 'flex';
     const infoCount = document.getElementById('bp_info_count');
@@ -2763,6 +2764,93 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
   }
 
   let html = `
+    <style>
+      .bp-active-row {
+        background-color: #e7f1ff !important;
+        box-shadow: inset 4px 0 0 #0d6efd;
+      }
+      .bp-active-row td {
+        background-color: #e7f1ff !important;
+      }
+      .bp-key-btn {
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+        user-select: none;
+      }
+      .bp-key-btn.bp-key-flash {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.45) !important;
+      }
+      .bp-inp-flash {
+        background-color: #d1e7dd !important;
+        border-color: #198754 !important;
+        transition: background-color 0.15s ease;
+      }
+    </style>
+
+    <!-- Panel Mode Pintasan Keyboard (Key Event Handler F - L) -->
+    <div id="bp_key_listener_panel" class="card border-primary shadow-sm mb-3 sticky-top" style="top: 8px; z-index: 10;">
+      <div class="card-body p-2 px-3 bg-white rounded">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-2 mb-2 border-bottom">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="bp_key_mode_toggle" checked onchange="onToggleBupresKeyMode()">
+              <label class="form-check-label fw-bold text-primary small" for="bp_key_mode_toggle">
+                <i class="fas fa-keyboard me-1"></i>Pintasan Keyboard (F&ndash;L)
+              </label>
+            </div>
+            <span class="text-muted small">|</span>
+            <div class="small">
+              <span class="text-muted">Santri Aktif:</span>
+              <strong id="bp_active_santri_label" class="text-dark ms-1">-</strong>
+              <span id="bp_active_santri_tm" class="badge bg-secondary ms-1 font-monospace">0/0</span>
+              <span id="bp_active_santri_poin" class="badge bg-secondary ms-1">0.00</span>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-1 flex-wrap">
+            <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2 small" onclick="pilihSantriBupresRelative(-1)" title="Santri Sebelumnya (Panah Atas ↑)">
+              <i class="fas fa-arrow-up"></i> <span class="d-none d-sm-inline">Sebelumnya</span>
+            </button>
+            <button type="button" class="btn btn-xs btn-primary py-1 px-2 small fw-semibold" onclick="pilihSantriBupresRelative(1)" title="Santri Berikutnya (Enter / Panah Bawah ↓)">
+              <span class="d-none d-sm-inline">Berikutnya</span> <i class="fas fa-arrow-down"></i>
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-warning text-dark py-1 px-2 small ms-1" onclick="undoLastBupresKey()" title="Batalkan tekan tombol terakhir (Backspace)">
+              <i class="fas fa-undo me-1"></i>Undo <kbd class="bg-secondary text-white" style="font-size:0.65rem;">Bksp</kbd>
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-danger py-1 px-2 small" onclick="resetBupresSantriAktif()" title="Nol-kan semua nilai BCK santri aktif ini">
+              <i class="fas fa-eraser me-1"></i>Reset 0
+            </button>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div class="d-flex flex-wrap gap-1 align-items-center">
+            <button type="button" id="bp_keybtn_F" class="btn btn-sm btn-success py-1 px-2 bp-key-btn fw-semibold" onclick="triggerBupresKeyAction('bp-b', 1, 'F')" title="Tekan F untuk +1 nilai B (95)">
+              <kbd class="bg-dark text-white me-1">F</kbd> +1 <strong>B</strong> <small>(95)</small>
+            </button>
+            <button type="button" id="bp_keybtn_G" class="btn btn-sm btn-info text-dark py-1 px-2 bp-key-btn fw-semibold" onclick="triggerBupresKeyAction('bp-b-minus', 1, 'G')" title="Tekan G untuk +1 nilai B- (90)">
+              <kbd class="bg-dark text-white me-1">G</kbd> +1 <strong>B-</strong> <small>(90)</small>
+            </button>
+            <button type="button" id="bp_keybtn_H" class="btn btn-sm btn-primary py-1 px-2 bp-key-btn fw-semibold" onclick="triggerBupresKeyAction('bp-c-plus', 1, 'H')" title="Tekan H untuk +1 nilai C+ (83)">
+              <kbd class="bg-dark text-white me-1">H</kbd> +1 <strong>C+</strong> <small>(83)</small>
+            </button>
+            <button type="button" id="bp_keybtn_J" class="btn btn-sm btn-warning text-dark py-1 px-2 bp-key-btn fw-semibold" onclick="triggerBupresKeyAction('bp-c', 1, 'J')" title="Tekan J untuk +1 nilai C (80)">
+              <kbd class="bg-dark text-white me-1">J</kbd> +1 <strong>C</strong> <small>(80)</small>
+            </button>
+            <button type="button" id="bp_keybtn_K" class="btn btn-sm btn-secondary py-1 px-2 bp-key-btn fw-semibold" onclick="triggerBupresKeyAction('bp-c-minus', 1, 'K')" title="Tekan K untuk +1 nilai C- (73)">
+              <kbd class="bg-dark text-white me-1">K</kbd> +1 <strong>C-</strong> <small>(73)</small>
+            </button>
+            <button type="button" id="bp_keybtn_L" class="btn btn-sm btn-danger py-1 px-2 bp-key-btn fw-semibold" onclick="triggerBupresKeyAction('bp-k', 1, 'L')" title="Tekan L untuk +1 nilai K (70)">
+              <kbd class="bg-dark text-white me-1">L</kbd> +1 <strong>K</strong> <small>(70)</small>
+            </button>
+          </div>
+          <div class="text-muted" style="font-size: 0.75rem;">
+            <i class="fas fa-hand-pointer text-primary me-1"></i>Klik baris santri lalu tekan <kbd>F</kbd>&ndash;<kbd>L</kbd> | <kbd>Shift</kbd>+<kbd>F&ndash;L</kbd> kurangi (-1) | <kbd>Enter</kbd>/<kbd>&darr;</kbd> pindah anak
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="table-responsive shadow-sm border rounded">
       <table class="table table-bordered table-hover align-middle mb-0" id="bp_table">
         <thead class="table-dark text-center align-middle sticky-top" style="z-index: 2; font-size: 0.85rem;">
@@ -2770,19 +2858,19 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
             <th style="width: 45px;" rowspan="2">No</th>
             <th style="width: 100px;" rowspan="2">NIS</th>
             <th style="min-width: 180px;" rowspan="2" class="text-start">Nama Santri</th>
-            <th colspan="6" class="bg-primary text-white py-1">Kategori Nilai BCK (Frekuensi / Kali)</th>
+            <th colspan="6" class="bg-primary text-white py-1">Kategori Nilai BCK (Frekuensi / Kali) &mdash; Pintasan Keyboard F s/d L</th>
             <th style="width: 95px;" rowspan="2">Total Nilai</th>
             <th style="width: 95px;" rowspan="2">Tatap Muka</th>
             <th style="width: 105px;" rowspan="2">Poin BCK</th>
             <th style="min-width: 150px;" rowspan="2">Catatan (Opsional)</th>
           </tr>
           <tr>
-            <th style="width: 70px;" class="bg-success text-white py-1" title="Bobot 95 poin">B (95)</th>
-            <th style="width: 70px;" class="bg-info text-dark py-1" title="Bobot 90 poin">B- (90)</th>
-            <th style="width: 70px;" class="bg-primary text-white py-1" title="Bobot 83 poin">C+ (83)</th>
-            <th style="width: 70px;" class="bg-warning text-dark py-1" title="Bobot 80 poin">C (80)</th>
-            <th style="width: 70px;" class="bg-secondary text-white py-1" title="Bobot 73 poin">C- (73)</th>
-            <th style="width: 70px;" class="bg-danger text-white py-1" title="Bobot 70 poin">K (70)</th>
+            <th style="width: 74px;" class="bg-success text-white py-1" title="Tekan F untuk +1 B (95 poin)">B (95)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Tombol F</kbd></th>
+            <th style="width: 74px;" class="bg-info text-dark py-1" title="Tekan G untuk +1 B- (90 poin)">B- (90)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Tombol G</kbd></th>
+            <th style="width: 74px;" class="bg-primary text-white py-1" title="Tekan H untuk +1 C+ (83 poin)">C+ (83)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Tombol H</kbd></th>
+            <th style="width: 74px;" class="bg-warning text-dark py-1" title="Tekan J untuk +1 C (80 poin)">C (80)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Tombol J</kbd></th>
+            <th style="width: 74px;" class="bg-secondary text-white py-1" title="Tekan K untuk +1 C- (73 poin)">C- (73)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Tombol K</kbd></th>
+            <th style="width: 74px;" class="bg-danger text-white py-1" title="Tekan L untuk +1 K (70 poin)">K (70)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Tombol L</kbd></th>
           </tr>
         </thead>
         <tbody>
@@ -2802,42 +2890,47 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
     const catatanVal = saved.catatan || '';
 
     html += `
-      <tr id="row_bp_${nis}" data-nis="${nis}" data-nama="${nama.toLowerCase()}">
+      <tr id="row_bp_${nis}" data-nis="${nis}" data-idx="${idx + 1}" data-nama-asli="${nama.replace(/"/g, '&quot;')}" data-nama="${nama.toLowerCase()}" onclick="setActiveBupresSantri('${nis}')" style="cursor: pointer;">
         <td class="text-center text-muted fw-bold align-middle">${idx + 1}</td>
         <td class="text-center font-monospace small align-middle">${nis}</td>
         <td class="align-middle">
-          <div class="fw-bold text-dark">${nama}</div>
+          <div class="d-flex align-items-center justify-content-between gap-1">
+            <div class="fw-bold text-dark">${nama}</div>
+            <span class="badge bg-primary bp-row-active-indicator" id="bp_ind_${nis}" style="display:none; font-size:0.68rem;">
+              <i class="fas fa-keyboard me-1"></i>Aktif
+            </span>
+          </div>
         </td>
         
-        <!-- B : 95 -->
+        <!-- B : 95 (Key F) -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-b" 
-                 data-nis="${nis}" value="${bVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
+                 data-nis="${nis}" value="${bVal}" onfocus="setActiveBupresSantri('${nis}')" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
-        <!-- B- : 90 -->
+        <!-- B- : 90 (Key G) -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-b-minus" 
-                 data-nis="${nis}" value="${bMinusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
+                 data-nis="${nis}" value="${bMinusVal}" onfocus="setActiveBupresSantri('${nis}')" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
-        <!-- C+ : 83 -->
+        <!-- C+ : 83 (Key H) -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-c-plus" 
-                 data-nis="${nis}" value="${cPlusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
+                 data-nis="${nis}" value="${cPlusVal}" onfocus="setActiveBupresSantri('${nis}')" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
-        <!-- C : 80 -->
+        <!-- C : 80 (Key J) -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-c" 
-                 data-nis="${nis}" value="${cVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
+                 data-nis="${nis}" value="${cVal}" onfocus="setActiveBupresSantri('${nis}')" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
-        <!-- C- : 73 -->
+        <!-- C- : 73 (Key K) -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-c-minus" 
-                 data-nis="${nis}" value="${cMinusVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
+                 data-nis="${nis}" value="${cMinusVal}" onfocus="setActiveBupresSantri('${nis}')" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
-        <!-- K : 70 -->
+        <!-- K : 70 (Key L) -->
         <td class="text-center p-1 align-middle">
           <input type="number" min="0" class="form-control form-control-sm text-center fw-semibold bp-inp bp-k" 
-                 data-nis="${nis}" value="${kVal}" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
+                 data-nis="${nis}" value="${kVal}" onfocus="setActiveBupresSantri('${nis}')" onclick="this.select()" oninput="hitungBupresSantri('${nis}', this)">
         </td>
 
         <!-- Total Nilai -->
@@ -2858,7 +2951,7 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
         <!-- Catatan -->
         <td class="p-1 align-middle">
           <input type="text" class="form-control form-control-sm" id="bp_catatan_${nis}" 
-                 placeholder="Catatan..." value="${catatanVal}">
+                 onfocus="setActiveBupresSantri('${nis}')" placeholder="Catatan..." value="${catatanVal}">
         </td>
       </tr>
     `;
@@ -2870,7 +2963,7 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
     </div>
     
     <div class="d-flex justify-content-between align-items-center mt-3">
-      <small class="text-muted"><i class="fas fa-lightbulb text-warning me-1"></i> Klik atau gunakan tombol <strong>Tab</strong> untuk berpindah antar kolom nilai secara cepat.</small>
+      <small class="text-muted"><i class="fas fa-keyboard text-primary me-1"></i> Klik baris santri lalu gunakan tombol <strong>F, G, H, J, K, L</strong> pada keyboard untuk menambah nilai secara cepat tanpa kerja 2x.</small>
       <button class="btn btn-success fw-bold shadow-sm" onclick="simpanSemuaBupres()">
         <i class="fas fa-save me-1"></i> Simpan Semua Bupres (${filteredSantri.length} Santri)
       </button>
@@ -2878,7 +2971,14 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
   `;
 
   container.innerHTML = html;
+  ensureBupresKeyListenerAttached();
   recalculateAllBupres();
+
+  // Pilih santri pertama secara otomatis
+  if (filteredSantri.length > 0) {
+    const firstNis = String(filteredSantri[0].NIS || filteredSantri[0].nis || filteredSantri[0].Nis || '').trim();
+    if (firstNis) setActiveBupresSantri(firstNis, false);
+  }
 }
 
 function onBupresTatapMukaInput() {
@@ -2996,6 +3096,267 @@ function hitungBupresSantri(nis, changedInput) {
       poinBadge.className = 'badge fs-6 px-2 py-1 bg-secondary';
     }
   }
+
+  // Jika baris ini adalah santri yang sedang aktif di Key Listener, perbarui info panel atas
+  if (typeof _activeBupresNis !== 'undefined' && _activeBupresNis === nis) {
+    updateActiveBupresPanelInfo(nis);
+  }
+}
+
+// =========================================================
+// ===== KEY EVENT HANDLER (F - L) INPUT BUPRES PER ANAK ===
+// =========================================================
+
+let _activeBupresNis = '';
+let _bupresKeyUndoStack = [];
+
+function onToggleBupresKeyMode() {
+  const toggle = document.getElementById('bp_key_mode_toggle');
+  const isEnabled = toggle ? toggle.checked : false;
+  if (isEnabled) {
+    showToast('Pintasan Keyboard Bupres (F–L) diaktifkan', 'info');
+  } else {
+    showToast('Pintasan Keyboard Bupres (F–L) dinonaktifkan', 'warning');
+  }
+}
+
+function setActiveBupresSantri(nis, shouldScroll) {
+  if (!nis) return;
+  _activeBupresNis = String(nis).trim();
+
+  const allRows = document.querySelectorAll('#bp_table tbody tr');
+  allRows.forEach(r => {
+    const rNis = r.getAttribute('data-nis');
+    const ind = document.getElementById('bp_ind_' + rNis);
+    if (rNis === _activeBupresNis) {
+      r.classList.add('bp-active-row');
+      if (ind) ind.style.display = 'inline-block';
+      if (shouldScroll) {
+        r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      r.classList.remove('bp-active-row');
+      if (ind) ind.style.display = 'none';
+    }
+  });
+
+  updateActiveBupresPanelInfo(_activeBupresNis);
+}
+
+function updateActiveBupresPanelInfo(nis) {
+  const row = document.getElementById('row_bp_' + nis);
+  if (!row) return;
+
+  const idx = row.getAttribute('data-idx') || '';
+  const nama = row.getAttribute('data-nama-asli') || '-';
+  const countBadge = document.getElementById('bp_count_badge_' + nis);
+  const poinBadge = document.getElementById('bp_poin_badge_' + nis);
+
+  const labelEl = document.getElementById('bp_active_santri_label');
+  const tmEl = document.getElementById('bp_active_santri_tm');
+  const poinEl = document.getElementById('bp_active_santri_poin');
+
+  if (labelEl) {
+    labelEl.textContent = `${idx ? idx + '. ' : ''}${nama} (${nis})`;
+  }
+  if (tmEl && countBadge) {
+    tmEl.textContent = countBadge.textContent;
+    tmEl.className = countBadge.className + ' ms-1';
+  }
+  if (poinEl && poinBadge) {
+    poinEl.textContent = 'Poin: ' + poinBadge.textContent;
+    poinEl.className = poinBadge.className.replace('fs-6', '') + ' ms-1';
+  }
+}
+
+function getVisibleBupresRows() {
+  const allRows = Array.from(document.querySelectorAll('#bp_table tbody tr'));
+  return allRows.filter(r => r.style.display !== 'none');
+}
+
+function pilihSantriBupresRelative(step) {
+  const visibleRows = getVisibleBupresRows();
+  if (visibleRows.length === 0) return;
+
+  let curIdx = visibleRows.findIndex(r => r.getAttribute('data-nis') === _activeBupresNis);
+  if (curIdx === -1) {
+    curIdx = 0;
+  } else {
+    curIdx = curIdx + step;
+    if (curIdx < 0) curIdx = 0;
+    if (curIdx >= visibleRows.length) curIdx = visibleRows.length - 1;
+  }
+
+  const targetNis = visibleRows[curIdx].getAttribute('data-nis');
+  if (targetNis) {
+    if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('bp-inp')) {
+      document.activeElement.blur();
+    }
+    setActiveBupresSantri(targetNis, true);
+  }
+}
+
+function triggerBupresKeyAction(colClass, delta, keyChar) {
+  if (!_activeBupresNis) {
+    const visibleRows = getVisibleBupresRows();
+    if (visibleRows.length > 0) {
+      setActiveBupresSantri(visibleRows[0].getAttribute('data-nis'), false);
+    }
+  }
+  if (!_activeBupresNis) return;
+
+  const row = document.getElementById('row_bp_' + _activeBupresNis);
+  if (!row) return;
+
+  const inp = row.querySelector('.' + colClass);
+  if (!inp) return;
+
+  // Blur input angka agar tidak bentrok dengan ketikan manual
+  if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('bp-inp')) {
+    document.activeElement.blur();
+  }
+
+  const prevVal = parseInt(inp.value) || 0;
+  const nextVal = Math.max(0, prevVal + delta);
+  inp.value = nextVal;
+
+  hitungBupresSantri(_activeBupresNis, inp);
+
+  const finalVal = parseInt(inp.value) || 0;
+  if (finalVal !== prevVal) {
+    _bupresKeyUndoStack.push({
+      nis: _activeBupresNis,
+      colClass: colClass,
+      prevVal: prevVal,
+      newVal: finalVal
+    });
+    if (_bupresKeyUndoStack.length > 100) _bupresKeyUndoStack.shift();
+  }
+
+  // Efek visual flash pada input & tombol pintasan
+  inp.classList.add('bp-inp-flash');
+  setTimeout(() => inp.classList.remove('bp-inp-flash'), 180);
+
+  if (keyChar) {
+    const btnEl = document.getElementById('bp_keybtn_' + keyChar.toUpperCase());
+    if (btnEl) {
+      btnEl.classList.add('bp-key-flash');
+      setTimeout(() => btnEl.classList.remove('bp-key-flash'), 160);
+    }
+  }
+}
+
+function undoLastBupresKey() {
+  if (_bupresKeyUndoStack.length === 0) {
+    showToast('Belum ada riwayat pintasan untuk di-undo', 'info');
+    return;
+  }
+
+  const lastAction = _bupresKeyUndoStack.pop();
+  if (!lastAction || !lastAction.nis) return;
+
+  setActiveBupresSantri(lastAction.nis, true);
+  const row = document.getElementById('row_bp_' + lastAction.nis);
+  if (!row) return;
+
+  const inp = row.querySelector('.' + lastAction.colClass);
+  if (!inp) return;
+
+  inp.value = lastAction.prevVal;
+  hitungBupresSantri(lastAction.nis, inp);
+
+  inp.classList.add('bp-inp-flash');
+  setTimeout(() => inp.classList.remove('bp-inp-flash'), 200);
+}
+
+function resetBupresSantriAktif() {
+  if (!_activeBupresNis) return;
+  const row = document.getElementById('row_bp_' + _activeBupresNis);
+  if (!row) return;
+
+  const nama = row.getAttribute('data-nama-asli') || 'Santri ini';
+  const inputs = row.querySelectorAll('.bp-inp');
+  inputs.forEach(inp => {
+    inp.value = 0;
+  });
+  hitungBupresSantri(_activeBupresNis);
+  showToast(`Nilai Bupres ${nama} di-reset ke 0`, 'info');
+}
+
+function ensureBupresKeyListenerAttached() {
+  if (window._bupresKeydownListenerRegistered) return;
+  window._bupresKeydownListenerRegistered = true;
+
+  document.addEventListener('keydown', function(e) {
+    // Pastikan tab Input Bupres sedang aktif dan terlihat
+    const tabPane = document.getElementById('tabInputBupres');
+    if (!tabPane || !tabPane.classList.contains('active') || tabPane.offsetParent === null) return;
+
+    // Pastikan toggle pintasan keyboard aktif
+    const toggle = document.getElementById('bp_key_mode_toggle');
+    if (toggle && !toggle.checked) return;
+
+    // Abaikan jika ada modal terbuka atau kombinasi Ctrl / Alt / Meta
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (document.querySelector('.modal.show')) return;
+
+    // Cek elemen yang sedang fokus
+    const activeEl = document.activeElement;
+    if (activeEl) {
+      const tag = (activeEl.tagName || '').toUpperCase();
+      const id = activeEl.id || '';
+      const isBupresNumberInput = activeEl.classList && activeEl.classList.contains('bp-inp');
+
+      // Jika sedang mengetik di kotak pencarian, catatan, TA, atau tatap muka, biarkan mengetik normal
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isBupresNumberInput && id !== 'bp_key_mode_toggle') {
+        return;
+      }
+
+      // Jika fokus ada di salah satu input angka Bupres, pastikan santri baris tersebut menjadi aktif
+      if (isBupresNumberInput) {
+        const focusedNis = activeEl.getAttribute('data-nis');
+        if (focusedNis && focusedNis !== _activeBupresNis) {
+          setActiveBupresSantri(focusedNis, false);
+        }
+      }
+    }
+
+    const keyUpper = (e.key || '').toUpperCase();
+    const keyMap = {
+      'F': 'bp-b',
+      'G': 'bp-b-minus',
+      'H': 'bp-c-plus',
+      'J': 'bp-c',
+      'K': 'bp-c-minus',
+      'L': 'bp-k'
+    };
+
+    if (keyMap[keyUpper]) {
+      e.preventDefault();
+      const delta = e.shiftKey ? -1 : 1;
+      triggerBupresKeyAction(keyMap[keyUpper], delta, keyUpper);
+      return;
+    }
+
+    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      pilihSantriBupresRelative(1);
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      pilihSantriBupresRelative(-1);
+      return;
+    }
+
+    // Backspace untuk Undo jika tidak sedang mengedit angka manual di dalam kotak input
+    const isEditingNumberInput = activeEl && activeEl.classList && activeEl.classList.contains('bp-inp');
+    if (e.key === 'Backspace' && !isEditingNumberInput) {
+      e.preventDefault();
+      undoLastBupresKey();
+    }
+  });
 }
 
 function filterBupresTable() {
