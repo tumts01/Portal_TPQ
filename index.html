@@ -5949,7 +5949,7 @@ function loadRaporPage() {
                     <option value="">-- Pilih Kelas --</option>
                   </select>
                 </div>
-                <div class="col-md-3 col-12">
+                <div class="col-md-3 col-12" id="bp_tm_config_col">
                   <label class="form-label fw-bold small mb-1 d-flex justify-content-between align-items-center">
                     <span><i class="fas fa-users-cog text-success me-1"></i> Jml Tatap Muka:</span>
                     <span id="bp_tm_badge" class="badge bg-secondary" style="font-size: 0.7rem;"></span>
@@ -5962,7 +5962,7 @@ function loadRaporPage() {
                   </div>
                   <small class="text-muted" id="bp_tm_hint" style="font-size: 0.75rem;">Ditentukan oleh Admin</small>
                 </div>
-                <div class="col-md-4 col-12 d-flex gap-2">
+                <div class="col-md-4 col-12 d-flex gap-2 ms-auto">
                   <button class="btn btn-sm btn-success flex-grow-1 fw-bold shadow-sm" onclick="simpanSemuaBupres()">
                     <i class="fas fa-save me-1"></i> Simpan Semua Bupres
                   </button>
@@ -5977,13 +5977,13 @@ function loadRaporPage() {
           <!-- Petunjuk Bobot Nilai & Pintasan Keyboard -->
           <div class="alert alert-secondary py-2 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="font-size: 0.85rem;">
             <div class="d-flex flex-wrap align-items-center gap-2">
-              <strong class="text-dark"><i class="fas fa-keyboard text-primary me-1"></i> Pintasan Keyboard (F&ndash;L) &amp; Poin BCK:</strong>
-              <span class="badge bg-success px-2 py-1"><kbd class="bg-dark text-white me-1">F</kbd> B : 95</span>
-              <span class="badge bg-info text-dark px-2 py-1"><kbd class="bg-dark text-white me-1">G</kbd> B- : 90</span>
-              <span class="badge bg-primary px-2 py-1"><kbd class="bg-dark text-white me-1">H</kbd> C+ : 83</span>
-              <span class="badge bg-warning text-dark px-2 py-1"><kbd class="bg-dark text-white me-1">J</kbd> C : 80</span>
-              <span class="badge bg-secondary px-2 py-1"><kbd class="bg-dark text-white me-1">K</kbd> C- : 73</span>
-              <span class="badge bg-danger px-2 py-1"><kbd class="bg-dark text-white me-1">L</kbd> K : 70</span>
+              <strong class="text-dark"><i class="fas fa-keyboard text-primary me-1"></i> Pintasan Angka (1&ndash;6) &amp; Poin BCK:</strong>
+              <span class="badge bg-success px-2 py-1"><kbd class="bg-dark text-white me-1">1</kbd> B : 95</span>
+              <span class="badge bg-info text-dark px-2 py-1"><kbd class="bg-dark text-white me-1">2</kbd> B- : 90</span>
+              <span class="badge bg-primary px-2 py-1"><kbd class="bg-dark text-white me-1">3</kbd> C+ : 83</span>
+              <span class="badge bg-warning text-dark px-2 py-1"><kbd class="bg-dark text-white me-1">4</kbd> C : 80</span>
+              <span class="badge bg-secondary px-2 py-1"><kbd class="bg-dark text-white me-1">5</kbd> C- : 73</span>
+              <span class="badge bg-danger px-2 py-1"><kbd class="bg-dark text-white me-1">6</kbd> K : 70</span>
             </div>
             <div class="fst-italic text-muted">
               <strong>Rumus:</strong> Poin BCK = Total Nilai &divide; Jumlah Tatap Muka
@@ -6186,11 +6186,15 @@ function loadRaporPage() {
     }
   }).getConfig();
   
-  // Set role-based permissions untuk Bupres Tatap Muka
+  // Set role-based permissions untuk Bupres Tatap Muka (hanya ditampilkan untuk Admin)
   const isSuperAdmin = currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin');
+  const bpTmCol = document.getElementById('bp_tm_config_col');
   const bpTmInput = document.getElementById('bp_tatap_muka');
   const bpBtnSaveTm = document.getElementById('bp_btn_save_tm');
   const bpTmHint = document.getElementById('bp_tm_hint');
+  if (bpTmCol) {
+    bpTmCol.style.display = isSuperAdmin ? '' : 'none';
+  }
   if (bpTmInput) {
     if (isSuperAdmin) {
       bpTmInput.readOnly = false;
@@ -6201,7 +6205,6 @@ function loadRaporPage() {
       bpTmInput.readOnly = true;
       bpTmInput.classList.add('bg-light');
       if (bpBtnSaveTm) bpBtnSaveTm.style.display = 'none';
-      if (bpTmHint) bpTmHint.innerHTML = '<span class="text-secondary"><i class="fas fa-lock me-1"></i> Ditentukan oleh Admin</span>';
     }
   }
 
