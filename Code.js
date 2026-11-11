@@ -1206,6 +1206,9 @@ function deleteMateriKelas(idMateri) {
 // ===== PRESENSI =====
 
 function savePresensiSantri(data) {
+  if (presensiModeBaru_()) {
+    try { return presensiSimpanBatch_([data]); } catch (e) { return { success: false, message: e.toString() }; }
+  }
   try {
     const sheet = SHEETS.presensiSantri;
     const newRow = [
@@ -1228,6 +1231,9 @@ function savePresensiSantri(data) {
 }
 
 function savePresensiSantriBatch(dataArray) {
+  if (presensiModeBaru_()) {
+    try { return presensiSimpanBatch_(dataArray); } catch (err) { throw new Error(err.message); }
+  }
   try {
     if (!dataArray || dataArray.length === 0) return { success: true, message: 'Tidak ada data untuk disimpan' };
     
@@ -1323,6 +1329,7 @@ function getPresensiSantriByTA(kelas, tahunAjaran) {
  */
 function getRekapPresensiSantriByNIS(nis, namaSantri, tahunAjaran) {
   try {
+    if (presensiModeBaru_()) return presensiRekapByNis_(nis, namaSantri, tahunAjaran);
     const sheet = SHEETS.presensiSantri;
     const data = sheet.getDataRange().getValues();
     const targetNis = String(nis || '').trim();
@@ -1844,8 +1851,10 @@ function getDataCetakRapor(kelas, tahunAjaran) {
     }
 
     // Ambil Presensi Santri (cocokkan kelas ATAU NIS ATAU Nama santri di kelas ini)
-    const presensiData = SHEETS.presensiSantri.getDataRange().getValues();
-    const absenList = [];
+    // Mode BARU: hanya baris ketidakhadiran (S/I/A) yang dibaca dari Presensi_Ketidakhadiran.
+    const presensiBaru = presensiModeBaru_();
+    const presensiData = presensiBaru ? [] : SHEETS.presensiSantri.getDataRange().getValues();
+    let absenList = [];
     for (let i = 1; i < presensiData.length; i++) {
       const row = presensiData[i];
       if (!row[3] && !row[4]) continue;
@@ -1864,6 +1873,9 @@ function getDataCetakRapor(kelas, tahunAjaran) {
           tahun_ajaran: rTA
         });
       }
+    }
+    if (presensiBaru) {
+      absenList = presensiAbsenUntukRapor_(kelas, targetTA, santriNisSet, santriNamaSet);
     }
 
     return {
@@ -2508,6 +2520,7 @@ function getPresensiGuruByMonth(bulan, tahun) {
 }
 
 function getPresensiGuruByGuru(namaGuru, bulan, tahun) {
+  if (presensiModeBaru_()) return presensiGuruByGuru_(namaGuru, bulan, tahun);
   const data = SHEETS.presensiSantri.getDataRange().getValues();
   const result = [];
   const uniqueSessions = new Set();
@@ -2764,6 +2777,7 @@ function updatePayment(nama, tipeTagihan, bulan, tanggalPembayaran) {
 
 
 function getJurnalKelas() {
+  if (presensiModeBaru_()) return presensiJurnalKelas_();
   const data = SHEETS.presensiSantri.getDataRange().getValues();
   const latestByKelas = {};
   for (let i = 1; i < data.length; i++) {
@@ -2816,6 +2830,7 @@ function getJurnalKelas() {
 
 
 function getUniqueKelasFromPresensi() {
+  if (presensiModeBaru_()) return presensiKelasUnik_();
   const data = SHEETS.presensiSantri.getDataRange().getValues();
   const unique = new Set();
   for (let i = 1; i < data.length; i++) {
@@ -2909,9 +2924,10 @@ function getRekapDataKelas() {
     }
   }
 
-  // 3. Ambil data jurnal terakhir dari Presensi_Santri
-  const dataPresensi = SHEETS.presensiSantri.getDataRange().getValues();
-  const latestJurnal = {};
+  // 3. Ambil data jurnal terakhir dari Presensi_Santri (mode BARU: dari sheet Pertemuan)
+  const presensiBaruJurnal = presensiModeBaru_();
+  const dataPresensi = presensiBaruJurnal ? [] : SHEETS.presensiSantri.getDataRange().getValues();
+  const latestJurnal = presensiBaruJurnal ? presensiJurnalTerakhirMap_() : {};
   
   for (let i = 1; i < dataPresensi.length; i++) {
     const row = dataPresensi[i];

@@ -4963,20 +4963,11 @@ function loadRekapSantri() {
           return;
         }
       
-      // Group by NIS
+      // Server sudah mengembalikan total H/S/I/A per santri
       const grouped = {};
-      data.forEach(d => {
-        let key = (d.nis && d.nis !== '-') ? d.nis : (d.nama_santri + '_' + d.kelas);
-        if (!grouped[key]) {
-          grouped[key] = { nis: d.nis || '-', nama: d.nama_santri, kelas: d.kelas, H: 0, S: 0, I: 0, A: 0 };
-        }
-        let stat = d.status ? d.status.toString().toUpperCase().trim() : 'H';
-        if (stat.includes('HADIR')) stat = 'H';
-        if (stat.includes('SAKIT')) stat = 'S';
-        if (stat.includes('IZIN')) stat = 'I';
-        if (stat.includes('ALPHA') || stat.includes('ALFA')) stat = 'A';
-        if (!['H', 'S', 'I', 'A'].includes(stat)) stat = 'H';
-        grouped[key][stat]++;
+      data.forEach((d, idx) => {
+        const key = (d.nis && d.nis !== '-') ? d.nis : (d.nama_santri + '_' + d.kelas + '_' + idx);
+        grouped[key] = { nis: d.nis || '-', nama: d.nama_santri, kelas: d.kelas, H: d.H || 0, S: d.S || 0, I: d.I || 0, A: d.A || 0 };
       });
       
       container.innerHTML = `
@@ -5020,7 +5011,7 @@ function loadRekapSantri() {
       hideLoading();
       alert('Error: ' + e.message);
     })
-    .getPresensiSantriByTA(kelas, tahunAjaran);
+    .getRekapPresensiSantriKelas(kelas, tahunAjaran);
 }
 
 function loadRekapGuru() {
