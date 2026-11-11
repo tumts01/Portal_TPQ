@@ -5987,7 +5987,7 @@ function loadRaporPage() {
               <span class="badge bg-danger px-2 py-1"><kbd class="bg-dark text-white me-1">6</kbd> K : 70</span>
             </div>
             <div class="fst-italic text-muted">
-              <strong>Rumus:</strong> Poin BCK = Total Nilai &divide; Jumlah Tatap Muka
+              <strong>Rumus:</strong> Poin BCK = Total Nilai &divide; Jumlah Tatap Muka (Min. 70)
             </div>
           </div>
 
@@ -7071,8 +7071,10 @@ function hitungDataRaporSantri(santri, cache) {
   let nilaiHarian = 0;
   if (totalPoinBupres > 0 && targetTatapMuka > 0) {
     nilaiHarian = Number((totalPoinBupres / targetTatapMuka).toFixed(2));
+    if (nilaiHarian < 70) nilaiHarian = 70;
   } else if (Number(bupresRec.poin_bck) > 0) {
     nilaiHarian = Number(Number(bupresRec.poin_bck).toFixed(2));
+    if (nilaiHarian < 70) nilaiHarian = 70;
   }
   const catatanBupres = String(bupresRec.catatan || '').trim();
 
@@ -9017,8 +9019,9 @@ function hitungBupresSantri(nis, changedInput) {
   const totalNilai = (b * 95) + (bMinus * 90) + (cPlus * 83) + (c * 80) + (cMinus * 73) + (k * 70);
 
   let poinBCK = 0;
-  if (tatapMuka > 0) {
+  if (tatapMuka > 0 && totalNilai > 0) {
     poinBCK = Number((totalNilai / tatapMuka).toFixed(2));
+    if (poinBCK < 70) poinBCK = 70;
   }
 
   // Update Total Nilai
@@ -9677,7 +9680,7 @@ function exportBupresExcel() {
   exportData.push(['Tahun Ajaran', ta]);
   exportData.push(['Jumlah Tatap Muka', tatapMuka + ' Pertemuan']);
   exportData.push(['Standar Poin Nilai', 'B: 95 | B-: 90 | C+: 83 | C: 80 | C-: 73 | K: 70']);
-  exportData.push(['Rumus', 'Poin BCK = Total Nilai / Jumlah Tatap Muka']);
+  exportData.push(['Rumus', 'Poin BCK = Total Nilai / Jumlah Tatap Muka (Min. 70)']);
   exportData.push(['Waktu Export', new Date().toLocaleString('id-ID')]);
   exportData.push([]);
   exportData.push([
@@ -9698,7 +9701,9 @@ function exportBupresExcel() {
     const totalEntries = b + bMinus + cPlus + c + cMinus + k;
     const totalNilai = (b * 95) + (bMinus * 90) + (cPlus * 83) + (c * 80) + (cMinus * 73) + (k * 70);
     const tmInt = parseInt(tatapMuka) || 24;
-    const poin = tmInt > 0 ? (totalNilai / tmInt).toFixed(2) : '0';
+    let poinNum = (tmInt > 0 && totalNilai > 0) ? (totalNilai / tmInt) : 0;
+    if (poinNum > 0 && poinNum < 70) poinNum = 70;
+    const poin = poinNum > 0 ? poinNum.toFixed(2) : '0';
 
     exportData.push([
       idx + 1, nis, nama, b, bMinus, cPlus, c, cMinus, k, totalEntries, totalNilai, poin

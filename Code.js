@@ -1931,7 +1931,8 @@ function saveBatchBupres(bupresArray) {
       }
       
       const totalNilai = (b * 95) + (bMinus * 90) + (cPlus * 83) + (c * 80) + (cMinus * 73) + (k * 70);
-      const poinBCK = Number((totalNilai / tatapMuka).toFixed(2));
+      let poinBCK = Number((totalNilai / tatapMuka).toFixed(2));
+      if (totalNilai > 0 && poinBCK < 70) poinBCK = 70;
       
       const idBupres = d.id_bupres || ('BP' + Utilities.formatDate(now, 'GMT+7', 'yyyyMMddHHmmss') + '_' + idx);
       
