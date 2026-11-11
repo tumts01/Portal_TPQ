@@ -4579,6 +4579,7 @@ function loadPresensiPage() {
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRekapSantri">Rekap Santri</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabRekapGuru">Rekap Guru</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabJurnalKelas" onclick="loadJurnalKelas()">Jurnal Kelas</a></li>
+        <li class="nav-item" id="navTabDbPresensi" style="display:none;"><a class="nav-link" data-bs-toggle="tab" href="#tabDbPresensi" onclick="loadStatistikDbPresensi()"><i class="fas fa-database text-success me-1"></i>Mode Hemat Baris</a></li>
       </ul>
       
       <div class="tab-content mt-3">
@@ -4672,6 +4673,14 @@ function loadPresensiPage() {
           </div>
           <div id="jk_result"></div>
         </div>
+        <!-- Tab Mode Hemat Baris (Admin) -->
+        <div class="tab-pane fade" id="tabDbPresensi">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="fas fa-database text-success me-2"></i>Pengelolaan Database Presensi (Mode Hemat Baris)</h5>
+            <button class="btn btn-outline-primary btn-sm" onclick="loadStatistikDbPresensi()"><i class="fas fa-sync"></i> Refresh Status</button>
+          </div>
+          <div id="db_presensi_result"></div>
+        </div>
       </div>
     </div>
   `;
@@ -4687,7 +4696,9 @@ function loadPresensiPage() {
   if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin')) {
     setTimeout(() => { 
       const btn = document.getElementById('btn_save_ta');
-      if (btn) btn.style.display = 'block'; 
+      if (btn) btn.style.display = 'block';
+      const navDb = document.getElementById('navTabDbPresensi');
+      if (navDb) navDb.style.display = 'block';
     }, 500);
   }
   
@@ -4756,10 +4767,13 @@ function loadPresensiPage() {
     showToast('Gagal memuat data guru: ' + e.message, 'error');
   }).getGuruList();
   
-  document.getElementById('formPresensiGuru').addEventListener('submit', function(e) {
-    e.preventDefault();
-    simpanPresensiGuru();
-  });
+  const fpg = document.getElementById('formPresensiGuru');
+  if (fpg) {
+    fpg.addEventListener('submit', function(e) {
+      e.preventDefault();
+      simpanPresensiGuru();
+    });
+  }
   
   // Expose cache to inner function
   window._presensiSantriCache = _presensiSantriCache;
@@ -5183,6 +5197,151 @@ function loadJurnalKelas() {
       alert("Error Jurnal Kelas: " + e.message);
     })
     .getJurnalKelas();
+}
+
+function loadStatistikDbPresensi() {
+  const container = document.getElementById('db_presensi_result');
+  if (!container) return;
+  container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-success"></div><p class="mt-2">Memuat statistik database presensi...</p></div>';
+
+  google.script.run
+    .withSuccessHandler(function(st) {
+      const isBaru = st && st.mode === 'BARU';
+      const lama = (st && st.baris_Presensi_Santri) || 0;
+      const bP = (st && st.baris_Pertemuan) || 0;
+      const bA = (st && st.baris_Presensi_Ketidakhadiran) || 0;
+      const totalBaru = bP + bA;
+      const hematPersen = (lama > 0 && totalBaru > 0) ? Math.round((1 - totalBaru / lama) * 1000) / 10 : 0;
+
+      container.innerHTML = `
+        <div class="alert ${isBaru ? 'alert-success' : 'alert-warning'} d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <h6 class="mb-1 fw-bold">
+              <i class="fas ${isBaru ? 'fa-check-circle' : 'fa-exclamation-circle'} me-1"></i>
+              Status Saat Ini: ${isBaru ? 'MODE HEMAT BARIS (AKTIF)' : 'MODE LAMA (1 Baris per Santri)'}
+            </h6>
+            <div class="small">
+              ${isBaru
+                ? 'Presensi baru disimpan ke sheet <b>Pertemuan</b> (1 baris/kelas/hari) & <b>Presensi_Ketidakhadiran</b> (hanya santri S/I/A). Data lama di <b>Presensi_Santri</b> tetap tersimpan aman sebagai arsip.'
+                : 'Aplikasi masih memakai sheet <b>Presensi_Santri</b> (1 baris per santri setiap hadir). Aktifkan Mode Hemat Baris untuk menghemat hingga ~78% baris spreadsheet.'}
+            </div>
+          </div>
+          <div>
+            ${isBaru
+              ? `<button class="btn btn-outline-secondary btn-sm" onclick="ubahModePresensi('LAMA')"><i class="fas fa-undo me-1"></i>Kembali ke Mode Lama</button>`
+              : `<button class="btn btn-success btn-sm" onclick="ubahModePresensi('BARU')"><i class="fas fa-bolt me-1"></i>Aktifkan Mode Hemat Baris</button>`}
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-3">
+            <div class="p-3 border rounded bg-light text-center">
+              <div class="text-muted small">Sheet Lama (Presensi_Santri)</div>
+              <div class="fs-4 fw-bold text-secondary">${lama.toLocaleString('id-ID')}</div>
+              <div class="small text-muted">baris (Arsip Aman)</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 border rounded bg-white text-center">
+              <div class="text-muted small">Sheet Baru: Pertemuan</div>
+              <div class="fs-4 fw-bold text-primary">${bP.toLocaleString('id-ID')}</div>
+              <div class="small text-muted">baris (1 baris / kelas / hari)</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 border rounded bg-white text-center">
+              <div class="text-muted small">Sheet Baru: Ketidakhadiran</div>
+              <div class="fs-4 fw-bold text-warning">${bA.toLocaleString('id-ID')}</div>
+              <div class="small text-muted">baris (Hanya S / I / A)</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="p-3 border rounded bg-success bg-opacity-10 text-center">
+              <div class="text-success small fw-bold">Total Baris Mode Baru</div>
+              <div class="fs-4 fw-bold text-success">${totalBaru.toLocaleString('id-ID')}</div>
+              <div class="small text-success fw-semibold">${hematPersen > 0 ? 'Hemat ' + hematPersen + '% baris!' : 'Belum dimigrasi'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border">
+          <div class="card-body">
+            <h6 class="fw-bold mb-2"><i class="fas fa-tools me-1"></i> Alat Migrasi & Verifikasi Data</h6>
+            <p class="small text-muted mb-3">
+              Migrasi menyalin dan meringkas seluruh riwayat dari <code>Presensi_Santri</code> ke sheet <code>Pertemuan</code> dan <code>Presensi_Ketidakhadiran</code> tanpa menghapus satu baris pun dari <code>Presensi_Santri</code>.
+            </p>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-outline-primary btn-sm" onclick="jalankanSimulasiMigrasiPresensi()">
+                <i class="fas fa-search me-1"></i> Cek & Verifikasi Kecocokan Data
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="jalankanMigrasiPresensi()">
+                <i class="fas fa-sync-alt me-1"></i> ${bP > 0 ? 'Sinkronisasi / Migrasi Ulang dari Sheet Lama' : 'Jalankan Migrasi Sekarang'}
+              </button>
+            </div>
+            <div id="db_presensi_log" class="mt-3"></div>
+          </div>
+        </div>
+      `;
+    })
+    .withFailureHandler(function(e) {
+      container.innerHTML = '<div class="alert alert-danger">Gagal memuat statistik: ' + e.message + '</div>';
+    })
+    .presensiStatistik();
+}
+
+function jalankanSimulasiMigrasiPresensi() {
+  const logEl = document.getElementById('db_presensi_log');
+  if (logEl) logEl.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span> Memeriksa dan membandingkan seluruh data santri...</div>';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      const r = res.ringkasan || {};
+      const v = res.verifikasi_hitungan_per_santri || {};
+      if (logEl) {
+        logEl.innerHTML = `
+          <div class="alert ${v.berbeda === 0 ? 'alert-info' : 'alert-warning'} mb-0 small">
+            <strong>Hasil Simulasi & Verifikasi:</strong><br>
+            • Baris lama valid: <b>${(r.baris_lama_valid || 0).toLocaleString('id-ID')}</b> baris<br>
+            • Ringkasan baru: <b>${(r.pertemuan_baru || 0).toLocaleString('id-ID')}</b> baris Pertemuan + <b>${(r.ketidakhadiran_baru || 0).toLocaleString('id-ID')}</b> baris S/I/A = <b>${(r.total_baris_baru || 0).toLocaleString('id-ID')}</b> baris (Hemat <b>${r.penghematan_baris_persen || 0}%</b>)<br>
+            • Verifikasi H/S/I/A per santri: <b>${v.identik || 0} / ${v.santri_dibandingkan || 0} santri 100% identik</b> (${v.berbeda || 0} berbeda)
+          </div>
+        `;
+      }
+    })
+    .withFailureHandler(function(e) {
+      if (logEl) logEl.innerHTML = '<div class="alert alert-danger mb-0 small">Gagal simulasi: ' + e.message + '</div>';
+    })
+    .presensiMigrasiSimulasi();
+}
+
+function jalankanMigrasiPresensi() {
+  if (!confirm('Salin & ringkas data dari Presensi_Santri ke sheet Pertemuan dan Presensi_Ketidakhadiran sekarang? (Data lama di Presensi_Santri TIDAK akan dihapus)')) return;
+  showLoading('Menjalankan migrasi data presensi...');
+  google.script.run
+    .withSuccessHandler(function(res) {
+      hideLoading();
+      showToast('Migrasi selesai! Memperbarui status...', 'success');
+      loadStatistikDbPresensi();
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Gagal migrasi: ' + e.message, 'error');
+    })
+    .presensiMigrasiUlang();
+}
+
+function ubahModePresensi(modeTarget) {
+  const fn = modeTarget === 'BARU' ? 'presensiAktifkanModeBaru' : 'presensiKembaliKeModeLama';
+  showLoading('Mengubah mode database presensi...');
+  google.script.run
+    .withSuccessHandler(function(msg) {
+      hideLoading();
+      showToast(msg, 'success');
+      loadStatistikDbPresensi();
+    })
+    .withFailureHandler(function(e) {
+      hideLoading();
+      showToast('Gagal mengubah mode: ' + e.message, 'error');
+    })[fn]();
 }
 
 </script>
