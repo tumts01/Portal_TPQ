@@ -5903,6 +5903,7 @@ function loadRaporPage() {
       <ul class="nav nav-tabs">
         <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabInputNilai"><i class="fas fa-edit me-1"></i> Input Nilai</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabInputBupres"><i class="fas fa-book-reader me-1"></i> Input Bupres</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabPantauKenaikan"><i class="fas fa-chart-line me-1"></i> Pantau Kenaikan</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabCetakRapor"><i class="fas fa-print me-1"></i> Cetak Rapor</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabPengaturanMateri"><i class="fas fa-sliders-h me-1"></i> Pengaturan Materi</a></li>
       </ul>
@@ -6008,6 +6009,53 @@ function loadRaporPage() {
             <div class="text-center py-5 text-muted border rounded bg-light">
               <i class="fas fa-book-open fa-3x mb-3 text-secondary opacity-50"></i>
               <h6>Silakan pilih kelas terlebih dahulu untuk memulai pengisian Bupres.</h6>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Pantau Kenaikan -->
+        <div class="tab-pane fade" id="tabPantauKenaikan">
+          <div class="card border-0 shadow-sm bg-light mb-3">
+            <div class="card-body p-3">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-2 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-calendar-alt text-primary me-1"></i> Tahun Ajaran</label>
+                  <input type="text" class="form-control form-control-sm fw-semibold" id="pk_ta" value="20262" onchange="loadPantauKenaikanData()">
+                </div>
+                <div class="col-md-3 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-school text-success me-1"></i> Filter Kelas</label>
+                  <select class="form-select form-select-sm fw-semibold" id="pk_kelas" onchange="loadPantauKenaikanData()">
+                    <option value="">-- Pilih Kelas --</option>
+                  </select>
+                </div>
+                <div class="col-md-2 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-filter text-info me-1"></i> Keterangan</label>
+                  <select class="form-select form-select-sm" id="pk_status" onchange="renderPantauKenaikanTable()">
+                    <option value="ALL">Semua Keterangan</option>
+                    <option value="NAIK">Naik Kelas</option>
+                    <option value="MENGULANG">Mengulang</option>
+                  </select>
+                </div>
+                <div class="col-md-3 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-search text-secondary me-1"></i> Cari Nama Santri</label>
+                  <input type="text" class="form-control form-control-sm" id="pk_search" placeholder="Ketik nama santri..." oninput="renderPantauKenaikanTable()">
+                </div>
+                <div class="col-md-2 col-12 d-flex gap-1">
+                  <button type="button" class="btn btn-sm btn-primary fw-bold flex-fill shadow-sm" onclick="loadPantauKenaikanData()">
+                    <i class="fas fa-sync-alt me-1"></i> Muat
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-success fw-semibold shadow-sm" onclick="exportPantauKenaikanExcel()" title="Export ke Excel">
+                    <i class="fas fa-file-excel"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="pk_result">
+            <div class="text-center py-5 text-muted border rounded bg-light">
+              <i class="fas fa-chart-line fa-3x mb-3 text-secondary opacity-50"></i>
+              <h6>Silakan pilih kelas terlebih dahulu untuk memantau kenaikan kelas santri.</h6>
             </div>
           </div>
         </div>
@@ -6175,9 +6223,11 @@ function loadRaporPage() {
       const rnTa = document.getElementById('rn_ta');
       const crTa = document.getElementById('cr_ta');
       const bpTa = document.getElementById('bp_ta');
+      const pkTa = document.getElementById('pk_ta');
       if (rnTa) rnTa.value = activeTA;
       if (crTa) crTa.value = activeTA;
       if (bpTa) bpTa.value = activeTA;
+      if (pkTa) pkTa.value = activeTA;
 
       const crKepala = document.getElementById('cr_kepala');
       if (crKepala && (cfg.kepala_tpq || cfg.KEPALA_TPQ)) {
@@ -6218,9 +6268,14 @@ function loadRaporPage() {
     const rnKelas = document.getElementById('rn_kelas');
     const crKelas = document.getElementById('cr_kelas');
     const bpKelas = document.getElementById('bp_kelas');
+    const pkKelas = document.getElementById('pk_kelas');
     if (rnKelas) rnKelas.innerHTML = options;
     if (crKelas) crKelas.innerHTML = options;
     if (bpKelas) bpKelas.innerHTML = options;
+    if (pkKelas) {
+      pkKelas.innerHTML = '<option value="">-- Pilih Kelas --</option><option value="ALL">-- Semua Kelas --</option>' +
+        kNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    }
     
     // For Pengaturan Materi, load both Kelas and distinct categories from Materi_Kelas
     google.script.run.withSuccessHandler(function(materiKelasList) {
@@ -6901,9 +6956,17 @@ function prosesCetakRapor() {
 function hitungDataRaporSantri(santri, cache) {
   const nis = String(santri.NIS || santri.nis || santri.Nis || '').trim();
   const nama = String(santri.Nama_Santri || santri.nama_santri || santri.Nama || santri.nama || '-').trim();
-  const kelas = cache.kelas || santri.Kelas || santri.kelas || '-';
+  const santriKelas = String(santri.Kelas || santri.kelas || '').trim();
+  const kelas = cache.kelas || santriKelas || '-';
   const ta = cache.ta || '20262';
-  const materiList = cache.materiList || [];
+  let materiList = cache.materiList || [];
+  if ((!materiList || materiList.length === 0) && cache.materiByKelasMap && santriKelas) {
+    materiList = cache.materiByKelasMap[santriKelas] || [];
+    if (materiList.length === 0) {
+      const foundKey = Object.keys(cache.materiByKelasMap).find(k => isKelasMatch(k, santriKelas));
+      if (foundKey) materiList = cache.materiByKelasMap[foundKey] || [];
+    }
+  }
 
   // 1. Nilai Ujian & Sikap
   const nilaiSantri = (cache.nilaiList || []).filter(n => {
@@ -8770,7 +8833,6 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
             <th style="width: 95px;" rowspan="2">Total Nilai</th>
             <th style="width: 95px;" rowspan="2">Tatap Muka</th>
             <th style="width: 105px;" rowspan="2">Poin BCK</th>
-            <th style="min-width: 150px;" rowspan="2">Catatan (Opsional)</th>
           </tr>
           <tr>
             <th style="width: 74px;" class="bg-success text-white py-1" title="Tekan angka 1 untuk +1 B (95 poin)">B (95)<br><kbd class="bg-dark text-white" style="font-size:0.7rem;">Angka 1</kbd></th>
@@ -8854,12 +8916,6 @@ function renderBupresTable(allSantri, savedBupresList, kelas, ta) {
         <!-- Poin Nilai BCK -->
         <td class="text-center align-middle">
           <span class="badge fs-6 px-2 py-1" id="bp_poin_badge_${nis}">0.00</span>
-        </td>
-
-        <!-- Catatan -->
-        <td class="p-1 align-middle">
-          <input type="text" class="form-control form-control-sm" id="bp_catatan_${nis}" 
-                 onfocus="setActiveBupresSantri('${nis}')" placeholder="Catatan..." value="${catatanVal}">
         </td>
       </tr>
     `;
@@ -9627,7 +9683,7 @@ function exportBupresExcel() {
   exportData.push([
     'No', 'NIS', 'Nama Santri', 
     'B (95)', 'B- (90)', 'C+ (83)', 'C (80)', 'C- (73)', 'K (70)', 
-    'Total Pertemuan', 'Total Nilai', 'Poin Nilai BCK', 'Catatan'
+    'Total Pertemuan', 'Total Nilai', 'Poin Nilai BCK'
   ]);
 
   rows.forEach((r, idx) => {
@@ -9643,10 +9699,9 @@ function exportBupresExcel() {
     const totalNilai = (b * 95) + (bMinus * 90) + (cPlus * 83) + (c * 80) + (cMinus * 73) + (k * 70);
     const tmInt = parseInt(tatapMuka) || 24;
     const poin = tmInt > 0 ? (totalNilai / tmInt).toFixed(2) : '0';
-    const catatan = r.querySelector('#bp_catatan_' + nis) ? r.querySelector('#bp_catatan_' + nis).value.trim() : '';
 
     exportData.push([
-      idx + 1, nis, nama, b, bMinus, cPlus, c, cMinus, k, totalEntries, totalNilai, poin, catatan
+      idx + 1, nis, nama, b, bMinus, cPlus, c, cMinus, k, totalEntries, totalNilai, poin
     ]);
   });
 
@@ -9654,6 +9709,229 @@ function exportBupresExcel() {
   const ws = XLSX.utils.aoa_to_sheet(exportData);
   XLSX.utils.book_append_sheet(wb, ws, 'Bupres');
   const filename = `Bupres_${kelas.replace(/[^a-zA-Z0-9]/g, '_')}_${ta}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+// =========================================================
+// ===== PANTAU KENAIKAN KELAS =============================
+// =========================================================
+
+let _pantauKenaikanCache = null;
+
+function loadPantauKenaikanData() {
+  const kelasVal = document.getElementById('pk_kelas') ? document.getElementById('pk_kelas').value : '';
+  const ta = document.getElementById('pk_ta') ? document.getElementById('pk_ta').value.trim() : '';
+  const resContainer = document.getElementById('pk_result');
+
+  if (!kelasVal) {
+    if (resContainer) {
+      resContainer.innerHTML = `
+        <div class="text-center py-5 text-muted border rounded bg-light">
+          <i class="fas fa-chart-line fa-3x mb-3 text-secondary opacity-50"></i>
+          <h6>Silakan pilih kelas terlebih dahulu untuk memantau kenaikan kelas santri.</h6>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  const queryKelas = kelasVal === 'ALL' ? '' : kelasVal;
+  const labelKelas = kelasVal === 'ALL' ? 'Semua Kelas' : ('Kelas ' + kelasVal);
+
+  if (resContainer) {
+    resContainer.innerHTML = `
+      <div class="text-center py-5 border rounded bg-white shadow-sm">
+        <div class="spinner-border text-primary mb-2" role="status"></div>
+        <div class="fw-semibold text-muted">Memuat data Pantau Kenaikan <strong>${labelKelas}</strong>...</div>
+      </div>
+    `;
+  }
+
+  showLoading('Memuat data Pantau Kenaikan ' + labelKelas + '...');
+
+  google.script.run
+    .withSuccessHandler(function(payload) {
+      hideLoading();
+      if (!payload || !payload.success) {
+        if (resContainer) {
+          resContainer.innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${(payload && payload.message) || 'Tidak ada respon server'}</div>`;
+        }
+        return;
+      }
+
+      const santriList = payload.santriList || [];
+      const filteredSantri = santriList.filter(s => {
+        const sK = String(s.Kelas || s.kelas || '').trim();
+        if (!sK || sK === '-') return false;
+        const matchK = !queryKelas || isKelasMatch(sK, queryKelas);
+        const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
+        return matchK && (status === 'aktif' || status === '');
+      }).sort((a, b) => {
+        const kA = String(a.Kelas || a.kelas || '').trim();
+        const kB = String(b.Kelas || b.kelas || '').trim();
+        if (!queryKelas && kA !== kB) return kA.localeCompare(kB);
+        const nameA = String(a.Nama_Santri || a.nama_santri || a.Nama || a.nama || '').trim();
+        const nameB = String(b.Nama_Santri || b.nama_santri || b.Nama || b.nama || '').trim();
+        return nameA.localeCompare(nameB);
+      });
+
+      _pantauKenaikanCache = {
+        kelas: queryKelas,
+        kelasLabel: labelKelas,
+        ta: ta,
+        santriList: filteredSantri,
+        materiList: (payload.materiList || []).slice().sort((a, b) => (Number(a.urutan) || 0) - (Number(b.urutan) || 0)),
+        materiByKelasMap: payload.materiByKelasMap || {},
+        nilaiList: payload.nilaiList || [],
+        bupresList: payload.bupresList || [],
+        tmConfig: payload.tmConfig || { tatap_muka: 24 },
+        absenList: payload.absenList || []
+      };
+
+      renderPantauKenaikanTable();
+    })
+    .withFailureHandler(function(err) {
+      hideLoading();
+      if (resContainer) {
+        resContainer.innerHTML = `<div class="alert alert-danger">Gagal memuat data Pantau Kenaikan: ${err.message || err}</div>`;
+      }
+    })
+    .getDataCetakRapor(queryKelas, ta);
+}
+
+function getFilteredPantauKenaikanRows() {
+  if (!_pantauKenaikanCache) return { rows: [], totalAll: 0, totalNaik: 0, totalMengulang: 0 };
+
+  const statusFilter = document.getElementById('pk_status') ? document.getElementById('pk_status').value : 'ALL';
+  const keyword = (document.getElementById('pk_search') ? document.getElementById('pk_search').value : '').toLowerCase().trim();
+
+  const allComputed = (_pantauKenaikanCache.santriList || []).map(s => hitungDataRaporSantri(s, _pantauKenaikanCache));
+
+  const totalAll = allComputed.length;
+  const totalNaik = allComputed.filter(d => d.isNaikKelas).length;
+  const totalMengulang = totalAll - totalNaik;
+
+  const filtered = allComputed.filter(d => {
+    if (statusFilter === 'NAIK' && !d.isNaikKelas) return false;
+    if (statusFilter === 'MENGULANG' && d.isNaikKelas) return false;
+    if (keyword) {
+      const matchNama = String(d.nama || '').toLowerCase().includes(keyword);
+      const matchNis = String(d.nis || '').toLowerCase().includes(keyword);
+      const matchKelas = String(d.kelas || '').toLowerCase().includes(keyword);
+      if (!matchNama && !matchNis && !matchKelas) return false;
+    }
+    return true;
+  });
+
+  return {
+    rows: filtered,
+    totalAll,
+    totalNaik,
+    totalMengulang
+  };
+}
+
+function renderPantauKenaikanTable() {
+  const resContainer = document.getElementById('pk_result');
+  if (!resContainer || !_pantauKenaikanCache) return;
+
+  const { rows, totalAll, totalNaik, totalMengulang } = getFilteredPantauKenaikanRows();
+  const isAllKelas = !_pantauKenaikanCache.kelas;
+
+  let tbodyHtml = '';
+  if (rows.length === 0) {
+    tbodyHtml = `
+      <tr>
+        <td colspan="6" class="text-center py-4 text-muted">Tidak ada data santri yang sesuai dengan filter.</td>
+      </tr>
+    `;
+  } else {
+    rows.forEach((d, idx) => {
+      const ketBadge = d.isNaikKelas
+        ? `<span class="badge bg-success px-3 py-1">NAIK KELAS</span>`
+        : `<span class="badge bg-danger px-3 py-1">MENGULANG</span>`;
+      const kelasSub = isAllKelas ? `<span class="badge bg-light text-secondary border ms-2">${d.kelas}</span>` : '';
+
+      tbodyHtml += `
+        <tr>
+          <td class="text-center fw-semibold text-muted">${idx + 1}</td>
+          <td class="fw-bold text-dark">${d.nama}${kelasSub}</td>
+          <td class="text-center fw-semibold">${d.totalNilaiUjian}</td>
+          <td class="text-center fw-semibold">${d.bupres.nilaiHarian.toFixed(2)}</td>
+          <td class="text-center fw-bold ${d.isNaikKelas ? 'text-success' : 'text-danger'}">${d.hasilAkhir.toFixed(2)}</td>
+          <td class="text-center">${ketBadge}</td>
+        </tr>
+      `;
+    });
+  }
+
+  resContainer.innerHTML = `
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="badge bg-primary px-3 py-2">Total Santri: ${totalAll}</span>
+        <span class="badge bg-success px-3 py-2">Naik Kelas: ${totalNaik}</span>
+        <span class="badge bg-danger px-3 py-2">Mengulang: ${totalMengulang}</span>
+      </div>
+      <div class="small text-muted">
+        <strong>Rumus Rata2:</strong> ((Nilai Rapor &times; 2) + Nilai Bupres) &divide; 3 &nbsp;|&nbsp; <strong>KKM:</strong> 80
+      </div>
+    </div>
+
+    <div class="table-responsive shadow-sm border rounded bg-white">
+      <table class="table table-bordered table-hover align-middle mb-0">
+        <thead class="table-primary text-center align-middle">
+          <tr>
+            <th style="width: 55px;">No</th>
+            <th class="text-start">Nama</th>
+            <th style="width: 130px;">Nilai Rapor</th>
+            <th style="width: 130px;">Nilai Bupres</th>
+            <th style="width: 130px;">Rata2</th>
+            <th style="width: 160px;">Keterangan</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tbodyHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function exportPantauKenaikanExcel() {
+  if (!_pantauKenaikanCache) {
+    Swal.fire('Info', 'Silakan pilih kelas dan muat data terlebih dahulu', 'info');
+    return;
+  }
+
+  const { rows } = getFilteredPantauKenaikanRows();
+  if (rows.length === 0) {
+    Swal.fire('Info', 'Tidak ada data untuk diexport', 'info');
+    return;
+  }
+
+  const exportData = [];
+  exportData.push(['REKAP PANTAU KENAIKAN KELAS SANTRI TPQ AL MABRUR']);
+  exportData.push(['Kelas', _pantauKenaikanCache.kelasLabel]);
+  exportData.push(['Tahun Ajaran', _pantauKenaikanCache.ta]);
+  exportData.push(['Rumus Rata2', '((Nilai Rapor x 2) + Nilai Bupres) / 3 (KKM: 80)']);
+  exportData.push([]);
+  exportData.push(['No', 'Nama', 'Nilai Rapor', 'Nilai Bupres', 'Rata2', 'Keterangan']);
+
+  rows.forEach((d, idx) => {
+    exportData.push([
+      idx + 1,
+      d.nama,
+      d.totalNilaiUjian,
+      Number(d.bupres.nilaiHarian.toFixed(2)),
+      Number(d.hasilAkhir.toFixed(2)),
+      d.isNaikKelas ? 'NAIK KELAS' : 'MENGULANG'
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(exportData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Pantau Kenaikan');
+  const filename = `Pantau_Kenaikan_${_pantauKenaikanCache.kelasLabel.replace(/[^a-zA-Z0-9]/g, '_')}_${_pantauKenaikanCache.ta}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
 

@@ -1745,6 +1745,18 @@ function getDataCetakRapor(kelas, tahunAjaran) {
     const allSantri = getSantriList() || [];
     const kelasList = getKelasList() || [];
     const materiList = getMateriByKelas(kelas) || [];
+    const materiByKelasMap = {};
+    if (!kelas) {
+      const distinctKelas = new Set();
+      kelasList.forEach(k => { if (k.Nama_Kelas) distinctKelas.add(String(k.Nama_Kelas).trim()); });
+      allSantri.forEach(s => {
+        const sk = String(s.Kelas || s.kelas || '').trim();
+        if (sk && sk !== '-') distinctKelas.add(sk);
+      });
+      distinctKelas.forEach(kName => {
+        materiByKelasMap[kName] = getMateriByKelas(kName) || [];
+      });
+    }
     const tmConfig = getTatapMukaConfig(tahunAjaran, kelas) || { tatap_muka: 24 };
     const config = getConfig() || {};
 
@@ -1859,6 +1871,7 @@ function getDataCetakRapor(kelas, tahunAjaran) {
       santriList: allSantri,
       kelasList: kelasList,
       materiList: materiList,
+      materiByKelasMap: materiByKelasMap,
       nilaiList: nilaiList,
       bupresList: bupresList,
       tmConfig: tmConfig,
