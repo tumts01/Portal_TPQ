@@ -1441,17 +1441,16 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         <thead>
           <tr>
             <th colspan="6">Frekuensi Perolehan Nilai Harian (BCK)</th>
-            <th rowspan="2" style="width:85px;">Jml Tatap Muka</th>
-            <th rowspan="2" style="width:85px;">Total Poin</th>
-            <th rowspan="2" style="width:105px;">Nilai Harian</th>
+            <th rowspan="2" style="width:110px;">Jml Pertemuan</th>
+            <th rowspan="2" style="width:120px;">Nilai Harian</th>
           </tr>
           <tr>
-            <th style="width:11%;">B (95)</th>
-            <th style="width:11%;">B- (90)</th>
-            <th style="width:11%;">C+ (83)</th>
-            <th style="width:11%;">C (80)</th>
-            <th style="width:11%;">C- (73)</th>
-            <th style="width:11%;">K (70)</th>
+            <th style="width:12%;">B</th>
+            <th style="width:12%;">B-</th>
+            <th style="width:12%;">C+</th>
+            <th style="width:12%;">C</th>
+            <th style="width:12%;">C-</th>
+            <th style="width:12%;">K</th>
           </tr>
         </thead>
         <tbody>
@@ -1462,8 +1461,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
             <td style="text-align:center;">${d.bupres.c}</td>
             <td style="text-align:center;">${d.bupres.c_minus}</td>
             <td style="text-align:center;">${d.bupres.k}</td>
-            <td style="text-align:center;">${d.bupres.totalPertemuan} / ${d.bupres.tatapMuka}</td>
-            <td style="text-align:center;">${d.bupres.totalPoin}</td>
+            <td style="text-align:center; font-weight:600;">${d.bupres.totalPertemuan} Kali</td>
             <td style="text-align:center; font-weight:800; font-size:12px; background-color:#dceeff;">${nilaiHarianStr}</td>
           </tr>
         </tbody>
@@ -1529,25 +1527,26 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         ${d.catatan ? `<span>${d.catatan}</span>` : `<span style="color:#666;">-</span>`}
       </div>
 
-      <!-- 8. KETERANGAN NAIK KELAS / MENGULANG & RUMUS NILAI AKHIR -->
+      <!-- 8. KETERANGAN NAIK KELAS / MENGULANG & NILAI AKHIR -->
       <div class="rapor-section-title">F. KEPUTUSAN KENAIKAN KELAS</div>
       <table class="rapor-grid-table" style="margin-bottom:8px;">
         <tbody>
           <tr>
-            <td style="width:65%; padding:4px 8px;">
-              <div style="font-size:10px; color:#333;">Rumus Nilai Akhir: <strong>(Total Nilai Ujian &times; 2 + Nilai Harian) &divide; 3</strong></div>
-              <div style="font-size:11px; margin-top:1px;">
-                Perhitungan: <strong>((${d.totalNilaiUjian} &times; 2) + ${nilaiHarianStr}) &divide; 3 = ${hasilAkhirStr}</strong>
-                <span style="margin-left:8px; font-size:10px;">(Batas KKM: <strong>${d.kkm}</strong>)</span>
-              </div>
+            <td style="width:33%; text-align:center; padding:4px 8px;">
+              <div style="font-size:10px; font-weight:bold; color:#333; text-transform:uppercase;">Nilai Ujian</div>
+              <div style="font-size:13px; font-weight:800;">${d.totalNilaiUjian}</div>
             </td>
-            <td style="width:35%; text-align:center; background-color:#dceeff; padding:4px 8px;">
+            <td style="width:33%; text-align:center; padding:4px 8px;">
+              <div style="font-size:10px; font-weight:bold; color:#333; text-transform:uppercase;">Nilai Harian (Bupres)</div>
+              <div style="font-size:13px; font-weight:800;">${nilaiHarianStr}</div>
+            </td>
+            <td style="width:34%; text-align:center; background-color:#dceeff; padding:4px 8px;">
               <div style="font-size:10px; font-weight:bold; text-transform:uppercase;">Nilai Akhir Rapor</div>
               <div style="font-size:15px; font-weight:800;">${hasilAkhirStr}</div>
             </td>
           </tr>
           <tr>
-            <td colspan="2" style="padding:6px 8px; text-align:center; font-size:11.5px;">
+            <td colspan="3" style="padding:6px 8px; text-align:center; font-size:11.5px;">
               Berdasarkan hasil penilaian ujian dan nilai harian tersebut, maka santri dinyatakan:
               <span style="margin-left:8px; cursor:pointer;" onclick="toggleOverrideNaikKelas('${d.nis}')" title="Klik untuk ubah status Naik Kelas / Mengulang">
                 ${naikBadgeHtml}
