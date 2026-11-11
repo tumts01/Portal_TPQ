@@ -5913,7 +5913,7 @@ function loadRaporPage() {
           <div class="row mb-3">
             <div class="col-md-3">
               <label>Tahun Ajaran</label>
-              <input type="text" class="form-control" id="rn_ta" value="20262">
+              <input type="text" class="form-control" id="rn_ta" value="20262" onchange="loadMateriForInput()">
             </div>
             <!-- Dropdown semester dihapus sesuai permintaan -->
             <input type="hidden" id="rn_semester" value="-">
@@ -6257,6 +6257,17 @@ function loadMateriForInput() {
     infoContainer.style.display = 'none';
     return;
   }
+
+  infoContainer.style.display = 'none';
+  if (container) {
+    container.innerHTML = `
+      <div class="text-center py-5 border rounded bg-light">
+        <div class="spinner-border text-primary mb-2" role="status"></div>
+        <div class="text-muted fw-semibold">Memuat materi &amp; daftar nilai santri kelas <strong>${kelas}</strong>...</div>
+      </div>
+    `;
+  }
+  showLoading('Memuat data nilai kelas ' + kelas + '...');
   
   // Load materi untuk kelas ini
   google.script.run
@@ -6286,6 +6297,7 @@ function loadMateriForInput() {
           });
           
           if (filtered.length === 0) {
+            hideLoading();
             container.innerHTML = '<div class="alert alert-warning">Tidak ada santri di kelas ini (Kelas: ' + kelas + ')</div>';
             return;
           }
@@ -6301,21 +6313,26 @@ function loadMateriForInput() {
           const ta = document.getElementById('rn_ta').value;
           google.script.run
             .withSuccessHandler(function(nilaiList) {
+              hideLoading();
               renderInputNilaiForm(filtered, materiList || [], nilaiList || [], kelas);
             })
             .withFailureHandler(function(e) {
+              hideLoading();
               renderInputNilaiForm(filtered, materiList || [], [], kelas);
             })
             .getNilaiRaporByKelas(kelas, ta);
         })
         .withFailureHandler(function(e) {
+          hideLoading();
           container.innerHTML = '<div class="alert alert-danger">Gagal memuat data santri: ' + e.message + '</div>';
         })
         .getSantriList();
     })
     .withFailureHandler(function(e) {
+      hideLoading();
       infoContainer.style.display = 'block';
       infoContainer.innerHTML = '<div class="alert alert-danger">Gagal memuat materi: ' + e.message + '</div>';
+      if (container) container.innerHTML = '';
     })
     .getMateriByKelas(kelas);
 }
