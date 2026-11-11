@@ -929,8 +929,16 @@
       // Generate menu
       generateMenu();
       
-      // Load default page
-      loadPage('dashboard');
+      // Load last active page if allowed for this role, otherwise default page
+      const menus = menuConfig[currentUser.role] || [];
+      let initialPage = menus.length > 0 ? menus[0].page : 'dashboard';
+      try {
+        const savedPage = localStorage.getItem('activePage');
+        if (savedPage && menus.some(m => m.page === savedPage)) {
+          initialPage = savedPage;
+        }
+      } catch (e) {}
+      loadPage(initialPage);
       
       // Check for active announcements
       google.script.run.withSuccessHandler(checkAndShowPengumuman).getPengumuman(currentUser.role);
@@ -993,6 +1001,10 @@
     
     // Load page
     function loadPage(page) {
+      try {
+        localStorage.setItem('activePage', page);
+      } catch (e) {}
+
       // Update active menu
       document.querySelectorAll('.sidebar-menu a').forEach(a => a.classList.remove('active'));
       const activeMenu = document.getElementById('menu-' + page);
@@ -1097,6 +1109,8 @@
       }).then((result) => {
         if (result.isConfirmed) {
           localStorage.removeItem('currentUser');
+          localStorage.removeItem('activePage');
+          localStorage.removeItem('activeRaporTab');
           currentUser = null;
           document.getElementById('loginPage').style.display = 'flex';
           document.getElementById('mainApp').style.display = 'none';
@@ -6207,6 +6221,28 @@ function loadRaporPage() {
       </div>
     </div>
   `;
+
+  // Simpan & pulihkan sub-tab aktif di menu Rapor saat halaman di-refresh
+  try {
+    const tabLinks = contentArea.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]');
+    tabLinks.forEach(link => {
+      link.addEventListener('shown.bs.tab', function(e) {
+        const targetHref = e.target.getAttribute('href');
+        if (targetHref) {
+          try { localStorage.setItem('activeRaporTab', targetHref); } catch (err) {}
+        }
+      });
+    });
+
+    const savedRaporTab = localStorage.getItem('activeRaporTab');
+    if (savedRaporTab) {
+      const targetLink = contentArea.querySelector(`.nav-tabs a[href="${savedRaporTab}"]`);
+      if (targetLink && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+        const tabInstance = new bootstrap.Tab(targetLink);
+        tabInstance.show();
+      }
+    }
+  } catch (e) {}
   
   // Set default tanggal rapor
   const crTanggal = document.getElementById('cr_tanggal');
