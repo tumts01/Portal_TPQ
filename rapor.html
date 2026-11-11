@@ -18,6 +18,70 @@ function isKelasMatch(k1, k2) {
   return normalizeKelas(k1) === normalizeKelas(k2);
 }
 
+function formatNamaBesarKecil(str) {
+  if (!str) return '';
+  const s = String(str).trim();
+  if (!s || s.startsWith('.')) return s;
+
+  const titleMap = {
+    's.pd': 'S.Pd', 's.pd.': 'S.Pd.', 's.pd.i': 'S.Pd.I', 's.pd.i.': 'S.Pd.I.',
+    'm.pd': 'M.Pd', 'm.pd.': 'M.Pd.', 'm.pd.i': 'M.Pd.I', 'm.pd.i.': 'M.Pd.I.',
+    's.ag': 'S.Ag', 's.ag.': 'S.Ag.', 'm.ag': 'M.Ag', 'm.ag.': 'M.Ag.',
+    's.kom': 'S.Kom', 's.kom.': 'S.Kom.', 's.e': 'S.E', 's.e.': 'S.E.',
+    's.si': 'S.Si', 's.si.': 'S.Si.', 's.sos': 'S.Sos', 's.sos.': 'S.Sos.',
+    's.h': 'S.H', 's.h.': 'S.H.', 'm.m': 'M.M', 'm.m.': 'M.M.',
+    'lc': 'Lc', 'lc.': 'Lc.', 'dra': 'Dra.', 'dra.': 'Dra.', 'drs': 'Drs.', 'drs.': 'Drs.',
+    'kh': 'KH.', 'kh.': 'KH.', 'k.h': 'K.H.', 'k.h.': 'K.H.',
+    'hj': 'Hj.', 'hj.': 'Hj.', 'h': 'H.', 'h.': 'H.',
+    'ust': 'Ust.', 'ust.': 'Ust.', 'ustadz': 'Ustadz', 'ustadzah': 'Ustadzah'
+  };
+
+  const parts = s.split(',');
+  const mainName = parts[0].trim();
+
+  const formattedMain = mainName.split(/\s+/).map(word => {
+    if (!word) return '';
+    const low = word.toLowerCase();
+    if (titleMap[low]) return titleMap[low];
+
+    if (word.includes('.')) {
+      return word.split('.').map(sub => {
+        if (!sub) return '';
+        const subLow = sub.toLowerCase();
+        if (titleMap[subLow]) return titleMap[subLow];
+        return sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase();
+      }).join('.');
+    }
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }).join(' ');
+
+  if (parts.length > 1) {
+    const formattedTitles = parts.slice(1).map(titlePart => {
+      const cleanTitle = titlePart.trim();
+      const lowTitle = cleanTitle.toLowerCase();
+      if (titleMap[lowTitle]) return titleMap[lowTitle];
+
+      return cleanTitle.split(/\s+/).map(w => {
+        const wLow = w.toLowerCase();
+        if (titleMap[wLow]) return titleMap[wLow];
+        if (w.includes('.')) {
+          return w.split('.').map(sub => {
+            if (!sub) return '';
+            const subLow = sub.toLowerCase();
+            if (titleMap[subLow]) return titleMap[subLow];
+            return sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase();
+          }).join('.');
+        }
+        return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      }).join(' ');
+    }).join(', ');
+
+    return formattedMain + ', ' + formattedTitles;
+  }
+
+  return formattedMain;
+}
+
 function loadRaporPage() {
   const contentArea = document.getElementById('contentArea');
   
@@ -217,7 +281,7 @@ function loadRaporPage() {
               <div class="row g-2 align-items-end mt-1 pt-2 border-top">
                 <div class="col-md-3">
                   <label class="form-label fw-bold small mb-1"><i class="fas fa-chalkboard-teacher text-primary me-1"></i> Nama Wali Kelas</label>
-                  <input type="text" class="form-control form-control-sm" id="cr_wali" list="cr_guru_datalist" placeholder="Nama Wali Kelas..." oninput="renderRaporPreviewFromCache()">
+                  <input type="text" class="form-control form-control-sm" id="cr_wali" list="cr_guru_datalist" placeholder="Nama Wali Kelas..." oninput="renderRaporPreviewFromCache()" onchange="this.value = formatNamaBesarKecil(this.value); renderRaporPreviewFromCache();">
                   <datalist id="cr_guru_datalist"></datalist>
                 </div>
                 <div class="col-md-3">
@@ -439,7 +503,10 @@ function loadRaporPage() {
   
   // Load guru for wali kelas datalist
   google.script.run.withSuccessHandler(function(guruList) {
-    const options = (guruList || []).map(g => `<option value="${g.Nama}">${g.Nama}</option>`).join('');
+    const options = (guruList || []).map(g => {
+      const f = formatNamaBesarKecil(g.Nama);
+      return `<option value="${f}">${f}</option>`;
+    }).join('');
     const crDatalist = document.getElementById('cr_guru_datalist');
     if (crDatalist) crDatalist.innerHTML = options;
   }).withFailureHandler(function(e) {
@@ -980,7 +1047,7 @@ function onCetakRaporKelasChange() {
   if (kelas && window._raporKelasListCache && crWali) {
     const kObj = window._raporKelasListCache.find(k => isKelasMatch(k.Nama_Kelas || k['Nama Kelas'], kelas));
     if (kObj && kObj.Ustadz_Wali) {
-      crWali.value = kObj.Ustadz_Wali;
+      crWali.value = formatNamaBesarKecil(kObj.Ustadz_Wali);
     }
   }
 
@@ -1048,7 +1115,7 @@ function prosesCetakRapor() {
         const kObj = payload.kelasList.find(k => isKelasMatch(k.Nama_Kelas || k['Nama Kelas'], kelas));
         const crWali = document.getElementById('cr_wali');
         if (kObj && kObj.Ustadz_Wali && crWali && !crWali.value.trim()) {
-          crWali.value = kObj.Ustadz_Wali;
+          crWali.value = formatNamaBesarKecil(kObj.Ustadz_Wali);
         }
       }
       if (payload.config) {
@@ -1605,7 +1672,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
           </tr>
           <tr>
             <td style="padding:2px 4px; text-align:center;">( ............................................ )</td>
-            <td style="padding:2px 4px; text-align:center; font-weight:bold; text-decoration:underline;">${meta.waliKelas || '............................................'}</td>
+            <td style="padding:2px 4px; text-align:center; font-weight:bold; text-decoration:underline;">${formatNamaBesarKecil(meta.waliKelas) || '............................................'}</td>
             <td style="padding:2px 4px; text-align:center; font-weight:bold; text-decoration:underline;">${meta.kepalaTpq || 'M. RAGIL WAHYUDI, M.Pd.'}</td>
           </tr>
         </tbody>
@@ -1655,7 +1722,7 @@ function renderRekapKelasTable(santriToRender, cache, meta) {
       <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
         <div>
           <h5 class="mb-0 fw-bold">REKAPITULASI NILAI RAPOR &amp; KENAIKAN KELAS</h5>
-          <small class="text-muted">Kelas: <strong>${cache.kelas}</strong> | Tahun Ajaran: <strong>${cache.ta}</strong> | Wali Kelas: <strong>${meta.waliKelas || '-'}</strong> | KKM: <strong>80</strong></small>
+          <small class="text-muted">Kelas: <strong>${cache.kelas}</strong> | Tahun Ajaran: <strong>${cache.ta}</strong> | Wali Kelas: <strong>${formatNamaBesarKecil(meta.waliKelas) || '-'}</strong> | KKM: <strong>80</strong></small>
         </div>
         <button type="button" class="btn btn-success fw-bold no-print" onclick="cetakRaporF4()">
           <i class="fas fa-print me-1"></i> Cetak Semua Rapor (F4)
@@ -1755,7 +1822,7 @@ function renderRaporPreviewFromCache() {
 
   const selectedNis = document.getElementById('cr_santri') ? document.getElementById('cr_santri').value : 'ALL';
   const modeView = document.getElementById('cr_mode_view') ? document.getElementById('cr_mode_view').value : 'rapor_f4';
-  const waliKelas = document.getElementById('cr_wali') ? document.getElementById('cr_wali').value.trim() : '';
+  const waliKelas = document.getElementById('cr_wali') ? formatNamaBesarKecil(document.getElementById('cr_wali').value.trim()) : '';
   const kepalaTpq = document.getElementById('cr_kepala') ? document.getElementById('cr_kepala').value.trim() : 'M. RAGIL WAHYUDI, M.Pd.';
   const tanggal = document.getElementById('cr_tanggal') ? document.getElementById('cr_tanggal').value.trim() : '';
 
@@ -1800,7 +1867,7 @@ function cetakRaporF4(singleNis) {
 
   const allSantri = _cetakRaporCache.santriList;
   const selectedNis = singleNis || (document.getElementById('cr_santri') ? document.getElementById('cr_santri').value : 'ALL');
-  const waliKelas = document.getElementById('cr_wali') ? document.getElementById('cr_wali').value.trim() : '';
+  const waliKelas = document.getElementById('cr_wali') ? formatNamaBesarKecil(document.getElementById('cr_wali').value.trim()) : '';
   const kepalaTpq = document.getElementById('cr_kepala') ? document.getElementById('cr_kepala').value.trim() : 'M. RAGIL WAHYUDI, M.Pd.';
   const tanggal = document.getElementById('cr_tanggal') ? document.getElementById('cr_tanggal').value.trim() : '';
 
