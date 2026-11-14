@@ -6523,8 +6523,9 @@ function loadRaporPage() {
     if (crKelas) crKelas.innerHTML = options;
     if (bpKelas) bpKelas.innerHTML = options;
     if (pkKelas) {
+      const pkNames = kNames.filter(name => !isExcludedFromPantauKenaikan(name));
       pkKelas.innerHTML = '<option value="">-- Pilih Kelas --</option><option value="ALL">-- Semua Kelas --</option>' +
-        kNames.map(name => `<option value="${name}">${name}</option>`).join('');
+        pkNames.map(name => `<option value="${name}">${name}</option>`).join('');
     }
     
     // For Pengaturan Materi, load both Kelas and distinct categories from Materi_Kelas
@@ -9975,6 +9976,10 @@ function exportBupresExcel() {
 
 let _pantauKenaikanCache = null;
 
+function isExcludedFromPantauKenaikan(namaKelas) {
+  return String(namaKelas || '').trim().toUpperCase().includes('PERSIAPAN WISUDA');
+}
+
 function loadPantauKenaikanData() {
   const kelasVal = document.getElementById('pk_kelas') ? document.getElementById('pk_kelas').value : '';
   const ta = document.getElementById('pk_ta') ? document.getElementById('pk_ta').value.trim() : '';
@@ -10019,7 +10024,7 @@ function loadPantauKenaikanData() {
       const santriList = payload.santriList || [];
       const filteredSantri = santriList.filter(s => {
         const sK = String(s.Kelas || s.kelas || '').trim();
-        if (!sK || sK === '-') return false;
+        if (!sK || sK === '-' || isExcludedFromPantauKenaikan(sK)) return false;
         const matchK = !queryKelas || isKelasMatch(sK, queryKelas);
         const status = String(s.Status || s.status || 'aktif').trim().toLowerCase();
         return matchK && (status === 'aktif' || status === '');
