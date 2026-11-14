@@ -10067,6 +10067,9 @@ function getFilteredPantauKenaikanRows() {
   const totalAll = allComputed.length;
   const totalNaik = allComputed.filter(d => d.isNaikKelas).length;
   const totalMengulang = totalAll - totalNaik;
+  const persenNaik = totalAll > 0 ? (totalNaik / totalAll) * 100 : 0;
+  const persenMengulang = totalAll > 0 ? (totalMengulang / totalAll) * 100 : 0;
+  const formatPersen = (v) => `${Number(v.toFixed(1))}%`;
 
   const filtered = allComputed.filter(d => {
     if (statusFilter === 'NAIK' && !d.isNaikKelas) return false;
@@ -10084,7 +10087,9 @@ function getFilteredPantauKenaikanRows() {
     rows: filtered,
     totalAll,
     totalNaik,
-    totalMengulang
+    totalMengulang,
+    persenNaikStr: formatPersen(persenNaik),
+    persenMengulangStr: formatPersen(persenMengulang)
   };
 }
 
@@ -10092,7 +10097,7 @@ function renderPantauKenaikanTable() {
   const resContainer = document.getElementById('pk_result');
   if (!resContainer || !_pantauKenaikanCache) return;
 
-  const { rows, totalAll, totalNaik, totalMengulang } = getFilteredPantauKenaikanRows();
+  const { rows, totalAll, totalNaik, totalMengulang, persenNaikStr, persenMengulangStr } = getFilteredPantauKenaikanRows();
   const isAllKelas = !_pantauKenaikanCache.kelas;
 
   let tbodyHtml = '';
@@ -10126,8 +10131,9 @@ function renderPantauKenaikanTable() {
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
       <div class="d-flex flex-wrap gap-2 align-items-center">
         <span class="badge bg-primary px-3 py-2">Total Santri: ${totalAll}</span>
-        <span class="badge bg-success px-3 py-2">Naik Kelas: ${totalNaik}</span>
-        <span class="badge bg-danger px-3 py-2">Mengulang: ${totalMengulang}</span>
+        <span class="badge bg-success px-3 py-2">Naik Kelas: ${totalNaik} (${persenNaikStr})</span>
+        <span class="badge bg-danger px-3 py-2">Mengulang: ${totalMengulang} (${persenMengulangStr})</span>
+        <span class="badge bg-info text-dark px-3 py-2"><i class="fas fa-percentage me-1"></i>Persentase Kenaikan: ${persenNaikStr}</span>
       </div>
       <div class="small text-muted">
         <strong>Rumus Rata2:</strong> ((Nilai Rapor &times; 2) + Nilai Bupres) &divide; 3 &nbsp;|&nbsp; <strong>KKM:</strong> 80
@@ -10160,7 +10166,7 @@ function exportPantauKenaikanExcel() {
     return;
   }
 
-  const { rows } = getFilteredPantauKenaikanRows();
+  const { rows, totalAll, totalNaik, totalMengulang, persenNaikStr } = getFilteredPantauKenaikanRows();
   if (rows.length === 0) {
     Swal.fire('Info', 'Tidak ada data untuk diexport', 'info');
     return;
@@ -10171,6 +10177,7 @@ function exportPantauKenaikanExcel() {
   exportData.push(['Kelas', _pantauKenaikanCache.kelasLabel]);
   exportData.push(['Tahun Ajaran', _pantauKenaikanCache.ta]);
   exportData.push(['Rumus Rata2', '((Nilai Rapor x 2) + Nilai Bupres) / 3 (KKM: 80)']);
+  exportData.push(['Ringkasan', `Total: ${totalAll} | Naik: ${totalNaik} | Mengulang: ${totalMengulang} | Persentase Kenaikan: ${persenNaikStr}`]);
   exportData.push([]);
   exportData.push(['No', 'Nama', 'Nilai Rapor', 'Nilai Bupres', 'Rata2', 'Keterangan']);
 
