@@ -10069,6 +10069,21 @@ function getFilteredPantauKenaikanRows() {
 
   const allComputed = (_pantauKenaikanCache.santriList || []).map(s => hitungDataRaporSantri(s, _pantauKenaikanCache));
 
+  // Tentukan nilai Rata2 tertinggi per kelas untuk predikat Bintang Kelas
+  const maxByKelas = {};
+  allComputed.forEach(d => {
+    const kKey = String(d.kelas || '').trim().toUpperCase();
+    const nilai = Number(d.hasilAkhir) || 0;
+    if (!maxByKelas[kKey] || nilai > maxByKelas[kKey]) {
+      maxByKelas[kKey] = nilai;
+    }
+  });
+  allComputed.forEach(d => {
+    const kKey = String(d.kelas || '').trim().toUpperCase();
+    const maxK = maxByKelas[kKey] || 0;
+    d.isBintangKelas = maxK > 0 && Number(d.hasilAkhir) === maxK;
+  });
+
   const totalAll = allComputed.length;
   const totalNaik = allComputed.filter(d => d.isNaikKelas).length;
   const totalMengulang = totalAll - totalNaik;
@@ -10119,11 +10134,14 @@ function renderPantauKenaikanTable() {
         ? `<span class="badge bg-success px-3 py-1">NAIK KELAS</span>`
         : `<span class="badge bg-danger px-3 py-1">MENGULANG</span>`;
       const kelasSub = isAllKelas ? `<span class="badge bg-light text-secondary border ms-2">${d.kelas}</span>` : '';
+      const bintangBadge = d.isBintangKelas
+        ? `<span class="badge bg-warning text-dark border border-warning ms-2" title="Nilai tertinggi di kelas ${d.kelas}"><i class="fas fa-star me-1"></i>Bintang Kelas</span>`
+        : '';
 
       tbodyHtml += `
-        <tr>
+        <tr class="${d.isBintangKelas ? 'table-warning' : ''}">
           <td class="text-center fw-semibold text-muted">${idx + 1}</td>
-          <td class="fw-bold text-dark">${d.nama}${kelasSub}</td>
+          <td class="fw-bold text-dark">${d.nama}${kelasSub}${bintangBadge}</td>
           <td class="text-center fw-semibold">${d.totalNilaiUjian}</td>
           <td class="text-center fw-semibold">${d.bupres.nilaiHarian.toFixed(2)}</td>
           <td class="text-center fw-bold ${d.isNaikKelas ? 'text-success' : 'text-danger'}">${d.hasilAkhir.toFixed(2)}</td>
@@ -10229,16 +10247,18 @@ function exportPantauKenaikanExcel() {
   exportData.push(['Rumus Rata2', '((Nilai Rapor x 2) + Nilai Bupres) / 3 (KKM: 80)']);
   exportData.push(['Ringkasan', `Total: ${totalAll} | Naik: ${totalNaik} | Mengulang: ${totalMengulang} | Persentase Kenaikan: ${persenNaikStr}`]);
   exportData.push([]);
-  exportData.push(['No', 'Nama', 'Nilai Rapor', 'Nilai Bupres', 'Rata2', 'Keterangan']);
+  exportData.push(['No', 'Nama', 'Kelas', 'Nilai Rapor', 'Nilai Bupres', 'Rata2', 'Keterangan', 'Predikat']);
 
   rows.forEach((d, idx) => {
     exportData.push([
       idx + 1,
       d.nama,
+      d.kelas,
       d.totalNilaiUjian,
       Number(d.bupres.nilaiHarian.toFixed(2)),
       Number(d.hasilAkhir.toFixed(2)),
-      d.isNaikKelas ? 'NAIK KELAS' : 'MENGULANG'
+      d.isNaikKelas ? 'NAIK KELAS' : 'MENGULANG',
+      d.isBintangKelas ? 'Bintang Kelas' : ''
     ]);
   });
 
