@@ -10093,6 +10093,7 @@ function getFilteredPantauKenaikanRows() {
     totalAll,
     totalNaik,
     totalMengulang,
+    persenNaikNum: Number(persenNaik.toFixed(1)),
     persenNaikStr: formatPersen(persenNaik),
     persenMengulangStr: formatPersen(persenMengulang)
   };
@@ -10102,7 +10103,7 @@ function renderPantauKenaikanTable() {
   const resContainer = document.getElementById('pk_result');
   if (!resContainer || !_pantauKenaikanCache) return;
 
-  const { rows, totalAll, totalNaik, totalMengulang, persenNaikStr, persenMengulangStr } = getFilteredPantauKenaikanRows();
+  const { rows, totalAll, totalNaik, totalMengulang, persenNaikNum, persenNaikStr, persenMengulangStr } = getFilteredPantauKenaikanRows();
   const isAllKelas = !_pantauKenaikanCache.kelas;
 
   let tbodyHtml = '';
@@ -10133,13 +10134,57 @@ function renderPantauKenaikanTable() {
   }
 
   resContainer.innerHTML = `
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-      <div class="d-flex flex-wrap gap-2 align-items-center">
-        <span class="badge bg-primary px-3 py-2">Total Santri: ${totalAll}</span>
-        <span class="badge bg-success px-3 py-2">Naik Kelas: ${totalNaik} (${persenNaikStr})</span>
-        <span class="badge bg-danger px-3 py-2">Mengulang: ${totalMengulang} (${persenMengulangStr})</span>
-        <span class="badge bg-info text-dark px-3 py-2"><i class="fas fa-percentage me-1"></i>Persentase Kenaikan: ${persenNaikStr}</span>
+    <div class="row g-3 mb-2">
+      <div class="col-6 col-lg-3">
+        <div class="bg-white border border-start border-4 border-primary rounded shadow-sm px-3 py-2 h-100 d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted fw-semibold" style="font-size: 0.8rem;">Total Santri</div>
+            <div class="fs-3 fw-bold text-primary lh-sm">${totalAll}</div>
+          </div>
+          <i class="fas fa-users fa-lg text-primary opacity-50"></i>
+        </div>
       </div>
+      <div class="col-6 col-lg-3">
+        <div class="bg-white border border-start border-4 border-success rounded shadow-sm px-3 py-2 h-100 d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted fw-semibold" style="font-size: 0.8rem;">Naik Kelas</div>
+            <div class="lh-sm">
+              <span class="fs-3 fw-bold text-success">${totalNaik}</span>
+              <span class="fs-6 fw-semibold text-success ms-1">(${persenNaikStr})</span>
+            </div>
+          </div>
+          <i class="fas fa-arrow-trend-up fa-lg text-success opacity-50"></i>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="bg-white border border-start border-4 border-danger rounded shadow-sm px-3 py-2 h-100 d-flex justify-content-between align-items-center">
+          <div>
+            <div class="text-muted fw-semibold" style="font-size: 0.8rem;">Mengulang</div>
+            <div class="lh-sm">
+              <span class="fs-3 fw-bold text-danger">${totalMengulang}</span>
+              <span class="fs-6 fw-semibold text-danger ms-1">(${persenMengulangStr})</span>
+            </div>
+          </div>
+          <i class="fas fa-rotate-left fa-lg text-danger opacity-50"></i>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="bg-white border border-start border-4 border-info rounded shadow-sm px-3 py-2 h-100 d-flex flex-column justify-content-center">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="text-muted fw-semibold" style="font-size: 0.8rem;">Persentase Kenaikan</div>
+              <div class="fs-3 fw-bold lh-sm" style="color: #087990;">${persenNaikStr}</div>
+            </div>
+            <i class="fas fa-chart-pie fa-lg opacity-50" style="color: #087990;"></i>
+          </div>
+          <div class="progress mt-1" style="height: 6px;">
+            <div class="progress-bar bg-info" role="progressbar" style="width: ${persenNaikNum}%;" aria-valuenow="${persenNaikNum}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-end mb-2">
       <div class="small text-muted">
         <strong>Rumus Rata2:</strong> ((Nilai Rapor &times; 2) + Nilai Bupres) &divide; 3 &nbsp;|&nbsp; <strong>KKM:</strong> 80
       </div>
