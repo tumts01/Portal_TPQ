@@ -7428,7 +7428,8 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
 
   // Baris Tabel 3: Materi Ujian
   let materiRowsHtml = '';
-  const colCountMateri = d.isManual ? 4 : 5;
+  const isTanpaKesalahan = d.isManual || d.isWeighted;
+  const colCountMateri = isTanpaKesalahan ? 4 : 5;
   if (d.detailMateriRows.length === 0) {
     materiRowsHtml = `
       <tr>
@@ -7437,22 +7438,12 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
     `;
   } else {
     d.detailMateriRows.forEach(r => {
-      if (d.isManual) {
+      if (isTanpaKesalahan) {
         materiRowsHtml += `
           <tr>
             <td style="text-align:center;">${r.no}</td>
             <td>${r.materi}</td>
-            <td style="text-align:center;">100</td>
-            <td style="text-align:center; font-weight:bold;">${r.nilai_materi}</td>
-          </tr>
-        `;
-      } else if (d.isWeighted) {
-        materiRowsHtml += `
-          <tr>
-            <td style="text-align:center;">${r.no}</td>
-            <td>${r.materi}</td>
-            <td style="text-align:center;">${r.bobot}</td>
-            <td style="text-align:center;">-</td>
+            <td style="text-align:center;">${d.isManual ? 100 : r.bobot}</td>
             <td style="text-align:center; font-weight:bold;">${r.nilai_materi}</td>
           </tr>
         `;
@@ -7472,7 +7463,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
 
   // Summary baris bawah Tabel Materi Ujian
   let materiSummaryHtml = '';
-  if (!d.isManual && !d.isWeighted) {
+  if (!isTanpaKesalahan) {
     materiSummaryHtml = `
       <tr>
         <td colspan="4" style="text-align:right; font-weight:600; padding-right:8px;">Jumlah Pengurangan Nilai (&Sigma; Bobot &times; Kesalahan)</td>
@@ -7487,17 +7478,10 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
       </tr>
     `;
-  } else if (d.isManual) {
-    materiSummaryHtml = `
-      <tr style="background-color:#dceeff;">
-        <td colspan="3" style="text-align:right; font-weight:800; padding-right:8px;">TOTAL NILAI UJIAN (RATA-RATA)</td>
-        <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
-      </tr>
-    `;
   } else {
     materiSummaryHtml = `
       <tr style="background-color:#dceeff;">
-        <td colspan="4" style="text-align:right; font-weight:800; padding-right:8px;">TOTAL NILAI UJIAN</td>
+        <td colspan="3" style="text-align:right; font-weight:800; padding-right:8px;">${d.isManual ? 'TOTAL NILAI UJIAN (RATA-RATA)' : 'TOTAL NILAI UJIAN'}</td>
         <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
       </tr>
     `;
@@ -7570,7 +7554,7 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
             <th style="width:32px;">No</th>
             <th style="text-align:left;">Materi Penilaian Ujian (${d.kelas})</th>
             <th style="width:75px;">Bobot</th>
-            ${d.isManual
+            ${isTanpaKesalahan
               ? '<th style="width:140px;">Nilai Ujian</th>'
               : '<th style="width:95px;">Kesalahan</th><th style="width:105px;">Jumlah</th>'}
           </tr>
