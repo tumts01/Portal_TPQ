@@ -6386,10 +6386,11 @@ function loadRaporPage() {
                 </div>
               </div>
               <div class="card-body">
+                <div id="pm_shared_warning" class="alert alert-warning py-2 small mb-2" style="display:none;"></div>
                 <div class="table-responsive">
                   <table class="table table-bordered table-sm">
                     <thead>
-                      <tr><th>No</th><th>Materi</th><th>Bobot (Max Nilai)</th><th>Tipe</th><th>Aksi</th></tr>
+                      <tr><th>No</th><th>Materi</th><th>Bobot (Max Nilai)</th><th>Tipe</th><th>Kategori</th><th>Aksi</th></tr>
                     </thead>
                     <tbody id="pm_materiTable"></tbody>
                   </table>
@@ -6402,6 +6403,7 @@ function loadRaporPage() {
                 <h6>Tambah / Edit Materi</h6>
                 <form id="formMateri" onsubmit="event.preventDefault(); simpanMateri();">
                   <input type="hidden" id="pm_id_materi">
+                  <input type="hidden" id="pm_row_kelas">
                   <div class="row">
                     <div class="col-md-4 mb-3">
                       <label>Nama Materi</label>
@@ -6650,8 +6652,10 @@ function renderInputNilaiForm(santriList, materiList, nilaiList, kelas) {
   const container = document.getElementById('rn_santriList');
   const upperKelas = String(kelas || '').trim().toUpperCase();
   
-  // Untuk DINIYAH, input manual per materi
-  if (upperKelas.includes('DINIYAH')) {
+  // Untuk DINIYAH atau kelas dengan tipe materi manual (mis. TAKHOSSUS TAHFIDH), input manual per materi
+  const isManualForm = upperKelas.includes('DINIYAH') ||
+    (materiList.some(m => m.tipe === 'manual') && !materiList.some(m => m.tipe === 'regular' || m.tipe === 'weighted'));
+  if (isManualForm) {
     container.innerHTML = `
       <div class="table-responsive">
         <table class="table table-bordered table-sm align-middle">
@@ -8045,39 +8049,58 @@ function loadPengaturanMateri() {
   container.style.display = 'block';
   document.getElementById('formTambahMateri').style.display = 'none';
   
+  const warningEl = document.getElementById('pm_shared_warning');
+  if (warningEl) warningEl.style.display = 'none';
+  
   showLoading('Memuat materi...');
   google.script.run
     .withSuccessHandler(function(materiList) {
       hideLoading();
       _pmCurrentMateriList = materiList || [];
       if (!materiList || materiList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Belum ada materi untuk kelas ini. Klik tombol "+ Tambah Materi" di atas untuk menambahkan.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Belum ada materi untuk kelas ini. Klik tombol "+ Tambah Materi" di atas untuk menambahkan.</td></tr>';
         return;
       }
+
+      const sharedCats = Array.from(new Set(
+        materiList.map(m => String(m.kelas || '').trim())
+          .filter(k => k && k.toUpperCase() !== kelas.toUpperCase())
+      ));
+      if (warningEl && sharedCats.length > 0) {
+        warningEl.innerHTML = `<i class="fas fa-info-circle me-1"></i> Materi di bawah ini memakai kategori gabungan <strong>${sharedCats.join(', ')}</strong>. Perubahan atau penghapusan akan memengaruhi semua kelas dalam kategori tersebut.`;
+        warningEl.style.display = 'block';
+      }
       
-      tbody.innerHTML = materiList.map((m, i) => `
+      tbody.innerHTML = materiList.map((m, i) => {
+        const safeNama = (m.materi || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const safeKelas = String(m.kelas || '').trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
         <tr>
           <td>${i+1}</td>
           <td>${m.materi}</td>
           <td>${m.bobot}</td>
           <td><span class="badge bg-secondary">${m.tipe}</span></td>
+          <td><span class="badge bg-light text-dark border">${m.kelas || '-'}</span></td>
           <td>
-            <button class="btn btn-sm btn-warning me-1" onclick="editMateri('${m.id_materi}', '${(m.materi || '').replace(/'/g, "\\'")}', ${m.bobot}, '${m.tipe}', ${m.urutan || 99})" title="Edit"><i class="fas fa-edit"></i></button>
-            <button class="btn btn-sm btn-danger" onclick="hapusMateri('${m.id_materi}')" title="Hapus"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-sm btn-warning me-1" onclick="editMateri('${m.id_materi}', '${safeNama}', ${m.bobot}, '${m.tipe}', ${m.urutan || 99}, '${safeKelas}')" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm btn-danger" onclick="hapusMateri('${m.id_materi}', '${safeKelas}')" title="Hapus"><i class="fas fa-trash"></i></button>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     })
     .withFailureHandler(function(e) {
       hideLoading();
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal memuat materi: ' + e.message + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal memuat materi: ' + e.message + '</td></tr>';
     })
     .getMateriByKelas(kelas);
 }
 
-function editMateri(id, nama, bobot, tipe, urutan) {
+function editMateri(id, nama, bobot, tipe, urutan, rowKelas) {
   document.getElementById('formTambahMateri').style.display = 'block';
   document.getElementById('pm_id_materi').value = id || '';
+  const rowKelasEl = document.getElementById('pm_row_kelas');
+  if (rowKelasEl) rowKelasEl.value = rowKelas || '';
   document.getElementById('pm_nama').value = nama || '';
   document.getElementById('pm_bobot').value = bobot || 0;
   document.getElementById('pm_tipe').value = tipe || 'regular';
@@ -8089,12 +8112,18 @@ function showFormTambahMateri() {
   document.getElementById('formTambahMateri').style.display = 'block';
   document.getElementById('formMateri').reset();
   document.getElementById('pm_id_materi').value = '';
+  const rowKelasEl = document.getElementById('pm_row_kelas');
+  if (rowKelasEl) rowKelasEl.value = '';
 }
 
 function simpanMateri() {
+  const idMateri = document.getElementById('pm_id_materi').value;
+  const selectedKelas = document.getElementById('pm_kelas').value;
+  const rowKelasEl = document.getElementById('pm_row_kelas');
+  const rowKelas = rowKelasEl ? rowKelasEl.value : '';
   const data = {
-    id_materi: document.getElementById('pm_id_materi').value,
-    kelas: document.getElementById('pm_kelas').value,
+    id_materi: idMateri,
+    kelas: (idMateri && rowKelas) ? rowKelas : selectedKelas,
     materi: document.getElementById('pm_nama').value,
     bobot: document.getElementById('pm_bobot').value,
     tipe: document.getElementById('pm_tipe').value,
@@ -8124,8 +8153,12 @@ function simpanMateri() {
     .saveMateriKelas(data);
 }
 
-function hapusMateri(idMateri) {
-  if (confirm('Yakin ingin menghapus materi ini?')) {
+function hapusMateri(idMateri, rowKelas) {
+  const selectedKelas = document.getElementById('pm_kelas') ? document.getElementById('pm_kelas').value : '';
+  const msg = (rowKelas && selectedKelas && rowKelas.toUpperCase() !== selectedKelas.toUpperCase())
+    ? `Perhatian: Materi ini milik kategori "${rowKelas}". Menghapusnya akan berdampak ke semua kelas yang memakai "${rowKelas}". Yakin ingin menghapus?`
+    : 'Yakin ingin menghapus materi ini?';
+  if (confirm(msg)) {
     showLoading('Menghapus materi...');
     google.script.run
       .withSuccessHandler(function(res) {
@@ -8167,8 +8200,15 @@ function matchMateriKelasClient(materiKelasName, targetKelasName) {
     return isTargetTahfidhJuzAmma && isMateriTahfidhJuzAmma;
   }
 
-  if ((cleanT.includes('JUZAMMA') || cleanT.includes('TADARUS') || cleanT.includes('TAKHOSSUS') || cleanT.includes('WISUDA')) &&
-      (cleanM.includes('JUZAMMA') || cleanM.includes('TADARUS') || cleanM.includes('TAKHOSSUS') || cleanM.includes('WISUDA'))) {
+  // Pisahkan TAKHOSSUS agar tidak tercampur dengan JUZ AMMA / TADARUS / WISUDA
+  const isTargetTakhossus = cleanT.includes('TAKHOSSUS');
+  const isMateriTakhossus = cleanM.includes('TAKHOSSUS');
+  if (isTargetTakhossus || isMateriTakhossus) {
+    return isTargetTakhossus && isMateriTakhossus;
+  }
+
+  if ((cleanT.includes('JUZAMMA') || cleanT.includes('TADARUS') || cleanT.includes('WISUDA')) &&
+      (cleanM.includes('JUZAMMA') || cleanM.includes('TADARUS') || cleanM.includes('WISUDA'))) {
     return true;
   }
 
