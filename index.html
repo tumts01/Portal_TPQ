@@ -6125,6 +6125,7 @@ function formatNamaBesarKecil(str) {
 
 function loadRaporPage() {
   const contentArea = document.getElementById('contentArea');
+  const isAdminRapor = typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'admin');
   
   contentArea.innerHTML = `
     <div class="content-card">
@@ -6133,7 +6134,7 @@ function loadRaporPage() {
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabInputBupres"><i class="fas fa-book-reader me-1"></i> Input Bupres</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabPantauKenaikan"><i class="fas fa-chart-line me-1"></i> Pantau Kenaikan</a></li>
         <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabCetakRapor"><i class="fas fa-print me-1"></i> Cetak Rapor</a></li>
-        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabPengaturanMateri"><i class="fas fa-sliders-h me-1"></i> Pengaturan Materi</a></li>
+        ${isAdminRapor ? '<li class="nav-item" id="navTabPengaturanMateri"><a class="nav-link" data-bs-toggle="tab" href="#tabPengaturanMateri"><i class="fas fa-sliders-h me-1"></i> Pengaturan Materi</a></li>' : ''}
       </ul>
       
       <div class="tab-content mt-3">
@@ -6353,8 +6354,8 @@ function loadRaporPage() {
           </div>
         </div>
         
-        <!-- Tab Pengaturan Materi -->
-        <div class="tab-pane fade" id="tabPengaturanMateri">
+        ${isAdminRapor ? `<!-- Tab Pengaturan Materi -->
+        <div class="tab-pane fade" id="tabPengaturanMateri">` : '<!-- Tab Pengaturan Materi (Hanya Admin) --><div id="tabPengaturanMateriDisabled" style="display:none;">'}
           <div class="row g-2 mb-3 align-items-end">
             <div class="col-md-4">
               <label class="form-label fw-bold small mb-1"><i class="fas fa-school text-primary me-1"></i> Pilih Kelas / Kategori Materi</label>
@@ -6530,17 +6531,19 @@ function loadRaporPage() {
         pkNames.map(name => `<option value="${name}">${name}</option>`).join('');
     }
     
-    // For Pengaturan Materi, load both Kelas and distinct categories from Materi_Kelas
-    google.script.run.withSuccessHandler(function(materiKelasList) {
-      const combined = Array.from(new Set([...kNames, ...(materiKelasList || [])])).filter(Boolean).sort();
-      const pmOptions = '<option value="">-- Pilih Kelas --</option>' + 
-        combined.map(name => `<option value="${name}">${name}</option>`).join('');
-      const pmKelas = document.getElementById('pm_kelas');
-      if (pmKelas) pmKelas.innerHTML = pmOptions;
-    }).withFailureHandler(function() {
-      const pmKelas = document.getElementById('pm_kelas');
-      if (pmKelas) pmKelas.innerHTML = options;
-    }).getDaftarKelasMateri();
+    // For Pengaturan Materi (hanya untuk Admin), load both Kelas and distinct categories from Materi_Kelas
+    if (isAdminRapor) {
+      google.script.run.withSuccessHandler(function(materiKelasList) {
+        const combined = Array.from(new Set([...kNames, ...(materiKelasList || [])])).filter(Boolean).sort();
+        const pmOptions = '<option value="">-- Pilih Kelas --</option>' + 
+          combined.map(name => `<option value="${name}">${name}</option>`).join('');
+        const pmKelas = document.getElementById('pm_kelas');
+        if (pmKelas) pmKelas.innerHTML = pmOptions;
+      }).withFailureHandler(function() {
+        const pmKelas = document.getElementById('pm_kelas');
+        if (pmKelas) pmKelas.innerHTML = options;
+      }).getDaftarKelasMateri();
+    }
   }).withFailureHandler(function(e) {
     showToast('Gagal memuat kelas: ' + e.message, 'error');
   }).getKelasList();
