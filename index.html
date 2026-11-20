@@ -10237,7 +10237,12 @@ function renderPantauKenaikanTable() {
       </div>
     </div>
 
-    <div class="d-flex justify-content-end mb-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+      <div>
+        <button type="button" class="btn btn-sm btn-warning fw-bold shadow-sm" onclick="exportBintangKelasExcel()" title="Export Excel Daftar Bintang Kelas">
+          <i class="fas fa-star me-1"></i> Export Excel Bintang Kelas
+        </button>
+      </div>
       <div class="small text-muted">
         <strong>Rumus Rata2:</strong> ((Nilai Rapor &times; 2) + Nilai Bupres) &divide; 3 &nbsp;|&nbsp; <strong>KKM:</strong> 80
       </div>
@@ -10301,6 +10306,51 @@ function exportPantauKenaikanExcel() {
   const ws = XLSX.utils.aoa_to_sheet(exportData);
   XLSX.utils.book_append_sheet(wb, ws, 'Pantau Kenaikan');
   const filename = `Pantau_Kenaikan_${_pantauKenaikanCache.kelasLabel.replace(/[^a-zA-Z0-9]/g, '_')}_${_pantauKenaikanCache.ta}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+function exportBintangKelasExcel() {
+  if (!_pantauKenaikanCache) {
+    Swal.fire('Info', 'Silakan pilih kelas dan muat data terlebih dahulu', 'info');
+    return;
+  }
+
+  const { rows } = getFilteredPantauKenaikanRows();
+  const bintangRows = rows
+    .filter(d => d.isBintangKelas)
+    .slice()
+    .sort((a, b) => {
+      const kCmp = String(a.kelas || '').localeCompare(String(b.kelas || ''));
+      if (kCmp !== 0) return kCmp;
+      return String(a.nama || '').localeCompare(String(b.nama || ''));
+    });
+
+  if (bintangRows.length === 0) {
+    Swal.fire('Info', 'Belum ada data Bintang Kelas untuk diexport', 'info');
+    return;
+  }
+
+  const exportData = [];
+  exportData.push(['DAFTAR BINTANG KELAS SANTRI TPQ AL MABRUR']);
+  exportData.push(['Kelas', _pantauKenaikanCache.kelasLabel]);
+  exportData.push(['Tahun Ajaran', _pantauKenaikanCache.ta]);
+  exportData.push([]);
+  exportData.push(['No', 'Nama', 'Nilai', 'Kelas']);
+
+  bintangRows.forEach((d, idx) => {
+    exportData.push([
+      idx + 1,
+      d.nama,
+      Number(d.hasilAkhir.toFixed(2)),
+      d.kelas
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(exportData);
+  ws['!cols'] = [{ wch: 6 }, { wch: 34 }, { wch: 12 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Bintang Kelas');
+  const filename = `Bintang_Kelas_${_pantauKenaikanCache.kelasLabel.replace(/[^a-zA-Z0-9]/g, '_')}_${_pantauKenaikanCache.ta}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
 
