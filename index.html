@@ -6958,7 +6958,7 @@ function hitungRataRataDiniyah(el) {
     }
   });
   
-  const rata = count > 0 ? Math.round(total / count) : 0;
+  const rata = count > 0 ? Number((total / count).toFixed(2)) : 0;
   row.querySelector('.rata-rata').innerHTML = `<strong>${rata}</strong>`;
 }
 
@@ -7292,12 +7292,15 @@ function hitungDataRaporSantri(santri, cache) {
 
   let totalNilaiUjian = 0;
   if (isManual) {
-    totalNilaiUjian = manualCount > 0 ? Math.round(manualSum / manualCount) : (regularMateri.length > 0 ? Math.round(manualSum / regularMateri.length) : 0);
+    const rawManualAvg = manualCount > 0
+      ? (manualSum / manualCount)
+      : (regularMateri.length > 0 ? (manualSum / regularMateri.length) : 0);
+    totalNilaiUjian = Number(rawManualAvg.toFixed(2));
   } else if (isWeighted) {
-    totalNilaiUjian = Math.round(weightedSum);
+    totalNilaiUjian = Number(weightedSum.toFixed(2));
   } else {
     if (nilaiSantri.length > 0) {
-      totalNilaiUjian = 95 - totalKurangan + nilaiLagu;
+      totalNilaiUjian = Number((95 - totalKurangan + nilaiLagu).toFixed(2));
       if (totalNilaiUjian < 70) totalNilaiUjian = 70;
     } else {
       totalNilaiUjian = 0;
@@ -7461,7 +7464,11 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
     });
   }
 
-  // Summary baris bawah Tabel Materi Ujian
+  const totalNilaiUjianStr = Number.isInteger(d.totalNilaiUjian) ? String(d.totalNilaiUjian) : String(Number(d.totalNilaiUjian.toFixed(2)));
+  const nilaiHarianStr = Number.isInteger(d.bupres.nilaiHarian) ? String(d.bupres.nilaiHarian) : d.bupres.nilaiHarian.toFixed(2);
+  const hasilAkhirStr = Number.isInteger(d.hasilAkhir) ? String(d.hasilAkhir) : d.hasilAkhir.toFixed(2);
+
+  // Summary baris bawah Tabel Materi Ujian (digabung dengan Nilai Harian / Bupres)
   let materiSummaryHtml = '';
   if (!isTanpaKesalahan) {
     materiSummaryHtml = `
@@ -7475,20 +7482,25 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
       </tr>
       <tr style="background-color:#dceeff;">
         <td colspan="4" style="text-align:right; font-weight:800; padding-right:8px;">TOTAL NILAI UJIAN (95 &minus; Jumlah Pengurangan + Nilai Lagu)</td>
-        <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
+        <td style="text-align:center; font-weight:800; font-size:12px;">${totalNilaiUjianStr}</td>
+      </tr>
+      <tr style="background-color:#eef6ff;">
+        <td colspan="4" style="text-align:right; font-weight:800; padding-right:8px;">NILAI HARIAN (BUKU PRESTASI / BUPRES)</td>
+        <td style="text-align:center; font-weight:800; font-size:12px;">${nilaiHarianStr}</td>
       </tr>
     `;
   } else {
     materiSummaryHtml = `
       <tr style="background-color:#dceeff;">
         <td colspan="3" style="text-align:right; font-weight:800; padding-right:8px;">${d.isManual ? 'TOTAL NILAI UJIAN (RATA-RATA)' : 'TOTAL NILAI UJIAN'}</td>
-        <td style="text-align:center; font-weight:800; font-size:12px;">${d.totalNilaiUjian}</td>
+        <td style="text-align:center; font-weight:800; font-size:12px;">${totalNilaiUjianStr}</td>
+      </tr>
+      <tr style="background-color:#eef6ff;">
+        <td colspan="3" style="text-align:right; font-weight:800; padding-right:8px;">NILAI HARIAN (BUKU PRESTASI / BUPRES)</td>
+        <td style="text-align:center; font-weight:800; font-size:12px;">${nilaiHarianStr}</td>
       </tr>
     `;
   }
-
-  const nilaiHarianStr = Number.isInteger(d.bupres.nilaiHarian) ? String(d.bupres.nilaiHarian) : d.bupres.nilaiHarian.toFixed(2);
-  const hasilAkhirStr = Number.isInteger(d.hasilAkhir) ? String(d.hasilAkhir) : d.hasilAkhir.toFixed(2);
 
   // Keterangan Naik Kelas / Mengulang
   const naikBadgeHtml = d.isNaikKelas
@@ -7515,17 +7527,17 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
       </div>
 
       <!-- 1. KOP SURAT -->
-      <div class="rapor-section-kop" style="text-align:center; margin-bottom:8px;">
+      <div class="rapor-section-kop" style="text-align:center; margin-bottom:6px;">
         <img src="${kopUrl}" alt="Kop TPQ Al Mabrur"
              onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='kop%20tpq.jpg';}"
-             style="width:100%; height:auto; max-height:165px; object-fit:contain; display:block; margin:0 auto 6px auto;">
+             style="width:100%; height:auto; max-height:150px; object-fit:contain; display:block; margin:0 auto 4px auto;">
         <div style="font-size:13.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; text-decoration:underline; margin-top:2px;">
           LAPORAN HASIL BELAJAR SANTRI (RAPOR)
         </div>
       </div>
 
       <!-- 2. IDENTITAS SANTRI (Nama, Kelas, No Induk, Nilai KKM 80) -->
-      <table class="rapor-identitas-table" style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:7px; border:1px solid #000;">
+      <table class="rapor-identitas-table" style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:6px; border:1px solid #000;">
         <tbody>
           <tr>
             <td style="width:18%; padding:3px 6px; font-weight:bold;">Nama Santri</td>
@@ -7546,9 +7558,9 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         </tbody>
       </table>
 
-      <!-- 3. TABEL MATERI UJIAN SESUAI KELASNYA -->
-      <div class="rapor-section-title">A. TABEL PENILAIAN MATERI UJIAN</div>
-      <table class="rapor-grid-table" style="margin-bottom:7px;">
+      <!-- 3. TABEL MATERI UJIAN & NILAI HARIAN -->
+      <div class="rapor-section-title">A. TABEL PENILAIAN MATERI UJIAN &amp; NILAI HARIAN</div>
+      <table class="rapor-grid-table" style="margin-bottom:6px;">
         <thead>
           <tr>
             <th style="width:32px;">No</th>
@@ -7565,41 +7577,9 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         </tbody>
       </table>
 
-      <!-- 4. TABEL NILAI HARIAN (BUPRES) -->
-      <div class="rapor-section-title">B. TABEL NILAI HARIAN (BUKU PRESTASI / BUPRES)</div>
-      <table class="rapor-grid-table" style="margin-bottom:7px;">
-        <thead>
-          <tr>
-            <th colspan="6">Frekuensi Perolehan Nilai Harian (BCK)</th>
-            <th rowspan="2" style="width:110px;">Jml Pertemuan</th>
-            <th rowspan="2" style="width:120px;">Nilai Harian</th>
-          </tr>
-          <tr>
-            <th style="width:12%;">B</th>
-            <th style="width:12%;">B-</th>
-            <th style="width:12%;">C+</th>
-            <th style="width:12%;">C</th>
-            <th style="width:12%;">C-</th>
-            <th style="width:12%;">K</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="text-align:center;">${d.bupres.b}</td>
-            <td style="text-align:center;">${d.bupres.b_minus}</td>
-            <td style="text-align:center;">${d.bupres.c_plus}</td>
-            <td style="text-align:center;">${d.bupres.c}</td>
-            <td style="text-align:center;">${d.bupres.c_minus}</td>
-            <td style="text-align:center;">${d.bupres.k}</td>
-            <td style="text-align:center; font-weight:600;">${d.bupres.totalPertemuan} Kali</td>
-            <td style="text-align:center; font-weight:800; font-size:12px; background-color:#dceeff;">${nilaiHarianStr}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- 5. TABEL KEAKTIFAN SANTRI (TOTAL SIA) -->
-      <div class="rapor-section-title">C. TABEL KEAKTIFAN / KEHADIRAN SANTRI (TOTAL SIA)</div>
-      <table class="rapor-grid-table" style="margin-bottom:7px;">
+      <!-- 4. TABEL KEAKTIFAN SANTRI (TOTAL SIA) -->
+      <div class="rapor-section-title">B. TABEL KEAKTIFAN / KEHADIRAN SANTRI (TOTAL SIA)</div>
+      <table class="rapor-grid-table" style="margin-bottom:6px;">
         <thead>
           <tr>
             <th style="width:25%;">Sakit (S)</th>
@@ -7618,9 +7598,9 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         </tbody>
       </table>
 
-      <!-- 6. TABEL SIKAP SANTRI (Perilaku, Kedisiplinan, Keaktifan) -->
-      <div class="rapor-section-title">D. TABEL PENILAIAN SIKAP SANTRI</div>
-      <table class="rapor-grid-table" style="margin-bottom:7px;">
+      <!-- 5. TABEL SIKAP SANTRI (Perilaku, Kedisiplinan, Keaktifan) -->
+      <div class="rapor-section-title">C. TABEL PENILAIAN SIKAP SANTRI</div>
+      <table class="rapor-grid-table" style="margin-bottom:6px;">
         <thead>
           <tr>
             <th style="width:32px;">No</th>
@@ -7651,20 +7631,20 @@ function buildSingleRaporF4Html(santri, cache, meta, isLast) {
         </tbody>
       </table>
 
-      <!-- 7. CATATAN PENGAJAR / PENGUJI (Diambil dari Catatan Penguji di Menu Input Nilai) -->
-      <div class="rapor-section-title">E. CATATAN PENGAJAR / PENGUJI</div>
-      <div style="border:1px solid #000; padding:5px 8px; min-height:34px; font-size:11px; margin-bottom:7px; background:#fff;">
+      <!-- 6. CATATAN PENGAJAR / PENGUJI (Diambil dari Catatan Penguji di Menu Input Nilai) -->
+      <div class="rapor-section-title">D. CATATAN PENGAJAR / PENGUJI</div>
+      <div style="border:1px solid #000; padding:5px 8px; min-height:32px; font-size:11px; margin-bottom:6px; background:#fff;">
         ${d.catatan ? `<span>${d.catatan}</span>` : `<span style="color:#666;">-</span>`}
       </div>
 
-      <!-- 8. KETERANGAN NAIK KELAS / MENGULANG & NILAI AKHIR -->
-      <div class="rapor-section-title">F. KEPUTUSAN KENAIKAN KELAS</div>
-      <table class="rapor-grid-table" style="margin-bottom:8px;">
+      <!-- 7. KETERANGAN NAIK KELAS / MENGULANG & NILAI AKHIR -->
+      <div class="rapor-section-title">E. KEPUTUSAN KENAIKAN KELAS</div>
+      <table class="rapor-grid-table" style="margin-bottom:7px;">
         <tbody>
           <tr>
             <td style="width:33%; text-align:center; padding:4px 8px;">
               <div style="font-size:10px; font-weight:bold; color:#333; text-transform:uppercase;">Nilai Ujian</div>
-              <div style="font-size:13px; font-weight:800;">${d.totalNilaiUjian}</div>
+              <div style="font-size:13px; font-weight:800;">${totalNilaiUjianStr}</div>
             </td>
             <td style="width:33%; text-align:center; padding:4px 8px;">
               <div style="font-size:10px; font-weight:bold; color:#333; text-transform:uppercase;">Nilai Harian (Bupres)</div>
@@ -7813,14 +7793,14 @@ function getRaporF4InlineStyles() {
       max-width: 100%;
       min-height: 315mm;
       margin: 0 auto 24px auto;
-      padding: 10mm 12mm;
+      padding: 6mm 12mm 8mm 12mm;
       background: #ffffff;
       color: #000000;
       border: 1px solid #ced4da;
       box-shadow: 0 4px 16px rgba(0,0,0,0.08);
       font-family: Arial, Helvetica, sans-serif;
       box-sizing: border-box;
-      line-height: 1.25;
+      line-height: 1.24;
     }
     .rapor-section-title {
       font-size: 11px;
@@ -7938,7 +7918,7 @@ function cetakRaporF4(singleNis) {
       <style>
         @page {
           size: 215mm 330mm portrait;
-          margin: 8mm 12mm;
+          margin: 4mm 12mm 6mm 12mm;
         }
         * {
           box-sizing: border-box;
@@ -7959,10 +7939,22 @@ function cetakRaporF4(singleNis) {
         .rapor-f4-sheet {
           width: 100% !important;
           min-height: 0 !important;
+          max-height: 318mm !important;
           margin: 0 !important;
           padding: 0 !important;
           border: none !important;
           box-shadow: none !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          overflow: hidden !important;
+        }
+        .rapor-f4-sheet:last-child {
+          page-break-after: auto !important;
+          break-after: auto !important;
+        }
+        .rapor-grid-table th,
+        .rapor-grid-table td {
+          padding: 2.5px 6px !important;
         }
       </style>
     </head>
