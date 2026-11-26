@@ -3885,12 +3885,13 @@ function renderSantriTable(data) {
     
     let btnHtml = '';
     const btnDetail = '<button class="btn btn-sm btn-info text-white me-1" onclick="showSantriDetail(' + q + s.NIS + q + ')" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i></button>';
+    const btnRiwayat = '<button class="btn btn-sm btn-outline-primary me-1" onclick="bukaModalRiwayatKelasSantri(' + q + s.NIS + q + ')" title="Riwayat Kelas per Tahun Ajaran"><i class="fas fa-history"></i></button>';
     if (!isReadonly) {
-      btnHtml = btnDetail +
+      btnHtml = btnDetail + btnRiwayat +
                 '<button class="btn btn-sm btn-warning me-1" onclick="editSantri(' + q + s.NIS + q + ')" title="Edit"><i class="fas fa-edit"></i></button>' +
                 '<button class="btn btn-sm btn-danger" onclick="deleteSantri(' + q + s.NIS + q + ')" title="Hapus"><i class="fas fa-trash"></i></button>';
     } else {
-      btnHtml = '<button class="btn btn-sm btn-info text-white" onclick="showSantriDetail(' + q + s.NIS + q + ')" title="Lihat Biodata Lengkap"><i class="fas fa-eye"></i> Detail</button>';
+      btnHtml = btnDetail + '<button class="btn btn-sm btn-outline-primary" onclick="bukaModalRiwayatKelasSantri(' + q + s.NIS + q + ')" title="Riwayat Kelas per Tahun Ajaran"><i class="fas fa-history"></i> Riwayat</button>';
     }
     
     let jenisKelamin = s.Jenis_Kelamin || s['L/P'] || '-';
@@ -11029,6 +11030,11 @@ function loadKelasPage() {
             <i class="fas fa-school me-1"></i> Rekap Data Kelas
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="tab" href="#tabRiwayatKelas" onclick="loadRiwayatKelasTab(false)">
+            <i class="fas fa-history text-primary me-1"></i> Riwayat Kelas Santri
+          </a>
+        </li>
         ${isAdminKelas ? `
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="tab" href="#tabProsesKelasBaru" onclick="initProsesKelasBaruTab()">
@@ -11047,6 +11053,53 @@ function loadKelasPage() {
             </button>
           </div>
           <div id="kelasResultContainer" class="table-responsive"></div>
+        </div>
+
+        <!-- Tab 2: Riwayat Kelas Santri Per Tahun Ajaran -->
+        <div class="tab-pane fade" id="tabRiwayatKelas">
+          <div class="card border-0 shadow-sm bg-light mb-3">
+            <div class="card-body p-3">
+              <div class="row g-2 align-items-end">
+                <div class="col-md-2 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-calendar-alt text-primary me-1"></i> Fokus Tahun Ajaran</label>
+                  <select class="form-select form-select-sm" id="rwk_flt_ta" onchange="renderRiwayatKelasTable()">
+                    <option value="">Semua Tahun Ajaran</option>
+                  </select>
+                </div>
+                <div class="col-md-2 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-school text-info me-1"></i> Filter Kelas</label>
+                  <select class="form-select form-select-sm" id="rwk_flt_kelas" onchange="renderRiwayatKelasTable()">
+                    <option value="">Semua Kelas</option>
+                  </select>
+                </div>
+                <div class="col-md-2 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-user-check text-success me-1"></i> Status Santri</label>
+                  <select class="form-select form-select-sm" id="rwk_flt_status" onchange="renderRiwayatKelasTable()">
+                    <option value="ALL">Semua Status</option>
+                    <option value="AKTIF" selected>Aktif</option>
+                    <option value="LULUS">Lulus</option>
+                    <option value="NONAKTIF">Nonaktif / Lainnya</option>
+                  </select>
+                </div>
+                <div class="col-md-3 col-6">
+                  <label class="form-label fw-bold small mb-1"><i class="fas fa-search text-secondary me-1"></i> Cari Nama / NIS</label>
+                  <input type="text" class="form-control form-control-sm" id="rwk_flt_search" placeholder="Ketik nama atau NIS..." oninput="renderRiwayatKelasTable()">
+                </div>
+                <div class="col-md-3 col-12 d-flex gap-2">
+                  <button type="button" class="btn btn-sm btn-primary fw-semibold flex-fill shadow-sm" onclick="loadRiwayatKelasTab(true)">
+                    <i class="fas fa-sync-alt me-1"></i> Muat Ulang
+                  </button>
+                  <button type="button" class="btn btn-sm btn-success fw-semibold shadow-sm" onclick="exportRiwayatKelasExcel()" title="Export Excel Riwayat Kelas">
+                    <i class="fas fa-file-excel me-1"></i> Excel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="rwk_result">
+            <div class="text-center py-4 text-muted">Klik tab ini untuk memuat riwayat kelas santri per Tahun Ajaran.</div>
+          </div>
         </div>
 
         ${isAdminKelas ? `
@@ -12173,6 +12226,7 @@ function konfirmasiTerapkanKenaikanKelas() {
       .withSuccessHandler(function(resp) {
         hideLoading();
         if (resp && resp.success) {
+          _rwkCache = null;
           Swal.fire('Berhasil!', resp.message, 'success');
           cekRiwayatKenaikanTerakhir();
           loadDataKelas();
@@ -12206,6 +12260,7 @@ function konfirmasiUndoKenaikan(batchId, totalSantri) {
       .withSuccessHandler(function(resp) {
         hideLoading();
         if (resp && resp.success) {
+          _rwkCache = null;
           Swal.fire('Berhasil Dikembalikan!', resp.message, 'success');
           cekRiwayatKenaikanTerakhir();
           loadDataKelas();
@@ -12219,6 +12274,397 @@ function konfirmasiUndoKenaikan(batchId, totalSantri) {
       })
       .batalkanKenaikanKelasTerakhir(batchId, actor);
   });
+}
+
+// =========================================================
+// ===== RIWAYAT KELAS SANTRI PER TAHUN AJARAN =============
+// =========================================================
+
+let _rwkCache = null;
+
+function loadRiwayatKelasTab(forceReload) {
+  const container = document.getElementById('rwk_result');
+  if (!container) return;
+
+  if (_rwkCache && !forceReload) {
+    renderRiwayatKelasTable();
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="text-center py-5 border rounded bg-white shadow-sm">
+      <div class="spinner-border text-primary mb-2" role="status"></div>
+      <div class="text-muted fw-semibold">Mengumpulkan rekam jejak kelas santri tiap Tahun Ajaran...</div>
+    </div>
+  `;
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        container.innerHTML = `<div class="alert alert-danger">Gagal memuat riwayat kelas: ${(res && res.message) || 'Tidak ada respon server'}</div>`;
+        return;
+      }
+      _rwkCache = res;
+      populateRiwayatKelasFilters();
+      renderRiwayatKelasTable();
+    })
+    .withFailureHandler(function(err) {
+      container.innerHTML = `<div class="alert alert-danger">Gagal memuat riwayat kelas: ${err.message || err}</div>`;
+    })
+    .getRiwayatKelasSantri('');
+}
+
+function populateRiwayatKelasFilters() {
+  if (!_rwkCache) return;
+  const taEl = document.getElementById('rwk_flt_ta');
+  const kEl = document.getElementById('rwk_flt_kelas');
+
+  if (taEl) {
+    const prev = taEl.value;
+    const taList = _rwkCache.tahunAjaranList || [];
+    taEl.innerHTML = '<option value="">Semua Tahun Ajaran</option>' +
+      taList.map(t => `<option value="${t}" ${prev === t ? 'selected' : ''}>TA ${t}</option>`).join('');
+  }
+
+  if (kEl) {
+    const prev = kEl.value;
+    const kSet = new Set();
+    (_rwkCache.santriList || []).forEach(s => {
+      if (s.kelasSaatIni && s.kelasSaatIni !== '-') kSet.add(s.kelasSaatIni);
+      Object.values(s.perTa || {}).forEach(v => {
+        if (v && v.kelas && v.kelas !== '-') kSet.add(v.kelas);
+      });
+    });
+    const sortedK = Array.from(kSet).sort((a, b) => a.localeCompare(b));
+    kEl.innerHTML = '<option value="">Semua Kelas</option>' +
+      sortedK.map(k => `<option value="${k}" ${prev === k ? 'selected' : ''}>${k}</option>`).join('');
+  }
+}
+
+function getFilteredRiwayatKelasRows() {
+  if (!_rwkCache) return { taCols: [], rows: [] };
+  const fltTa = document.getElementById('rwk_flt_ta')?.value || '';
+  const fltKelas = document.getElementById('rwk_flt_kelas')?.value || '';
+  const fltStatus = document.getElementById('rwk_flt_status')?.value || 'ALL';
+  const keyword = (document.getElementById('rwk_flt_search')?.value || '').trim().toLowerCase();
+
+  const allTas = _rwkCache.tahunAjaranList || [];
+  const taCols = fltTa ? [fltTa] : allTas;
+
+  const rows = (_rwkCache.santriList || []).filter(s => {
+    const stU = String(s.status || 'AKTIF').trim().toUpperCase();
+    if (fltStatus === 'AKTIF' && stU !== 'AKTIF' && stU !== '') return false;
+    if (fltStatus === 'LULUS' && stU !== 'LULUS') return false;
+    if (fltStatus === 'NONAKTIF' && (stU === 'AKTIF' || stU === '' || stU === 'LULUS')) return false;
+
+    if (fltKelas) {
+      if (fltTa) {
+        const rec = (s.perTa || {})[fltTa];
+        if (!rec || rec.kelas !== fltKelas) return false;
+      } else {
+        const matchAny = (s.kelasSaatIni === fltKelas) ||
+          Object.values(s.perTa || {}).some(v => v && v.kelas === fltKelas);
+        if (!matchAny) return false;
+      }
+    }
+
+    if (keyword) {
+      const mNama = String(s.nama || '').toLowerCase().includes(keyword);
+      const mNis = String(s.nis || '').toLowerCase().includes(keyword);
+      if (!mNama && !mNis) return false;
+    }
+
+    return true;
+  });
+
+  return { taCols, rows };
+}
+
+function renderRiwayatKelasTable() {
+  const container = document.getElementById('rwk_result');
+  if (!container || !_rwkCache) return;
+
+  const { taCols, rows } = getFilteredRiwayatKelasRows();
+  const totalLog = (_rwkCache.logKenaikan || []).length;
+
+  let tbodyHtml = '';
+  if (rows.length === 0) {
+    tbodyHtml = `<tr><td colspan="${6 + taCols.length}" class="text-center py-4 text-muted">Tidak ada data riwayat santri yang sesuai filter.</td></tr>`;
+  } else {
+    tbodyHtml = rows.map((s, idx) => {
+      const safeNis = String(s.nis || '').replace(/'/g, "\\'");
+      const stU = String(s.status || 'AKTIF').trim().toUpperCase();
+      const stBadge = (stU === 'AKTIF' || stU === '')
+        ? '<span class="badge bg-success">Aktif</span>'
+        : (stU === 'LULUS' ? '<span class="badge bg-primary">Lulus</span>' : `<span class="badge bg-secondary">${s.status}</span>`);
+      const jkBadge = s.jk === 'L'
+        ? '<span class="badge bg-primary bg-opacity-75">L</span>'
+        : (s.jk === 'P' ? '<span class="badge bg-danger bg-opacity-75">P</span>' : '-');
+
+      const taCells = taCols.map(ta => {
+        const info = (s.perTa || {})[ta];
+        if (!info || !info.kelas) {
+          return '<td class="text-center text-muted small">-</td>';
+        }
+        const tip = `Sumber: ${info.sumber || '-'}${info.statusKenaikan ? ' | ' + info.statusKenaikan : ''}${info.nilaiAkhir !== null && info.nilaiAkhir !== undefined ? ' (Nilai: ' + info.nilaiAkhir + ')' : ''}`;
+        const badgeCls = info.kelas === 'LULUS'
+          ? 'bg-primary'
+          : (info.sumber === 'Riwayat Kenaikan' ? 'bg-success bg-opacity-75' : 'bg-light text-dark border');
+        return `<td class="text-center"><span class="badge ${badgeCls}" title="${tip}">${info.kelas}</span></td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="text-center text-muted">${idx + 1}</td>
+          <td class="text-center font-monospace small">${s.nis}</td>
+          <td class="fw-semibold">
+            <a href="javascript:void(0)" class="text-decoration-none text-dark" onclick="bukaModalRiwayatKelasSantri('${safeNis}')">${s.nama}</a>
+          </td>
+          <td class="text-center">${jkBadge}</td>
+          <td class="text-center">${stBadge}</td>
+          ${taCells}
+          <td class="text-center">
+            <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 small" onclick="bukaModalRiwayatKelasSantri('${safeNis}')" title="Lihat Timeline Riwayat Santri">
+              <i class="fas fa-history me-1"></i> Detail
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  container.innerHTML = `
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 small">
+      <div>
+        <span class="badge bg-primary px-2 py-1">Ditampilkan: ${rows.length} Santri</span>
+        <span class="badge bg-info text-dark px-2 py-1">Tahun Ajaran Tercatat: ${taCols.length > 0 ? taCols.join(', ') : '-'}</span>
+        <span class="badge bg-secondary px-2 py-1">Log Proses Kenaikan: ${totalLog} rekaman</span>
+      </div>
+      <div class="text-muted">
+        <i class="fas fa-info-circle me-1"></i> Sumber data digabung otomatis dari Riwayat Kenaikan, Nilai Rapor, Bupres, Presensi, &amp; Data Santri.
+      </div>
+    </div>
+
+    <div class="table-responsive shadow-sm border rounded bg-white" style="max-height: 540px; overflow-y: auto;">
+      <table class="table table-bordered table-hover table-sm align-middle mb-0" style="font-size:0.85rem;">
+        <thead class="table-primary text-center sticky-top">
+          <tr>
+            <th style="width:45px;">No</th>
+            <th style="width:90px;">NIS</th>
+            <th class="text-start">Nama Santri</th>
+            <th style="width:50px;">L/P</th>
+            <th style="width:75px;">Status</th>
+            ${taCols.map(t => `<th style="min-width:125px;">TA ${t}</th>`).join('')}
+            <th style="width:85px;">Timeline</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tbodyHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function exportRiwayatKelasExcel() {
+  if (!_rwkCache) {
+    Swal.fire('Info', 'Silakan muat data riwayat kelas terlebih dahulu.', 'info');
+    return;
+  }
+
+  const { taCols, rows } = getFilteredRiwayatKelasRows();
+  if (rows.length === 0) {
+    Swal.fire('Info', 'Tidak ada data untuk diexport.', 'info');
+    return;
+  }
+
+  // Sheet 1: Matriks Riwayat Per Tahun Ajaran
+  const sheetMatriks = [
+    ['RIWAYAT KELAS SANTRI PER TAHUN AJARAN - TPQ AL MABRUR'],
+    [],
+    ['No', 'NIS', 'Nama Santri', 'L/P', 'Status', ...taCols.map(t => 'TA ' + t)]
+  ];
+  rows.forEach((s, idx) => {
+    sheetMatriks.push([
+      idx + 1,
+      s.nis,
+      s.nama,
+      s.jk,
+      s.status,
+      ...taCols.map(t => (s.perTa && s.perTa[t] ? s.perTa[t].kelas : '-'))
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(sheetMatriks);
+  ws1['!cols'] = [{ wch: 6 }, { wch: 12 }, { wch: 32 }, { wch: 6 }, { wch: 10 }, ...taCols.map(() => ({ wch: 18 }))];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Riwayat Per TA');
+
+  // Sheet 2: Log Proses Kenaikan Kelas (jika sudah ada)
+  const logs = _rwkCache.logKenaikan || [];
+  if (logs.length > 0) {
+    const sheetLog = [
+      ['LOG PROSES KENAIKAN KELAS - TPQ AL MABRUR'],
+      [],
+      ['No', 'Batch ID', 'Tanggal', 'TA Lama', 'TA Baru', 'NIS', 'Nama Santri', 'L/P', 'Kelas Lama', 'Nilai Akhir', 'Status Kenaikan', 'Kelas Baru', 'Diproses Oleh']
+    ];
+    logs.forEach((l, idx) => {
+      sheetLog.push([
+        idx + 1, l.batchId, l.tanggal, l.taLama, l.taBaru, l.nis, l.nama, l.jk,
+        l.kelasLama, l.nilaiAkhir, l.statusKenaikan, l.kelasBaru, l.diprosesOleh
+      ]);
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(sheetLog);
+    ws2['!cols'] = [
+      { wch: 6 }, { wch: 18 }, { wch: 17 }, { wch: 9 }, { wch: 9 },
+      { wch: 12 }, { wch: 30 }, { wch: 6 }, { wch: 18 }, { wch: 11 },
+      { wch: 14 }, { wch: 18 }, { wch: 18 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Log Kenaikan');
+  }
+
+  XLSX.writeFile(wb, 'Riwayat_Kelas_Santri_Per_TA.xlsx');
+}
+
+function ensureModalRiwayatKelasSantri() {
+  if (document.getElementById('modalRiwayatKelasSantri')) return;
+  const div = document.createElement('div');
+  div.id = 'modalRiwayatKelasSantri';
+  div.className = 'modal fade';
+  div.tabIndex = -1;
+  div.innerHTML = `
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white py-2">
+          <h6 class="modal-title fw-bold"><i class="fas fa-history me-2"></i>Riwayat Kelas Santri per Tahun Ajaran</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="modalRiwayatKelasBody"></div>
+        <div class="modal-footer py-2 bg-light">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div);
+}
+
+function bukaModalRiwayatKelasSantri(nis) {
+  ensureModalRiwayatKelasSantri();
+  const modalEl = document.getElementById('modalRiwayatKelasSantri');
+  const bodyEl = document.getElementById('modalRiwayatKelasBody');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+
+  const renderSantriTimeline = (rec) => {
+    if (!rec) {
+      bodyEl.innerHTML = `<div class="alert alert-warning mb-0">Data riwayat untuk NIS <strong>${nis}</strong> tidak ditemukan.</div>`;
+      return;
+    }
+
+    const taKeys = Object.keys(rec.perTa || {}).sort((a, b) => a.localeCompare(b));
+    const perTaRows = taKeys.length > 0
+      ? taKeys.map((ta, i) => {
+          const v = rec.perTa[ta];
+          return `
+            <tr>
+              <td class="text-center">${i + 1}</td>
+              <td class="text-center fw-bold">TA ${ta}</td>
+              <td class="fw-bold text-primary">${v.kelas}</td>
+              <td class="text-center">${v.nilaiAkhir !== null && v.nilaiAkhir !== undefined ? v.nilaiAkhir : '-'}</td>
+              <td class="text-center">${v.statusKenaikan ? `<span class="badge ${v.statusKenaikan === 'NAIK' ? 'bg-success' : (v.statusKenaikan === 'LULUS' ? 'bg-primary' : 'bg-warning text-dark')}">${v.statusKenaikan}</span>` : '-'}</td>
+              <td class="small text-muted">${v.sumber || '-'}</td>
+            </tr>
+          `;
+        }).join('')
+      : '<tr><td colspan="6" class="text-center text-muted py-3">Belum ada riwayat Tahun Ajaran yang tercatat.</td></tr>';
+
+    const transList = rec.transitions || [];
+    const transHtml = transList.length > 0 ? `
+      <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-exchange-alt text-success me-1"></i> Riwayat Proses Kenaikan Kelas</h6>
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle mb-0" style="font-size:0.84rem;">
+          <thead class="table-light text-center">
+            <tr>
+              <th>Tanggal</th>
+              <th>TA</th>
+              <th>Kelas Lama &rarr; Kelas Baru</th>
+              <th>Nilai</th>
+              <th>Keputusan</th>
+              <th>Oleh</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transList.map(tr => `
+              <tr>
+                <td class="small text-center">${tr.tanggal || '-'}</td>
+                <td class="small text-center">${tr.taLama || '-'} &rarr; ${tr.taBaru || '-'}</td>
+                <td class="text-center"><span class="badge bg-light text-dark border">${tr.kelasLama}</span> &rarr; <span class="badge bg-success">${tr.kelasBaru}</span></td>
+                <td class="text-center fw-bold">${tr.nilaiAkhir || 0}</td>
+                <td class="text-center"><span class="badge ${tr.statusKenaikan === 'NAIK' ? 'bg-success' : (tr.statusKenaikan === 'LULUS' ? 'bg-primary' : 'bg-warning text-dark')}">${tr.statusKenaikan || '-'}</span></td>
+                <td class="small text-muted">${tr.diprosesOleh || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '';
+
+    bodyEl.innerHTML = `
+      <div class="p-3 bg-light border rounded mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h6 class="fw-bold mb-0">${rec.nama}</h6>
+          <div class="small text-muted">NIS: <strong class="font-monospace">${rec.nis}</strong> &bull; L/P: <strong>${rec.jk}</strong> &bull; Status: <strong>${rec.status}</strong></div>
+        </div>
+        <div class="text-end">
+          <div class="small text-muted">Kelas Saat Ini</div>
+          <span class="badge bg-success fs-6">${rec.kelasSaatIni || '-'}</span>
+        </div>
+      </div>
+
+      <h6 class="fw-bold mb-2"><i class="fas fa-calendar-check text-primary me-1"></i> Rekam Jejak Kelas per Tahun Ajaran</h6>
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle mb-0" style="font-size:0.86rem;">
+          <thead class="table-primary text-center">
+            <tr>
+              <th style="width:45px;">No</th>
+              <th style="width:105px;">Tahun Ajaran</th>
+              <th>Kelas</th>
+              <th style="width:90px;">Nilai Akhir</th>
+              <th style="width:110px;">Status</th>
+              <th style="width:130px;">Sumber Data</th>
+            </tr>
+          </thead>
+          <tbody>${perTaRows}</tbody>
+        </table>
+      </div>
+      ${transHtml}
+    `;
+  };
+
+  // Jika cache sudah ada, tampilkan langsung tanpa menunggu server
+  if (_rwkCache && Array.isArray(_rwkCache.santriList)) {
+    const found = _rwkCache.santriList.find(s => String(s.nis).trim() === String(nis).trim());
+    if (found) {
+      renderSantriTimeline(found);
+      return;
+    }
+  }
+
+  bodyEl.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Memuat riwayat kelas santri...</p></div>';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        bodyEl.innerHTML = `<div class="alert alert-danger mb-0">Gagal memuat: ${(res && res.message) || 'Tidak ada respon'}</div>`;
+        return;
+      }
+      const found = (res.santriList || []).find(s => String(s.nis).trim() === String(nis).trim()) || (res.santriList || [])[0];
+      renderSantriTimeline(found);
+    })
+    .withFailureHandler(function(err) {
+      bodyEl.innerHTML = `<div class="alert alert-danger mb-0">Error: ${err.message || err}</div>`;
+    })
+    .getRiwayatKelasSantri(String(nis || '').trim());
 }
 </script>
 
